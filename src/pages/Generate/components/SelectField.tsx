@@ -52,7 +52,7 @@ export const SelectField = (props: SelectFieldProps) => {
                         height: '32px',
                         boxSizing: 'border-box',
                         outline: 'none',
-                        '&.Mui-focused': {
+                        '&:hover, &:focus': {
                             outline: 'none',
                             boxShadow: 'none',
                             background: '#F3F3F5',

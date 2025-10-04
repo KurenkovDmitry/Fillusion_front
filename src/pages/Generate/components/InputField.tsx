@@ -21,7 +21,7 @@ export const InputField = (props: InputFieldProps) => {
   const [field, meta] = useField(props);
 
   return (
-    <>
+    <div>
       {props.labelIcon ? (
         <div style={{ display: "flex", alignItems: "center" }}>
           <div
@@ -64,7 +64,7 @@ export const InputField = (props: InputFieldProps) => {
               borderRadius: "7px",
               border: "1px solid #ccc",
               fontSize: "14px",
-              minHeight: "70px",
+              minHeight: "140px",
               boxSizing: "border-box",
               outline: "none",
               background: "#F3F3F5",
@@ -92,6 +92,6 @@ export const InputField = (props: InputFieldProps) => {
           />
         )}
       </div>
-    </>
+    </div>
   );
 };

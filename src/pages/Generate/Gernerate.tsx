@@ -20,13 +20,28 @@ const initalValues = {
 import { InputField } from "./components/InputField";
 import { SliderWithInput } from "./components/SliderWithinput";
 import TableIcon from "@assets/table.svg?react";
+import { SelectField } from "./components/SelectField";
 
 export const Generate = () => {
   const [open, _] = useState(true);
-  const [value, setValue] = useState("string");
+
+  const selectModelOptions = [
+    { value: "deepseek", label: "Deepseek" },
+    { value: "gemini", label: "Gemini" },
+  ];
+
+  const selectOutputOptions = [
+    { value: "json", label: "JSON" },
+    { value: "csv", label: "CSV" },
+    { value: "sql", label: "SQL" },
+  ];
+
+  const [selectModelValue, setSelectModelValue] = useState(selectModelOptions[0].value);
+  const [selectOutputValue, setSelectOutputValue] = useState(selectOutputOptions[0].value);
+
   return (
-    <Dialog open={open} maxWidth="lg" fullWidth sx={{ borderRadius: "12px" }}>
-      <DialogTitle>Настройка генерации</DialogTitle>
+    <Dialog open={open} maxWidth="lg" fullWidth style={{ borderRadius: "12px !important" }}>
+      <DialogTitle style={{fontSize: '20px'}}>Настройка генерации</DialogTitle>
       <DialogContent>
         <Formik
           initialValues={initalValues}
@@ -52,7 +67,12 @@ export const Generate = () => {
             console.log(values);
 
             return (
-              <Form>
+              <Form style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                <InputField
+                  label="Название таблицы"
+                  name="name"
+                  placeholder="users"
+                />
                 <SliderWithInput
                   label="Количество строк"
                   value={values.length}
@@ -61,11 +81,6 @@ export const Generate = () => {
                   onChange={(value) => {
                     setValues({ ...values, length: value });
                   }}
-                />
-                <InputField
-                  label="Название таблицы"
-                  name="name"
-                  placeholder="users"
                 />
                 <InputField
                   label="Правила генерации"
@@ -91,6 +106,18 @@ export const Generate = () => {
   "phone": "+7(999)123-45-67",
   "city": "Москва"
 }`}
+                />
+                <SelectField
+                  label="Модель для генерации"
+                  value={selectModelValue}
+                  options={selectModelOptions}
+                  onChange={setSelectModelValue}
+                />
+                <SelectField
+                  label="Тип выходных данных"
+                  value={selectOutputValue}
+                  options={selectOutputOptions}
+                  onChange={setSelectOutputValue}
                 />
                 <Box
                   width="100%"

@@ -77,7 +77,8 @@ export const SliderWithInput = (props: SliderWithInputProps) => {
           onBlur={handleBlur}
           style={{
             width: "auto",
-            padding: "8px",
+            padding: "10px 15px",
+            height: "32px",
             borderRadius: "7px",
             border: "1px solid #ccc",
             fontSize: "14px",
