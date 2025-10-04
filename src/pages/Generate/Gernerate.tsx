@@ -1,14 +1,18 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@mui/material";
+import { InputField } from "./components/InputField";
+import TableIcon from '@assets/table.svg?react';
 
 export const Generate = () => {
-  const [open, setOpen] = useState(true);
-
+  const [open, _] = useState(true);
   return (
-    <Dialog open={open} maxWidth="lg" fullWidth>
-      <DialogTitle>Subscribe</DialogTitle>
+    <Dialog open={open} maxWidth="lg" fullWidth sx={{borderRadius: '12px'}}>
+      <DialogTitle>Настройка генерации</DialogTitle>
       <DialogContent>
-        <img  src="https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif" alt="Loading..." />
+        <InputField label="Название таблицы" value="users"/>
+        <InputField label="Название таблицы" value="users" inputIcon={<TableIcon/>}/>
+        <InputField label="Название таблицы" value="users" labelIcon={<TableIcon/>}/>
+        <InputField label="Название таблицы" value="users" labelIcon={<TableIcon/>} multiline/>
       </DialogContent>
     </Dialog>
   );

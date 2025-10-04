@@ -7,6 +7,16 @@
     "module": "ESNext",
     "types": ["vite/client"],
     "skipLibCheck": true,
+    "paths": {
+        // "@components": ["./src/components"],
+        // "@components/*": ["./src/components/*"],
+        "@pages": ["./src/pages"],
+        "@assets": ["./src/assets"],
+        // "@shared/*": ["./src/shared/*"],
+        // "@store/*": ["./src/store/*"],
+        // "@api": ["./src/api"],
+        // "@utils": ["./src/utils"],
+    },
 
     /* Bundler mode */
     "moduleResolution": "bundler",
