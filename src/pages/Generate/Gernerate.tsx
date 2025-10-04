@@ -1,8 +1,13 @@
 import React, { useState } from "react";
-import "./App.css";
+import { Dialog, DialogContent, DialogTitle } from "@mui/material";
 
-export const Genereate = () => {
-  //   const [count, setCount] = useState(0);
+export const Generate = () => {
+  const [open, setOpen] = useState(true);
 
-  return <>Negr is ready!</>;
+  return (
+    <Dialog open={open}>
+      <DialogTitle>Subscribe</DialogTitle>
+      <DialogContent>Negr isasdas ready!</DialogContent>
+    </Dialog>
+  );
 };
