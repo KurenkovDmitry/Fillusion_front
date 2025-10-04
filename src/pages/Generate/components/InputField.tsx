@@ -54,7 +54,8 @@ export const InputField = (props: InputFieldProps) => {
                             outline: 'none',
                             background: '#F3F3F5',
                             color: 'black',
-                            resize: 'none'
+                            resize: 'none',
+                            fontFamily: 'inherit',
                         }}
                     />
                 ) : (
