@@ -37,8 +37,12 @@ export const Generate = () => {
     { value: "sql", label: "SQL" },
   ];
 
-  const [selectModelValue, setSelectModelValue] = useState(selectModelOptions[0].value);
-  const [selectOutputValue, setSelectOutputValue] = useState(selectOutputOptions[0].value);
+  const [selectModelValue, setSelectModelValue] = useState(
+    selectModelOptions[0].value
+  );
+  const [selectOutputValue, setSelectOutputValue] = useState(
+    selectOutputOptions[0].value
+  );
 
   return (
     <>
@@ -70,11 +74,18 @@ export const Generate = () => {
             console.log(values);
 
             return (
-              <Form style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+              <Form
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
+              >
                 <InputField
                   label="Название таблицы"
                   name="name"
                   placeholder="users"
+                  required
                 />
                 <SliderWithInput
                   label="Количество строк"
@@ -96,6 +107,7 @@ export const Generate = () => {
 - age: от 18 до 65 лет
 - phone: российские номера телефонов
 - city: города России`}
+                  required
                 />
                 <InputField
                   label="Примеры данных"
