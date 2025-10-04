@@ -8,7 +8,6 @@ import {
 } from "@mui/material";
 import { Form, Formik } from "formik";
 import { object, Schema, string } from "yup";
-import { TextInput as Input } from "../../ui";
 
 const initalValues = {
   length: 50,
@@ -71,7 +70,7 @@ export const Generate = () => {
             setValues,
             submitForm,
           }) => {
-            console.log(values);
+            // console.log(values);
 
             return (
               <Form
@@ -109,6 +108,7 @@ export const Generate = () => {
 - city: города России`}
                   required
                 />
+                <SchemaMaker />
                 <InputField
                   label="Примеры данных"
                   name="examples"
@@ -134,7 +134,6 @@ export const Generate = () => {
                   options={selectOutputOptions}
                   onChange={setSelectOutputValue}
                 />
-                <SchemaMaker />
                 <Box
                   width="100%"
                   paddingX={"20px"}
