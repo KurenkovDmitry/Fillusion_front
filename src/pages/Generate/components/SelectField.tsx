@@ -1,7 +1,7 @@
 import { FormControl, Select, MenuItem } from '@mui/material';
 
 interface SelectFieldProps {
-    label: string;
+    label?: string;
     value: string;
     options: { value: string; label: string }[];
     onChange: (value: string) => void;

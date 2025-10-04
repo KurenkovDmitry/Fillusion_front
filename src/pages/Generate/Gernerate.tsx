@@ -1,14 +1,13 @@
 import { useState } from "react";
 import {
   Dialog,
-  DialogActions,
   Button,
   Box,
   DialogTitle,
   DialogContent,
 } from "@mui/material";
 import { Form, Formik } from "formik";
-import { object, string } from "yup";
+import { object, Schema, string } from "yup";
 import { TextInput as Input } from "../../ui";
 
 const initalValues = {
@@ -21,9 +20,11 @@ import { InputField } from "./components/InputField";
 import { SliderWithInput } from "./components/SliderWithinput";
 import TableIcon from "@assets/table.svg?react";
 import { SelectField } from "./components/SelectField";
+import { NonModalGenerate } from "./NonModalGenerate";
+import { SchemaMaker } from "./components/SchemaMaker";
 
 export const Generate = () => {
-  const [open, _] = useState(true);
+  const [open, setOpen] = useState(true);
 
   const selectModelOptions = [
     { value: "deepseek", label: "Deepseek" },
@@ -40,7 +41,9 @@ export const Generate = () => {
   const [selectOutputValue, setSelectOutputValue] = useState(selectOutputOptions[0].value);
 
   return (
-    <Dialog open={open} maxWidth="lg" fullWidth style={{ borderRadius: "12px !important" }}>
+    <>
+    <NonModalGenerate open={open} setOpen={setOpen}/>
+    <Dialog open={open} maxWidth="lg" fullWidth style={{ borderRadius: "12px !important" }} onClose={() => setOpen(false)}>
       <DialogTitle style={{fontSize: '20px'}}>Настройка генерации</DialogTitle>
       <DialogContent>
         <Formik
@@ -119,6 +122,7 @@ export const Generate = () => {
                   options={selectOutputOptions}
                   onChange={setSelectOutputValue}
                 />
+                <SchemaMaker />
                 <Box
                   width="100%"
                   paddingX={"20px"}
@@ -134,5 +138,6 @@ export const Generate = () => {
         </Formik>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
