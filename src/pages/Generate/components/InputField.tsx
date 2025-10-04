@@ -1,10 +1,12 @@
 import { useField } from "formik";
+import { useStyles } from "./InputField.styles";
 
 interface InputFieldProps {
   name: string;
   label: string;
   placeholder?: string;
   value?: string;
+  required?: boolean;
   inputIcon?: React.ReactNode;
   labelIcon?: React.ReactNode;
   multiline?: boolean;
@@ -18,6 +20,7 @@ export const InputField = (props: InputFieldProps) => {
   //     setText(event.target.value);
   //   };
 
+  const { classes } = useStyles();
   const [field, meta] = useField(props);
 
   return (
@@ -33,12 +36,18 @@ export const InputField = (props: InputFieldProps) => {
           >
             {props.labelIcon}
           </div>
-          <p style={{ fontSize: "15px", fontWeight: "bold", margin: "10px 0" }}>
+          <p
+            className={props.required ? classes.requiredLabel : undefined}
+            style={{ fontSize: "15px", fontWeight: "bold", margin: "10px 0" }}
+          >
             {props.label}
           </p>
         </div>
       ) : (
-        <h4 style={{ margin: "10px 0", fontSize: "15px", lineHeight: "18px" }}>
+        <h4
+          className={props.required ? classes.requiredLabel : undefined}
+          style={{ margin: "10px 0", fontSize: "15px", lineHeight: "18px" }}
+        >
           {props.label}
         </h4>
       )}
@@ -92,6 +101,11 @@ export const InputField = (props: InputFieldProps) => {
           />
         )}
       </div>
+      {meta.touched && meta.error && (
+        <div style={{ color: "red", fontSize: 12, marginTop: 4 }}>
+          {meta.error}
+        </div>
+      )}
     </div>
   );
 };
