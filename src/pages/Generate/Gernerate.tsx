@@ -5,7 +5,15 @@ export const Generate = () => {
   const [open, setOpen] = useState(true);
 
   return (
-    <Dialog open={open}>
+    <Dialog
+      open={open}
+      fullWidth
+      maxWidth="md"
+      //   fullScreen
+      //   sx={{
+      //     width: "1500px",
+      //   }}
+    >
       <DialogTitle>Subscribe</DialogTitle>
       <DialogContent>Negr isasdas ready!</DialogContent>
     </Dialog>
