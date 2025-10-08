@@ -9,13 +9,8 @@ import TableIcon from "@assets/table.svg?react";
 import { SelectField } from "./components/SelectField";
 import { NonModalGenerate } from "./NonModalGenerate";
 import { SchemaMaker } from "./components/SchemaMaker";
+import { CopyButton } from './components/CopyButton';
 import { generateData } from "./actions/Generate.actions";
-
-// interface FormValues {
-//   query: string;
-//   totalRecords: number;
-//   examples: string;
-// }
 
 const selectModelOptions = [
   { value: "deepseek", label: "Deepseek" },
@@ -28,7 +23,6 @@ const selectOutputOptions = [
   { value: "sql", label: "SQL" },
 ];
 
-// Начальные значения теперь под новые имена DTO
 const initialValues = {
   query: "",
   totalRecords: 50,
@@ -36,9 +30,10 @@ const initialValues = {
 };
 
 export const Generate = () => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [responseJson, setResponseJson] = useState<JSON | null>(null);
 
   const [selectModelValue, setSelectModelValue] = useState(
     selectModelOptions[0].value
@@ -47,7 +42,7 @@ export const Generate = () => {
     selectOutputOptions[0].value
   );
 
-  const [schema, setSchema] = useState<{ name: string; type: string }[]>([]);
+  const [schema, setSchema] = useState<{ id: string, name: string; type: string }[]>(() => [{id: '1', name: '', type: ''}]);
 
   const formatSchemaForDTO = (schema: { name: string; type: string }[]) =>
     schema.map((field) => ({
@@ -56,7 +51,7 @@ export const Generate = () => {
       autoIncrement: false,
     }));
 
-  const mapValuesToDTO = (values) => ({
+  const mapValuesToDTO = (values: any) => ({
     query: values.query.trim(),
     network: selectModelValue,
     totalRecords: String(values.totalRecords),
@@ -72,109 +67,138 @@ export const Generate = () => {
         maxWidth="lg"
         fullWidth
         onClose={() => setOpen(false)}
-        PaperProps={{ style: { borderRadius: 12 } }}
       >
-        <DialogTitle style={{ fontSize: 20 }}>Настройка генерации</DialogTitle>
-        <DialogContent>
-          <Formik
-            initialValues={initialValues}
-            validationSchema={object({
-              query: string().required("Обязательное поле"),
-              totalRecords: number()
-                .min(1)
-                .max(100)
-                .required("Обязательное поле"),
-            })}
-            validateOnMount
-            onSubmit={async (values) => {
-              setLoading(true);
-              setError("");
-              try {
-                const dto = mapValuesToDTO(values);
-                const response = await generateData(dto);
-                if (!response.ok) throw new Error("Ошибка при отправке формы");
-              } catch (err) {
-                setError((err as Error).message);
-              } finally {
-                setLoading(false);
-              }
-            }}
-          >
-            {({ values, setValues, isValid }) => (
-              <Form
-                style={{ display: "flex", flexDirection: "column", gap: 10 }}
+        <DialogTitle style={{ fontSize: 20 }}>{responseJson ? 'Результат генерации' : 'Настройка генерации'}</DialogTitle>
+        <DialogContent style={{scrollbarWidth: 'thin', scrollbarColor: '#c0c0c0ff white'}}>
+          {responseJson ? (
+            <>
+              <Box
+                sx={{
+                  fontFamily: "monospace",
+                  fontSize: "15px",
+                  maxHeight: "60vh",
+                  overflowY: "auto",
+                  scrollbarWidth: 'thin'
+                }}
               >
-                <InputField
-                  label="Правила генерации (query)"
-                  name="query"
-                  labelIcon={<TableIcon />}
-                  multiline
-                  placeholder={`Например:
-- name: русские имена и фамилии
-- email: корпоративные email адреса
-- age: от 18 до 65 лет
-- phone: российские номера телефонов
-- city: города России`}
-                  required
-                />
-                <SliderWithInput
-                  label="Количество строк (totalRecords)"
-                  value={values.totalRecords}
-                  min={1}
-                  max={100}
-                  onChange={(value) =>
-                    setValues({ ...values, totalRecords: value })
-                  }
-                />
-                <InputField
-                  label="Примеры данных (examples)"
-                  name="examples"
-                  labelIcon={<TableIcon />}
-                  multiline
-                  placeholder={`{
-  "name": "Иван Петров",
-  "email": "ivan.petrov@company.ru",
-  "age": 32,
-  "phone": "+7(999)123-45-67",
-  "city": "Москва"
-}`}
-                />
-                <SelectField
-                  label="Модель для генерации (network)"
-                  value={selectModelValue}
-                  options={selectModelOptions}
-                  onChange={setSelectModelValue}
-                />
-                <SelectField
-                  label="Тип выходных данных"
-                  value={selectOutputValue}
-                  options={selectOutputOptions}
-                  onChange={setSelectOutputValue}
-                />
-                <SchemaMaker schema={schema} setSchema={setSchema} />
-                <Box
-                  width="100%"
-                  paddingX={2}
-                  display="flex"
-                  justifyContent="space-between"
-                >
-                  <Button onClick={() => setOpen(false)}>Отмена</Button>
-                  <Button
-                    type="submit"
-                    disabled={!isValid || loading}
-                    variant="contained"
-                  >
-                    {loading ? "Загрузка..." : "Применить"}
+                {Array.isArray(responseJson) && responseJson.length > 0 ? (
+                  <pre>{JSON.stringify(responseJson, null, 2)}</pre>
+                ) : (
+                  <pre>{JSON.stringify(responseJson, null, 2)}</pre>
+                )}
+              </Box>
+              <Box display="flex" mt={1} gap={'20px'}>
+                <CopyButton textToCopy={JSON.stringify(responseJson, null, 2)} />
+                  <Button variant="contained" onClick={() => setResponseJson(null)} sx={{height: '40px'}}>
+                    Назад
                   </Button>
                 </Box>
-                {!!error && (
-                  <Box marginTop={2} color="error.main" fontWeight="bold">
-                    {error}
+              </>
+          ) : (
+            <Formik
+              initialValues={initialValues}
+              validationSchema={object({
+                query: string().required("Обязательное поле"),
+                totalRecords: number()
+                  .min(1)
+                  .max(100)
+                  .required("Обязательное поле"),
+              })}
+              validateOnMount
+              onSubmit={async (values) => {
+                setLoading(true);
+                setError("");
+                try {
+                  const dto = mapValuesToDTO(values);
+                  const response = await generateData(dto);
+                  if (!response.ok) throw new Error("Ошибка при отправке формы");
+                  const data = await response.json();
+                  setResponseJson(data);
+                } catch (err) {
+                  setError((err as Error).message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              {({ values, setValues, isValid }) => (
+                <Form
+                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
+                >
+                  <InputField
+                    label="Правила генерации (query)"
+                    name="query"
+                    labelIcon={<TableIcon />}
+                    multiline
+                    placeholder="Например: name: русские имена и фамилии"
+                    required
+                  />
+                  <SliderWithInput
+                    label="Количество строк (totalRecords)"
+                    value={values.totalRecords}
+                    min={1}
+                    max={100}
+                    onChange={(value) =>
+                      setValues({ ...values, totalRecords: value })
+                    }
+                  />
+                  <InputField
+                    label="Примеры данных (examples)"
+                    name="examples"
+                    labelIcon={<TableIcon />}
+                    multiline
+                    placeholder='Например: { "name": "Иван Петров" }'
+                  />
+                  <SelectField
+                    label="Модель для генерации (network)"
+                    value={selectModelValue}
+                    options={selectModelOptions}
+                    onChange={setSelectModelValue}
+                  />
+                  <SelectField
+                    label="Тип выходных данных"
+                    value={selectOutputValue}
+                    options={selectOutputOptions}
+                    onChange={setSelectOutputValue}
+                  />
+                  <SchemaMaker schema={schema} setSchema={setSchema} />
+                  <Box
+                    width="100%"
+                    display="flex"
+                    justifyContent="space-between"
+                  >
+                    <Button onClick={() => setOpen(false)} 
+                      sx={{
+                        border: '1px solid #4f8cff', 
+                        height: '40px',
+                        '&': {
+                          transition: 'background-color 0.3s ease, color 0.3s ease',
+                        },
+                        '&:hover': {
+                            backgroundColor: '#4f8cff',
+                            color: 'white'
+                          }
+                        }
+                      }
+                      >Отмена</Button>
+                    <Button
+                      type="submit"
+                      disabled={!isValid || loading}
+                      variant="contained"
+                      sx={{height: '40px'}}
+                    >
+                      {loading ? "Загрузка..." : "Применить"}
+                    </Button>
                   </Box>
-                )}
-              </Form>
-            )}
-          </Formik>
+                  {!!error && (
+                    <Box marginTop={2} color="error.main" fontWeight="bold">
+                      {error}
+                    </Box>
+                  )}
+                </Form>
+              )}
+            </Formik>
+          )}
         </DialogContent>
       </Dialog>
     </>

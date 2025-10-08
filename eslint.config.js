@@ -3,21 +3,41 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
-import { defineConfig, globalIgnores } from 'eslint/config'
+// defineConfig здесь не обязателен, но помогает с автодополнением
+// import { defineConfig } from 'eslint/config' (если вы его импортировали)
 
-export default defineConfig([
-  globalIgnores(['dist']),
+
+export default [ // defineConfig() можно убрать, если не используется
+  {
+    ignores: ['dist/'], // Более современный синтаксис для игнорирования
+  },
   {
     files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs['recommended-latest'],
-      reactRefresh.configs.vite,
-    ],
+    // extends теперь не используется, все плагины добавляются напрямую
+    plugins: {
+      '@typescript-eslint': tseslint.plugin,
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
     languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+      globals: {
+        ...globals.browser,
+      },
+    },
+    rules: {
+      // Подключаем рекомендованные правила
+      ...js.configs.recommended.rules,
+      ...tseslint.configs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
+
+      // И отключаем то, что нам не нужно
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-unused-vars': 'off'
     },
   },
-])
+]

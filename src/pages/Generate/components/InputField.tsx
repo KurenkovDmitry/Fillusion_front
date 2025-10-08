@@ -1,31 +1,27 @@
 import { useField } from "formik";
 import { useStyles } from "./InputField.styles";
+import React from "react";
 
-interface InputFieldProps {
+interface InputFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'name'> {
   name: string;
-  label: string;
+  label?: string;
   placeholder?: string;
   value?: string;
   required?: boolean;
   inputIcon?: React.ReactNode;
   labelIcon?: React.ReactNode;
   multiline?: boolean;
+  onChange?: (e?: any | undefined) => void;
 }
 
-export const InputField = (props: InputFieldProps) => {
-  //   const [text, setText] = useState("");
-  //   const handleChange = (
-  //     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  //   ) => {
-  //     setText(event.target.value);
-  //   };
 
+export const InputField = (props: InputFieldProps ) => {
   const { classes } = useStyles();
   const [field, meta] = useField(props);
 
   return (
     <div>
-      {props.labelIcon ? (
+      {props.labelIcon && props.label ? (
         <div style={{ display: "flex", alignItems: "center" }}>
           <div
             style={{
@@ -43,7 +39,7 @@ export const InputField = (props: InputFieldProps) => {
             {props.label}
           </p>
         </div>
-      ) : (
+      ) : props.label && (
         <h4
           className={props.required ? classes.requiredLabel : undefined}
           style={{ margin: "10px 0", fontSize: "15px", lineHeight: "18px" }}
@@ -79,6 +75,8 @@ export const InputField = (props: InputFieldProps) => {
               background: "#F3F3F5",
               color: "black",
               resize: "none",
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#c0c0c0ff #F3F3F5'
             }}
           />
         ) : (

@@ -1,16 +1,18 @@
 import { FormControl, Select, MenuItem } from '@mui/material';
+import React from 'react';
 
 interface SelectFieldProps {
     label?: string;
+    margin?: boolean;
     value: string;
     options: { value: string; label: string }[];
-    onChange: (value: string) => void;
+    onChange: (arg0: string) => void;
     labelIcon?: React.ReactNode;
 }
 
 export const SelectField = (props: SelectFieldProps) => {
     return (
-        <div style={{ margin: '10px 0' }}>
+        <div>
             {props.labelIcon ? (
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                     <div style={{ marginRight: '8px', alignItems: 'center', display: 'flex' }}>
@@ -20,7 +22,7 @@ export const SelectField = (props: SelectFieldProps) => {
                         {props.label}
                     </p>
                 </div>
-            ) : (
+            ) : props.label && (
                 <h4 style={{ margin: '10px 0', fontSize: '15px', lineHeight: '18px' }}>
                     {props.label}
                 </h4>
@@ -57,10 +59,21 @@ export const SelectField = (props: SelectFieldProps) => {
                             boxShadow: 'none',
                             background: '#F3F3F5',
                         },
+                        '&.MuiList-root.MuiList-padding.MuiMenu-list': {
+                            padding: '0',
+                        }
+                    }}
+                    MenuProps={{
+                        sx: {
+                            '& .MuiList-root': {
+                                paddingTop: 0,
+                                paddingBottom: 0,
+                            }
+                        }
                     }}
                 >
                     {props.options.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
+                        <MenuItem key={option.value} value={option.value} sx={{height: '32px', fontSize: '14px', paddingLeft: '14px'}}>
                             {option.label}
                         </MenuItem>
                     ))}
