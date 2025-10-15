@@ -34,7 +34,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
           return new Error("Failed to fetch");
         }
         const data = await response.json();
-        setResponseJson(data);
+        setResponseJson(JSON.stringify(data, null, 2));
       } catch (e) {
         setResponseJson("Произошла ошибка при получении запроса");
         return e;
