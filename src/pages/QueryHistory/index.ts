@@ -1,2 +1,1 @@
-export * from "./Generate";
 export * from "./QueryHistory";

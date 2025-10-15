@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Dialog, Button, Box, DialogTitle, DialogContent } from "@mui/material";
+import {
+  Dialog,
+  Button,
+  Box,
+  DialogTitle,
+  DialogContent,
+  Snackbar,
+} from "@mui/material";
 import { Form, Formik } from "formik";
 import { object, string, number } from "yup";
 
@@ -9,12 +16,13 @@ import TableIcon from "@assets/table.svg?react";
 import { SelectField } from "./components/SelectField";
 import { NonModalGenerate } from "./NonModalGenerate";
 import { SchemaMaker } from "./components/SchemaMaker";
-import { CopyButton } from './components/CopyButton';
+import { CopyButton } from "./components/CopyButton";
 import { generateData } from "./actions/Generate.actions";
 
 const selectModelOptions = [
   { value: "deepseek", label: "Deepseek" },
   { value: "gemini", label: "Gemini" },
+  { value: "faker", label: "Faker" },
 ];
 
 const selectOutputOptions = [
@@ -31,6 +39,7 @@ const initialValues = {
 
 export const Generate = () => {
   const [open, setOpen] = useState(false);
+  const [openSnackbar, setOpenSnackbar] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [responseJson, setResponseJson] = useState<JSON | null>(null);
@@ -42,22 +51,40 @@ export const Generate = () => {
     selectOutputOptions[0].value
   );
 
-  const [schema, setSchema] = useState<{ id: string, name: string; type: string }[]>(() => [{id: '1', name: '', type: ''}]);
+  const [schema, setSchema] = useState<
+    {
+      id: string;
+      name: string;
+      type: string;
+      unique: boolean;
+      autoIncrement: boolean;
+    }[]
+  >(() => [
+    { id: "1", name: "", type: "string", unique: false, autoIncrement: false },
+  ]);
 
   const formatSchemaForDTO = (schema: { name: string; type: string }[]) =>
     schema.map((field) => ({
       ...field,
-      unique: false,
-      autoIncrement: false,
     }));
 
   const mapValuesToDTO = (values: any) => ({
+    projectId: import.meta.env.VITE_PROJECT_ID,
     query: values.query.trim(),
     network: selectModelValue,
     totalRecords: String(values.totalRecords),
     schema: formatSchemaForDTO(schema),
     examples: values.examples.trim() || undefined,
   });
+
+  const handleError = (err: string) => {
+    setError(err);
+    setOpenSnackbar(true);
+  };
+
+  const handleClose = () => {
+    openSnackbar && setOpenSnackbar(false);
+  };
 
   return (
     <>
@@ -68,32 +95,19 @@ export const Generate = () => {
         fullWidth
         onClose={() => setOpen(false)}
       >
-        <DialogTitle style={{ fontSize: 20 }}>{responseJson ? 'Результат генерации' : 'Настройка генерации'}</DialogTitle>
-        <DialogContent style={{scrollbarWidth: 'thin', scrollbarColor: '#c0c0c0ff white'}}>
+        <DialogTitle style={{ fontSize: 20 }}>
+          {responseJson ? "Результат генерации" : "Настройка генерации"}
+        </DialogTitle>
+        <DialogContent
+          style={{ scrollbarWidth: "thin", scrollbarColor: "#c0c0c0ff white" }}
+        >
           {responseJson ? (
             <>
-              <Box
-                sx={{
-                  fontFamily: "monospace",
-                  fontSize: "15px",
-                  maxHeight: "60vh",
-                  overflowY: "auto",
-                  scrollbarWidth: 'thin'
-                }}
-              >
-                {Array.isArray(responseJson) && responseJson.length > 0 ? (
-                  <pre>{JSON.stringify(responseJson, null, 2)}</pre>
-                ) : (
-                  <pre>{JSON.stringify(responseJson, null, 2)}</pre>
-                )}
-              </Box>
-              <Box display="flex" mt={1} gap={'20px'}>
-                <CopyButton textToCopy={JSON.stringify(responseJson, null, 2)} />
-                  <Button variant="contained" onClick={() => setResponseJson(null)} sx={{height: '40px'}}>
-                    Назад
-                  </Button>
-                </Box>
-              </>
+              <h1>Запрос отправлен!</h1>
+              <h3>
+                Посмотреть результат можно будет на странице истории запросов
+              </h3>
+            </>
           ) : (
             <Formik
               initialValues={initialValues}
@@ -106,16 +120,24 @@ export const Generate = () => {
               })}
               validateOnMount
               onSubmit={async (values) => {
+                const emptyNameField = schema.find(
+                  (field) => !field.name.trim()
+                );
+                if (emptyNameField) {
+                  handleError("Все поля 'Название' должны быть заполнены");
+                  return;
+                }
                 setLoading(true);
                 setError("");
                 try {
                   const dto = mapValuesToDTO(values);
                   const response = await generateData(dto);
-                  if (!response.ok) throw new Error("Ошибка при отправке формы");
+                  if (!response.ok)
+                    throw new Error("Ошибка при отправке формы");
                   const data = await response.json();
                   setResponseJson(data);
                 } catch (err) {
-                  setError((err as Error).message);
+                  handleError((err as Error).message);
                 } finally {
                   setLoading(false);
                 }
@@ -167,33 +189,48 @@ export const Generate = () => {
                     display="flex"
                     justifyContent="space-between"
                   >
-                    <Button onClick={() => setOpen(false)} 
+                    <Button
+                      onClick={() => setOpen(false)}
                       sx={{
-                        border: '1px solid #4f8cff', 
-                        height: '40px',
-                        '&': {
-                          transition: 'background-color 0.3s ease, color 0.3s ease',
+                        border: "1px solid #4f8cff",
+                        height: "40px",
+                        "&": {
+                          transition:
+                            "background-color 0.3s ease, color 0.3s ease",
                         },
-                        '&:hover': {
-                            backgroundColor: '#4f8cff',
-                            color: 'white'
-                          }
-                        }
-                      }
-                      >Отмена</Button>
+                        "&:hover": {
+                          backgroundColor: "#4f8cff",
+                          color: "white",
+                        },
+                      }}
+                    >
+                      Отмена
+                    </Button>
                     <Button
                       type="submit"
                       disabled={!isValid || loading}
                       variant="contained"
-                      sx={{height: '40px'}}
+                      sx={{ height: "40px" }}
                     >
-                      {loading ? "Загрузка..." : "Применить"}
+                      {loading ? "Загрузка..." : "Начать генерацию"}
                     </Button>
                   </Box>
                   {!!error && (
-                    <Box marginTop={2} color="error.main" fontWeight="bold">
-                      {error}
-                    </Box>
+                    <Snackbar
+                      onClose={handleClose}
+                      open={openSnackbar}
+                      message={error}
+                      autoHideDuration={6000}
+                      anchorOrigin={{ vertical: "top", horizontal: "center" }}
+                      sx={{
+                        "& .MuiSnackbarContent-root": {
+                          backgroundColor: "#940d0dff",
+                          color: "white",
+                          fontSize: "16px",
+                          borderRadius: "12px",
+                        },
+                      }}
+                    />
                   )}
                 </Form>
               )}

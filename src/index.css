@@ -15,8 +15,7 @@
 
 :root {
   /* font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; */
-  line-height: 1.5;
-  font-weight: 400;
+  width: 100%;
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
@@ -42,6 +41,7 @@ body {
   display: flex;
   place-items: center;
   min-width: 320px;
+  max-width: 100%;
   min-height: 100vh;
 }
 
@@ -68,4 +68,8 @@ button {
 
 .zero-opacity {
   opacity: 0;
+}
+
+fieldset {
+  transition: border-color 0.2s ease;
 }

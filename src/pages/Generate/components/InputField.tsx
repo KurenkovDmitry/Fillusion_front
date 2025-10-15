@@ -2,7 +2,8 @@ import { useField } from "formik";
 import { useStyles } from "./InputField.styles";
 import React from "react";
 
-interface InputFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'name'> {
+interface InputFieldProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "name"> {
   name: string;
   label?: string;
   placeholder?: string;
@@ -12,12 +13,30 @@ interface InputFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElemen
   labelIcon?: React.ReactNode;
   multiline?: boolean;
   onChange?: (e?: any | undefined) => void;
+  useFormik?: boolean; // Добавь этот prop
 }
 
-
-export const InputField = (props: InputFieldProps ) => {
+export const InputField = (props: InputFieldProps) => {
   const { classes } = useStyles();
-  const [field, meta] = useField(props);
+
+  // Используй Formik только если useFormik !== false и onChange не передан
+  const shouldUseFormik = props.useFormik !== false && !props.onChange;
+
+  // Условно вызывай useField
+  let field, meta;
+  if (shouldUseFormik) {
+    //eslint-ignore-next-line
+    [field, meta] = useField(props);
+  }
+
+  // Для controlled mode без Formik
+  const controlledProps = !shouldUseFormik
+    ? {
+        value: props.value || "",
+        onChange: props.onChange,
+        name: props.name,
+      }
+    : field;
 
   return (
     <div>
@@ -39,13 +58,15 @@ export const InputField = (props: InputFieldProps ) => {
             {props.label}
           </p>
         </div>
-      ) : props.label && (
-        <h4
-          className={props.required ? classes.requiredLabel : undefined}
-          style={{ margin: "10px 0", fontSize: "15px", lineHeight: "18px" }}
-        >
-          {props.label}
-        </h4>
+      ) : (
+        props.label && (
+          <h4
+            className={props.required ? classes.requiredLabel : undefined}
+            style={{ margin: "10px 0", fontSize: "15px", lineHeight: "18px" }}
+          >
+            {props.label}
+          </h4>
+        )
       )}
       <div style={{ display: "flex", alignItems: "center" }}>
         {props.inputIcon && (
@@ -61,8 +82,8 @@ export const InputField = (props: InputFieldProps ) => {
         )}
         {props.multiline ? (
           <textarea
-            {...field}
-            placeholder={props.value || props.placeholder || props.label}
+            {...controlledProps}
+            placeholder={props.placeholder || props.label}
             style={{
               width: "100%",
               padding: "10px 15px",
@@ -75,15 +96,15 @@ export const InputField = (props: InputFieldProps ) => {
               background: "#F3F3F5",
               color: "black",
               resize: "none",
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#c0c0c0ff #F3F3F5'
+              scrollbarWidth: "thin",
+              scrollbarColor: "#c0c0c0ff #F3F3F5",
             }}
           />
         ) : (
           <input
             type="text"
-            {...field}
-            placeholder={props.value || props.placeholder || props.label}
+            {...controlledProps}
+            placeholder={props.placeholder || props.label}
             style={{
               width: "100%",
               padding: "10px 15px",
@@ -99,7 +120,7 @@ export const InputField = (props: InputFieldProps ) => {
           />
         )}
       </div>
-      {meta.touched && meta.error && (
+      {shouldUseFormik && meta?.touched && meta?.error && (
         <div style={{ color: "red", fontSize: 12, marginTop: 4 }}>
           {meta.error}
         </div>

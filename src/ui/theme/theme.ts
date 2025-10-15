@@ -14,7 +14,7 @@ export const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: "Roboto, Arial, sans-serif",
+    fontFamily: "onest, Roboto, Arial, sans-serif",
     h1: {
       fontSize: 34,
       lineHeight: headingLineHeight,

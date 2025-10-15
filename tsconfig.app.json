@@ -12,7 +12,7 @@
         // "@components/*": ["./src/components/*"],
         "@pages": ["./src/pages"],
         "@assets": ["./src/assets"],
-        // "@shared/*": ["./src/shared/*"],
+        "@shared/*": ["./src/shared/*"],
         // "@store/*": ["./src/store/*"],
         // "@api": ["./src/api"],
         // "@utils": ["./src/utils"],
