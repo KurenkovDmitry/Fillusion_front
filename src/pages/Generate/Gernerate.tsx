@@ -95,9 +95,11 @@ export const Generate = () => {
         fullWidth
         onClose={() => setOpen(false)}
       >
-        <DialogTitle style={{ fontSize: 20 }}>
-          {responseJson ? "Результат генерации" : "Настройка генерации"}
-        </DialogTitle>
+        {!responseJson && (
+          <DialogTitle style={{ fontSize: 20 }}>
+            {responseJson ? "Результат генерации" : "Настройка генерации"}
+          </DialogTitle>
+        )}
         <DialogContent
           style={{ scrollbarWidth: "thin", scrollbarColor: "#c0c0c0ff white" }}
         >

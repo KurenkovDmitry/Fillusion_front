@@ -16,6 +16,7 @@ interface SelectFieldProps {
   labelIcon?: React.ReactNode;
   multiple?: boolean;
   multipleValue?: string[];
+  className?: string;
 }
 
 export const SelectField = (props: SelectFieldProps) => {
@@ -48,6 +49,7 @@ export const SelectField = (props: SelectFieldProps) => {
       <FormControl
         fullWidth
         variant="outlined"
+        className={props.className}
         sx={{
           background: "#F3F3F5",
           borderRadius: "7px",
@@ -96,7 +98,7 @@ export const SelectField = (props: SelectFieldProps) => {
               background: "#F3F3F5",
             },
             "&&.Mui-focused fieldset": {
-              border: "1px solid black",
+              border: "1px solid #818181ff",
               transition: "border-color 0.2s ease",
             },
           }}

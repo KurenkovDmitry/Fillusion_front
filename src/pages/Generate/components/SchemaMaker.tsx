@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { SelectField } from "./SelectField";
 import { InputField } from "./InputField";
-import { IconButton, Button, Checkbox, FormControlLabel } from "@mui/material";
+import { IconButton, Button } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-
 import type { DropResult } from "@hello-pangea/dnd";
+import { AdditionalSettings } from "./AdditionalSettings";
 
 const typeOptions = [
   { value: "string", label: "String" },
@@ -93,7 +93,7 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "30px 1fr 1fr 90px 110px 40px",
+          gridTemplateColumns: "30px 1fr 1fr 90px 40px",
           alignItems: "center",
           gap: "12px",
           marginBottom: "8px",
@@ -109,10 +109,7 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
           </span>
         </div>
         <div>Тип поля</div>
-        <div style={{ display: "flex", justifySelf: "center" }}>Уникально</div>
-        <div style={{ display: "flex", justifySelf: "center" }}>
-          Автоинкремент
-        </div>
+        <div style={{ display: "flex", justifySelf: "center" }}>Настройки</div>
         <div />
       </div>
 
@@ -128,7 +125,7 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
                       {...provided.draggableProps}
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "30px 1fr 1fr 90px 110px 40px",
+                        gridTemplateColumns: "30px 1fr 1fr 90px 40px",
                         alignItems: "center",
                         gap: "12px",
                         marginBottom: "8px",
@@ -162,34 +159,11 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
                         }
                       />
 
-                      {/* Checkbox для Unique */}
+                      {/* Настройки */}
                       <div
                         style={{ display: "flex", justifyContent: "center" }}
                       >
-                        <Checkbox
-                          checked={field.unique}
-                          onChange={(e) =>
-                            handleFieldChange(idx, "unique", e.target.checked)
-                          }
-                          sx={{ padding: 0 }}
-                        />
-                      </div>
-
-                      {/* Checkbox для Auto Increment */}
-                      <div
-                        style={{ display: "flex", justifyContent: "center" }}
-                      >
-                        <Checkbox
-                          checked={field.autoIncrement}
-                          onChange={(e) =>
-                            handleFieldChange(
-                              idx,
-                              "autoIncrement",
-                              e.target.checked
-                            )
-                          }
-                          sx={{ padding: 0 }}
-                        />
+                        <AdditionalSettings />
                       </div>
 
                       <IconButton

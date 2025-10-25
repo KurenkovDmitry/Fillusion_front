@@ -13,7 +13,7 @@ interface InputFieldProps
   labelIcon?: React.ReactNode;
   multiline?: boolean;
   onChange?: (e?: any | undefined) => void;
-  useFormik?: boolean; // Добавь этот prop
+  useFormik?: boolean;
 }
 
 export const InputField = (props: InputFieldProps) => {
@@ -25,11 +25,10 @@ export const InputField = (props: InputFieldProps) => {
   // Условно вызывай useField
   let field, meta;
   if (shouldUseFormik) {
-    //eslint-ignore-next-line
+    //eslint-disable-next-line
     [field, meta] = useField(props);
   }
 
-  // Для controlled mode без Formik
   const controlledProps = !shouldUseFormik
     ? {
         value: props.value || "",
@@ -84,11 +83,11 @@ export const InputField = (props: InputFieldProps) => {
           <textarea
             {...controlledProps}
             placeholder={props.placeholder || props.label}
+            className={classes.input__border}
             style={{
               width: "100%",
               padding: "10px 15px",
               borderRadius: "7px",
-              border: "1px solid #ccc",
               fontSize: "14px",
               minHeight: "140px",
               boxSizing: "border-box",
@@ -102,14 +101,15 @@ export const InputField = (props: InputFieldProps) => {
           />
         ) : (
           <input
+            {...props}
             type="text"
             {...controlledProps}
+            className={classes.input__border}
             placeholder={props.placeholder || props.label}
             style={{
               width: "100%",
               padding: "10px 15px",
               borderRadius: "7px",
-              border: "1px solid #ccc",
               fontSize: "14px",
               height: "32px",
               boxSizing: "border-box",
