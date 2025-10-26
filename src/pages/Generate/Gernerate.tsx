@@ -7,22 +7,20 @@ import {
   DialogContent,
   Snackbar,
 } from "@mui/material";
-import { Form, Formik } from "formik";
+import { Field, Form, Formik } from "formik";
 import { object, string, number } from "yup";
-
 import { InputField } from "./components/InputField";
 import { SliderWithInput } from "./components/SliderWithinput";
 import TableIcon from "@assets/table.svg?react";
 import { SelectField } from "./components/SelectField";
 import { NonModalGenerate } from "./NonModalGenerate";
 import { SchemaMaker } from "./components/SchemaMaker";
-import { CopyButton } from "./components/CopyButton";
 import { generateData } from "./actions/Generate.actions";
+import useSchemaStore, { type SchemaField } from "../../store/schemaStore";
 
 const selectModelOptions = [
   { value: "deepseek", label: "Deepseek" },
   { value: "gemini", label: "Gemini" },
-  { value: "faker", label: "Faker" },
 ];
 
 const selectOutputOptions = [
@@ -51,22 +49,14 @@ export const Generate = () => {
     selectOutputOptions[0].value
   );
 
-  const [schema, setSchema] = useState<
-    {
-      id: string;
-      name: string;
-      type: string;
-      unique: boolean;
-      autoIncrement: boolean;
-    }[]
-  >(() => [
-    { id: "1", name: "", type: "string", unique: false, autoIncrement: false },
-  ]);
+  const schema = useSchemaStore((s) => s.schema);
 
-  const formatSchemaForDTO = (schema: { name: string; type: string }[]) =>
-    schema.map((field) => ({
-      ...field,
-    }));
+  // Убираем id из запроса
+  const formatSchemaForDTO = (
+    schema: SchemaField[]
+  ): Omit<SchemaField, "id">[] => {
+    return schema.map(({ id, ...rest }) => rest);
+  };
 
   const mapValuesToDTO = (values: any) => ({
     projectId: import.meta.env.VITE_PROJECT_ID,
@@ -149,8 +139,9 @@ export const Generate = () => {
                 <Form
                   style={{ display: "flex", flexDirection: "column", gap: 10 }}
                 >
+                  <InputField label="Название таблицы" name="name" />
                   <InputField
-                    label="Правила генерации (query)"
+                    label="Правила генерации"
                     name="query"
                     labelIcon={<TableIcon />}
                     multiline
@@ -158,7 +149,7 @@ export const Generate = () => {
                     required
                   />
                   <SliderWithInput
-                    label="Количество строк (totalRecords)"
+                    label="Количество строк"
                     value={values.totalRecords}
                     min={1}
                     max={100}
@@ -167,14 +158,14 @@ export const Generate = () => {
                     }
                   />
                   <InputField
-                    label="Примеры данных (examples)"
+                    label="Примеры данных"
                     name="examples"
                     labelIcon={<TableIcon />}
                     multiline
                     placeholder='Например: { "name": "Иван Петров" }'
                   />
                   <SelectField
-                    label="Модель для генерации (network)"
+                    label="Модель для генерации"
                     value={selectModelValue}
                     options={selectModelOptions}
                     onChange={setSelectModelValue}
@@ -185,7 +176,7 @@ export const Generate = () => {
                     options={selectOutputOptions}
                     onChange={setSelectOutputValue}
                   />
-                  <SchemaMaker schema={schema} setSchema={setSchema} />
+                  <SchemaMaker />
                   <Box
                     width="100%"
                     display="flex"

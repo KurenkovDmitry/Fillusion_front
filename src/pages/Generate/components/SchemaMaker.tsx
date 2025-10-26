@@ -8,6 +8,8 @@ import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
 import { AdditionalSettings } from "./AdditionalSettings";
+import useSchemaStore from "../../../store/schemaStore";
+import { getLabelByValue } from "./constants/constants";
 
 const typeOptions = [
   { value: "string", label: "String" },
@@ -20,19 +22,20 @@ interface Field {
   id: string;
   name: string;
   type: string;
-  unique: boolean;
-  autoIncrement: boolean;
+  unique?: boolean;
+  autoIncrement?: boolean;
+  viaFaker?: boolean;
+  fakerType?: string;
+  locale?: "RU_RU" | "EN_US";
 }
 
-interface SchemaMakerProps {
-  schema: Field[];
-  setSchema: (schema: Field[]) => void;
-}
+export const SchemaMaker: React.FC = () => {
+  const schema = useSchemaStore((s) => s.schema);
+  const addField = useSchemaStore((s) => s.addField);
+  const updateField = useSchemaStore((s) => s.updateField);
+  const removeField = useSchemaStore((s) => s.removeField);
+  const reorderFields = useSchemaStore((s) => s.reorderFields);
 
-export const SchemaMaker: React.FC<SchemaMakerProps> = ({
-  schema,
-  setSchema,
-}) => {
   const [error, setError] = useState<string>("");
   const [errClass, setErrClass] = useState<string>("zero-opacity");
 
@@ -42,9 +45,9 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
     key: keyof Omit<Field, "id">,
     value: string | boolean
   ) => {
-    const updated = [...schema];
-    (updated[idx] as any)[key] = value;
-    setSchema(updated);
+    const id = schema[idx]?.id;
+    if (!id) return;
+    updateField(id, { [key]: value } as Partial<Field>);
   };
 
   const handleSchemaErrorDisplay = (errorMessage: string) => {
@@ -57,35 +60,18 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
   };
 
   const handleAddField = () => {
-    setSchema([
-      ...schema,
-      {
-        id: `field-${Date.now()}`,
-        name: "",
-        type: "string",
-        unique: false,
-        autoIncrement: false,
-      },
-    ]);
+    addField();
   };
 
   const handleRemoveField = (idx: number) => {
-    if (schema.length === 1) {
-      handleSchemaErrorDisplay("(Не может быть меньше одного поля)");
-      return;
-    }
-    const updated = schema.filter((_, i) => i !== idx);
-    setSchema(updated);
+    const id = schema[idx]?.id;
+    if (!id) return;
+    removeField(id, handleSchemaErrorDisplay);
   };
 
   const handleOnDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-
-    const items = Array.from(schema);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    setSchema(items);
+    reorderFields(result.source.index, result.destination.index);
   };
 
   return (
@@ -142,7 +128,7 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
                       </div>
 
                       <InputField
-                        name={`field_${idx}_name`}
+                        name={`${idx}`}
                         value={field.name}
                         placeholder="Введите название поля"
                         onChange={(e) =>
@@ -154,16 +140,25 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
                       <SelectField
                         value={field.type}
                         options={typeOptions}
-                        onChange={(val) =>
+                        onChange={(val: any) =>
                           handleFieldChange(idx, "type", val as string)
                         }
+                        displayLabel={
+                          field.viaFaker
+                            ? getLabelByValue(field.fakerType!) +
+                              " (" +
+                              field.locale +
+                              ")"
+                            : undefined
+                        }
+                        disabled={field.viaFaker}
                       />
 
                       {/* Настройки */}
                       <div
                         style={{ display: "flex", justifyContent: "center" }}
                       >
-                        <AdditionalSettings />
+                        <AdditionalSettings fieldId={field.id} />
                       </div>
 
                       <IconButton
