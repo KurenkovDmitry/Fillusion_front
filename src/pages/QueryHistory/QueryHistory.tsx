@@ -51,7 +51,6 @@ export const QueryHistory = () => {
   return (
     <LayoutWithHeader noJustify>
       <DatasetDialog open={open} setOpen={setOpen} requestId={requsetId} />
-      <div style={{ height: "80px", opacity: 0 }}> a</div>
       <div
         style={{
           display: "flex",

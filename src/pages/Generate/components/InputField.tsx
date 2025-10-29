@@ -13,7 +13,10 @@ interface InputFieldProps
   labelIcon?: React.ReactNode;
   multiline?: boolean;
   onChange?: (e?: any | undefined) => void;
+  onBlur?: (e?: any | undefined) => void; // Добавлено
   useFormik?: boolean;
+  error?: boolean; // Добавлено
+  helperText?: string; // Добавлено
 }
 
 export const InputField = (props: InputFieldProps) => {
@@ -33,9 +36,29 @@ export const InputField = (props: InputFieldProps) => {
     ? {
         value: props.value || "",
         onChange: props.onChange,
+        onBlur: props.onBlur, // Добавлено
         name: props.name,
       }
     : field;
+
+  // Определяем, есть ли ошибка
+  const hasError = shouldUseFormik ? meta?.touched && meta?.error : props.error;
+
+  // Определяем текст ошибки
+  const errorText = shouldUseFormik ? meta?.error : props.helperText;
+
+  // Стили для input с ошибкой
+  const inputStyle = {
+    width: "100%",
+    padding: "10px 15px",
+    borderRadius: "7px",
+    fontSize: "14px",
+    boxSizing: "border-box" as const,
+    outline: "none",
+    background: "#F3F3F5",
+    color: "black",
+    border: hasError ? "1px solid #d32f2f" : undefined, // Красная граница при ошибке
+  };
 
   return (
     <div>
@@ -85,15 +108,8 @@ export const InputField = (props: InputFieldProps) => {
             placeholder={props.placeholder || props.label}
             className={classes.input__border}
             style={{
-              width: "100%",
-              padding: "10px 15px",
-              borderRadius: "7px",
-              fontSize: "14px",
+              ...inputStyle,
               minHeight: "140px",
-              boxSizing: "border-box",
-              outline: "none",
-              background: "#F3F3F5",
-              color: "black",
               resize: "none",
               scrollbarWidth: "thin",
               scrollbarColor: "#c0c0c0ff #F3F3F5",
@@ -107,22 +123,16 @@ export const InputField = (props: InputFieldProps) => {
             className={classes.input__border}
             placeholder={props.placeholder || props.label}
             style={{
-              width: "100%",
-              padding: "10px 15px",
-              borderRadius: "7px",
-              fontSize: "14px",
+              ...inputStyle,
               height: "32px",
-              boxSizing: "border-box",
-              outline: "none",
-              background: "#F3F3F5",
-              color: "black",
             }}
           />
         )}
       </div>
-      {shouldUseFormik && meta?.touched && meta?.error && (
-        <div style={{ color: "red", fontSize: 12, marginTop: 4 }}>
-          {meta.error}
+      {/* Показываем ошибку как от Formik, так и от пропсов */}
+      {hasError && errorText && (
+        <div style={{ color: "#d32f2f", fontSize: 12, marginTop: 4 }}>
+          {errorText}
         </div>
       )}
     </div>

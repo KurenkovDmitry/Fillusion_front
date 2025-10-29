@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Generate } from "../pages";
 import { QueryHistory } from "../pages";
 import { DatabaseDiagram } from "../pages";
+import { Projects } from "../pages";
 
 export const App = () => {
   return (
@@ -10,9 +11,10 @@ export const App = () => {
         <Route path="/" element={<Generate />} />
         <Route path="/history" element={<QueryHistory />} />
         <Route
-          path="/editor"
+          path="/projects/:id"
           element={<DatabaseDiagram tables={tables} relations={relations} />}
         />
+        <Route path="/projects" element={<Projects />} />
       </Routes>
     </Router>
   );
@@ -22,8 +24,8 @@ const tables = [
   {
     id: "users",
     name: "Users",
-    x: 50,
-    y: 50,
+    x: -104,
+    y: 187,
     fields: [
       { name: "id", type: "INT", isPrimaryKey: true },
       { name: "username", type: "VARCHAR" },
@@ -34,8 +36,8 @@ const tables = [
   {
     id: "posts",
     name: "Posts",
-    x: 400,
-    y: 50,
+    x: 360,
+    y: -143,
     fields: [
       { name: "id", type: "INT", isPrimaryKey: true },
       { name: "user_id", type: "INT", isForeignKey: true },
@@ -46,8 +48,8 @@ const tables = [
   {
     id: "comments",
     name: "Comments",
-    x: 750,
-    y: 50,
+    x: 1002,
+    y: -75,
     fields: [
       { name: "id", type: "INT", isPrimaryKey: true },
       { name: "post_id", type: "INT", isForeignKey: true },
@@ -58,8 +60,8 @@ const tables = [
   {
     id: "tags",
     name: "Tags",
-    x: 400,
-    y: 250,
+    x: 122,
+    y: 487,
     fields: [
       { name: "id", type: "INT", isPrimaryKey: true },
       { name: "name", type: "VARCHAR" },
@@ -70,8 +72,8 @@ const tables = [
   {
     id: "post_tags",
     name: "Post_Tags",
-    x: 400,
-    y: 400,
+    x: 822,
+    y: 456,
     fields: [
       { name: "post_id", type: "INT", isForeignKey: true },
       { name: "tag_id", type: "INT", isForeignKey: true },

@@ -4,39 +4,36 @@ import { useNavigate } from "react-router-dom";
 export const LayoutWithHeader = ({
   children,
   noJustify,
+  transparent,
 }: {
   children: ReactNode;
   noJustify?: boolean;
+  transparent?: boolean;
 }) => {
   const navigate = useNavigate();
 
   return (
-    <div style={{ position: "relative", overflow: "hidden" }}>
-      <div
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      <header
         style={{
-          width: "100dvw",
-          minHeight: "100dvh",
+          width: "100%",
+          backgroundColor: /*transparent ? "#18191b44" :*/ "#18191b",
+          boxShadow: "0 7px 10px rgba(0,0,0,0.1)",
           display: "flex",
-          flexDirection: "column",
-          justifyContent: noJustify ? "" : "center",
-          alignItems: "center",
-          background: "#F3F3F5",
+          justifyContent: "center",
+          position: transparent ? "absolute" : "unset",
+          zIndex: transparent ? "1" : "auto",
+          backdropFilter: transparent ? "blur(2px)" : "none",
         }}
       >
-        <header
-          style={{
-            position: "absolute",
-            top: "0px",
-            width: "100dvw",
-            backgroundColor: "#becaffff",
-          }}
-        >
+        <div style={{ width: "70%" }}>
           <h2
             style={{
-              margin: "16px",
               color: "white",
               background:
-                "linear-gradient(90deg, #4f8cff 0%, #7f53ff 50%, #ff6a88 100%)",
+                /*transparent
+                ? "linear-gradient(90deg, #000b69ff 0%, #000a44ff 50%, #000000ff 100%)"
+                : */ "linear-gradient(90deg, #2d3383ff 0%, #7f53ff 50%, #d6002bff 100%)",
               width: "fit-content",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
@@ -45,12 +42,25 @@ export const LayoutWithHeader = ({
               fontSize: "2rem",
               letterSpacing: "2px",
               cursor: "pointer",
+              margin: "15px 0",
             }}
             onClick={() => navigate("/")}
           >
             Fillusion
           </h2>
-        </header>
+        </div>
+      </header>
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          minHeight: "calc(100dvh - 80px)",
+          flexDirection: "column",
+          justifyContent: noJustify ? "" : "center",
+          alignItems: "center",
+          background: "#F3F3F5",
+        }}
+      >
         {children}
       </div>
     </div>

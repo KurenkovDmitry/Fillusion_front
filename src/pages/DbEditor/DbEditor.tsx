@@ -13,11 +13,14 @@ import {
   Connection,
   addEdge,
   BackgroundVariant,
+  ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { SelectField } from "../Generate/components/SelectField";
+import { LayoutWithHeader } from "@shared/components/LayoutWithHeader";
+import { Button } from "@mui/material";
+import { AdditionalSettings } from "../Generate/components/AdditionalSettings";
 
-// Интерфейсы (ваш текущий формат идеален!)
 interface Field {
   name: string;
   type: string;
@@ -54,7 +57,6 @@ interface DatabaseDiagramProps {
   tables: Table[];
   relations?: Relation[];
   onTableUpdate?: (tableId: string, updates: Partial<Table>) => void;
-  onDiagramSave?: (tables: Table[], relations: Relation[]) => void; // Новый колбэк
 }
 
 const typeOptions = [
@@ -105,6 +107,8 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
           background: "#000",
           padding: "12px 15px",
           color: "white",
+          display: "flex",
+          justifyContent: "space-between",
         }}
       >
         {isEditingName ? (
@@ -144,6 +148,7 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
             {tableName}
           </div>
         )}
+        <>Generate</>
       </div>
 
       <div>
@@ -155,7 +160,7 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
               borderBottom:
                 index < fields.length - 1 ? "1px solid #E0E0E0" : "none",
               display: "grid",
-              gridTemplateColumns: "1fr 135px",
+              gridTemplateColumns: "1fr 135px 30px",
               alignItems: "center",
               gap: "8px",
               position: "relative",
@@ -175,7 +180,6 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
                 border: "2px solid white",
               }}
             />
-
             <Handle
               type="source"
               position={Position.Right}
@@ -190,11 +194,11 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
                 border: "2px solid white",
               }}
             />
-
             <input
-              value={`${
-                field.isPrimaryKey ? "🔑 " : field.isForeignKey ? "🔗 " : ""
-              }${field.name}`}
+              // value={`${
+              //   field.isPrimaryKey ? "🔑 " : field.isForeignKey ? "🔗 " : ""
+              // }${field.name}`}
+              value={field.name}
               onChange={(e) => {
                 const cleaned = e.target.value.replace(/^(🔑 |🔗 )/, "");
                 handleFieldChange(index, "name", cleaned);
@@ -210,7 +214,6 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
               }}
               className="nodrag"
             />
-
             <div className="nodrag">
               <SelectField
                 options={typeOptions}
@@ -219,6 +222,9 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
                   handleFieldChange(index, "type", val as string)
                 }
               />
+            </div>
+            <div className="nodrag">
+              <AdditionalSettings fieldId="1" />
             </div>
           </div>
         ))}
@@ -249,7 +255,7 @@ const convertTablesToNodes = (
 };
 
 const convertRelationsToEdges = (relations: Relation[]): Edge[] => {
-  return relations.map((relation, index) => {
+  return relations.map((relation) => {
     let label = "";
 
     switch (relation.type) {
@@ -270,7 +276,7 @@ const convertRelationsToEdges = (relations: Relation[]): Edge[] => {
       target: relation.toTable,
       sourceHandle: `${relation.fromField}-right`,
       targetHandle: `${relation.toField}-left`,
-      type: "deafult",
+      type: "default",
       animated: false,
       style: {
         stroke: "#666",
@@ -294,20 +300,20 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
   tables,
   relations = [],
   onTableUpdate,
-  onDiagramSave,
 }) => {
-  // Локальное состояние для актуальных данных
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
+
   const [currentTables, setCurrentTables] = useState<Table[]>(tables);
   const [currentRelations, setCurrentRelations] =
     useState<Relation[]>(relations);
 
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
     convertTablesToNodes(currentTables, (tableId, updates) => {
-      // Обновляем локальное состояние
       setCurrentTables((prev) =>
         prev.map((t) => (t.id === tableId ? { ...t, ...updates } : t))
       );
-      // Вызываем внешний колбэк
       if (onTableUpdate) {
         onTableUpdate(tableId, updates);
       }
@@ -318,7 +324,6 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
     convertRelationsToEdges(currentRelations)
   );
 
-  // Синхронизация с внешним state при изменении пропсов
   useEffect(() => {
     setCurrentTables(tables);
     setNodes(convertTablesToNodes(tables, onTableUpdate));
@@ -347,7 +352,6 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
     (changes: any) => {
       onNodesChange(changes);
 
-      // Обновляем позиции в локальном state
       changes.forEach((change: any) => {
         if (change.type === "position" && change.position) {
           setCurrentTables((prev) =>
@@ -358,7 +362,6 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
             )
           );
 
-          // Вызываем внешний колбэк
           if (onTableUpdate) {
             onTableUpdate(change.id, {
               x: change.position.x,
@@ -371,22 +374,78 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
     [onNodesChange, onTableUpdate]
   );
 
-  // Функция для сохранения всей диаграммы
-  const handleSave = useCallback(() => {
-    if (onDiagramSave) {
-      onDiagramSave(currentTables, currentRelations);
+  // Функция сохранения с выводом в консоль
+  // const handleSave = useCallback(() => {
+  //   if (rfInstance) {
+  //     // Способ 1: React Flow toObject() - полное состояние с viewport
+  //     const flowState = rfInstance.toObject();
+  //     console.log("React Flow полное состояние:", flowState);
+  //     console.log("JSON:", JSON.stringify(flowState, null, 2));
+  //   }
+
+  //   // Способ 2: Ваш кастомный формат (рекомендуется для БД)
+  //   const customState = {
+  //     tables: currentTables,
+  //     relations: currentRelations,
+  //   };
+  //   console.log("Кастомное состояние для API:", customState);
+  //   console.log("JSON для API:", JSON.stringify(customState, null, 2));
+
+  //   // Пример вызова API:
+  //   // fetch('/api/save-diagram', {
+  //   //   method: 'POST',
+  //   //   headers: { 'Content-Type': 'application/json' },
+  //   //   body: JSON.stringify(customState)
+  //   // });
+  // }, [rfInstance, currentTables, currentRelations]);
+
+  const handleSave = async () => {
+    const res = await fetch("http://localhost:8080/api/users/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json", // Добавьте этот заголовок!
+      },
+      body: JSON.stringify({
+        email: "itwasnear78@gmail.com",
+        password: "SecurePassword123",
+      }),
+      credentials: "include",
+    });
+    if (!res.ok) {
+      console.log("error");
     }
-  }, [currentTables, currentRelations, onDiagramSave]);
+    console.log(await res.json());
+  };
+
+  // Добавить новую таблицу
+  const handleAddTable = () => {
+    const newTable: Table = {
+      id: `table-${Date.now()}`,
+      name: `Table_${currentTables.length + 1}`,
+      fields: [],
+      x: 200,
+      y: 200,
+    };
+    const newTables = [...currentTables, newTable];
+    setCurrentTables(newTables);
+    setNodes(convertTablesToNodes(newTables, onTableUpdate));
+    setSelectedTableId(newTable.id);
+  };
 
   return (
-    <div style={{ width: "100vw", height: "100vh", position: "relative" }}>
-      {/* Кнопка сохранения */}
-      {onDiagramSave && (
+    <LayoutWithHeader noJustify transparent>
+      <div
+        style={{
+          width: "100vw",
+          height: "calc(100vh)",
+          position: "relative",
+        }}
+      >
         <button
           onClick={handleSave}
           style={{
             position: "absolute",
-            top: 20,
+            top: 100,
             right: 20,
             zIndex: 10,
             padding: "10px 20px",
@@ -401,29 +460,112 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
         >
           Сохранить диаграмму
         </button>
-      )}
 
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={handleNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        fitView
-        defaultEdgeOptions={{
-          type: "smoothstep",
-          animated: false,
-        }}
-      >
-        <Background
-          color="#cfd3d7"
-          gap={16}
-          size={3}
-          variant={BackgroundVariant.Dots}
-        />
-        <Controls />
-      </ReactFlow>
-    </div>
+        {/* SIDEBAR */}
+        <aside
+          style={{
+            position: "absolute",
+            top: 78,
+            left: 0,
+            width: `350px`,
+            bottom: 0,
+            zIndex: 20,
+            background: "#18191b",
+            color: "#fff",
+            padding: "12px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+            overflow: "hidden",
+            borderTop: "1px solid #3b3b3bff",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: 16 }}>Таблицы</h3>
+            <Button
+              onClick={handleAddTable}
+              aria-label="Добавить таблицу"
+              style={{
+                background: "#4f8cff",
+                border: "none",
+                color: "white",
+                borderRadius: 6,
+                height: "32px",
+                cursor: "pointer",
+                fontWeight: 700,
+              }}
+            >
+              +
+            </Button>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+              overflowY: "auto",
+              scrollbarWidth: "thin",
+              scrollbarColor: "#333 #18191b",
+            }}
+          >
+            {currentTables.length === 0 && (
+              <div style={{ color: "#bbb", fontSize: 13 }}>Таблиц пока нет</div>
+            )}
+            {currentTables.map((t) => (
+              <div
+                key={t.id}
+                style={{
+                  padding: "10px",
+                  borderRadius: 8,
+                  border: "1px solid #333",
+                  cursor: "pointer",
+                  marginBottom: 8,
+                  height: "70px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{}}>{t.name}</div>
+                <div style={{ fontSize: 12, color: "#aaa" }}>
+                  {t.fields.length} полей — x: {Math.round(t.x)}, y:{" "}
+                  {Math.round(t.y)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <ReactFlow
+          nodes={nodes}
+          // edges={edges}
+          onNodesChange={handleNodesChange}
+          // onEdgesChange={onEdgesChange}
+          // onConnect={onConnect}
+          onInit={setRfInstance} // Получаем инстанс через onInit
+          nodeTypes={nodeTypes}
+          fitView
+          defaultEdgeOptions={{
+            type: "smoothstep",
+            animated: false,
+          }}
+        >
+          <Background
+            color="#cfd3d7"
+            gap={16}
+            size={3}
+            variant={BackgroundVariant.Dots}
+          />
+        </ReactFlow>
+      </div>
+    </LayoutWithHeader>
   );
 };

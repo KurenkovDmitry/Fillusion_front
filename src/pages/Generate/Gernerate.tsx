@@ -139,7 +139,7 @@ export const Generate = () => {
                 <Form
                   style={{ display: "flex", flexDirection: "column", gap: 10 }}
                 >
-                  <InputField label="Название таблицы" name="name" />
+                  <InputField label="Название таблицы" name="name" required />
                   <InputField
                     label="Правила генерации"
                     name="query"
