@@ -10,7 +10,7 @@ const root = ReactDOM.createRoot(document.getElementById("root")!);
 root.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
-      <CssBaseline /> {/* Сброс дефолтных стилей браузера */}
+      <CssBaseline />
       <App />
     </ThemeProvider>
   </React.StrictMode>
