@@ -14,7 +14,7 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   user: User;
-  accessToken?: string; // Если используете access token в ответе
+  accessToken: string; // Если используете access token в ответе
 }
 
 export interface RegisterRequest {
@@ -24,11 +24,11 @@ export interface RegisterRequest {
 }
 
 export interface RegisterResponse {
-  user: User;
+  accessToken: string;
 }
 
 export interface AuthResponse {
-  user: User;
+  accessToken: string;
 }
 
 export interface UpdateProfileRequest {

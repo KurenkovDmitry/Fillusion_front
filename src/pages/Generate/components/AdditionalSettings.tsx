@@ -19,6 +19,8 @@ interface AdditionalSettingsProps {
 export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   const updateField = useSchemaStore((s) => s.updateField);
   const removeFieldProperties = useSchemaStore((s) => s.removeFieldProperties);
+  const currentTableId = useSchemaStore((s) => s.currentTableId); // Получаем ID текущей таблицы
+
   const { classes } = useStyles();
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [approach, setApproach] = useState("ai");
@@ -43,29 +45,35 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   };
 
   const handleAutoIncrementChange = () => {
-    updateField(props.fieldId, { autoIncrement: !checkedAutoincrement });
+    if (!currentTableId) return; // Защита от null
+    updateField(currentTableId, props.fieldId, {
+      autoIncrement: !checkedAutoincrement,
+    });
     setCheckedAutoincrement((pr) => !pr);
   };
 
   const handleUniqueChange = () => {
-    updateField(props.fieldId, { unique: !checkedUnique });
+    if (!currentTableId) return; // Защита от null
+    updateField(currentTableId, props.fieldId, { unique: !checkedUnique });
     setCheckedUnique((pr) => !pr);
   };
 
   const open = Boolean(anchorEl);
 
   const handleApproachChange = (event: any, newApproach: string) => {
-    if (newApproach === null) {
+    if (newApproach === null || !currentTableId) {
       return;
     }
     removeFieldProperties(
+      currentTableId, // Добавлен tableId
       props.fieldId,
-      // Инвертированая логика изза того, что approach еще не поменялся
+      // Инвертированная логика из-за того, что approach еще не поменялся
       approach === "ai"
         ? ["unique", "autoIncrement"]
         : ["viaFaker", "fakerType", "locale"]
     );
     updateField(
+      currentTableId, // Добавлен tableId
       props.fieldId,
       approach === "ai"
         ? { viaFaker: true, fakerType: fakerType, locale: locale }
@@ -75,16 +83,23 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   };
 
   const handleFakerTypeChange = (type: string) => {
+    if (!currentTableId) return; // Защита от null
+
     const update = {
       viaFaker: true,
       fakerType: type,
       locale: locale,
       type: "string",
     };
-    updateField(props.fieldId, update);
+    updateField(currentTableId, props.fieldId, update);
     setFakerType(type);
     handleClose();
   };
+
+  // Если нет текущей таблицы, не рендерим компонент
+  if (!currentTableId) {
+    return null;
+  }
 
   return (
     <>
@@ -197,6 +212,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                         >
                           {types.map((type) => (
                             <div
+                              key={type.value}
                               className={classes.dataTypeBox}
                               onClick={() => handleFakerTypeChange(type.value)}
                             >

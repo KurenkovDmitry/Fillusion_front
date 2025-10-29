@@ -1,0 +1,27 @@
+import { apiServiceClient } from "../client";
+import {
+  CreateProjectRequest,
+  Project,
+  UpdateProjectRequest,
+} from "./ProjectService.types";
+
+export const ProjectService = {
+  async getProjects(): Promise<any> {
+    return apiServiceClient.get<any>("/projects");
+  },
+
+  async createProject(data: CreateProjectRequest): Promise<Project> {
+    return apiServiceClient.post<Project>("/projects", data);
+  },
+
+  async updateProject(
+    projectId: string,
+    data: UpdateProjectRequest
+  ): Promise<Project> {
+    return apiServiceClient.patch<Project>(`/projects/${projectId}`, data);
+  },
+
+  async deleteProject(projectId: string): Promise<void> {
+    return apiServiceClient.delete(`/projects/${projectId}`);
+  },
+};

@@ -55,6 +55,7 @@ export const ProjectCard = (props: ProjectCardProps) => {
         onClose={() => setOpen(false)}
         title={props.title}
         description={props.description}
+        projectId={props.id}
       />
     </article>
   );

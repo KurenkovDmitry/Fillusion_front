@@ -30,7 +30,10 @@ interface Field {
 }
 
 export const SchemaMaker: React.FC = () => {
-  const schema = useSchemaStore((s) => s.schema);
+  // Получаем текущую таблицу и её ID
+  const currentTable = useSchemaStore((s) => s.getCurrentTable());
+  const currentTableId = useSchemaStore((s) => s.currentTableId);
+
   const addField = useSchemaStore((s) => s.addField);
   const updateField = useSchemaStore((s) => s.updateField);
   const removeField = useSchemaStore((s) => s.removeField);
@@ -39,15 +42,20 @@ export const SchemaMaker: React.FC = () => {
   const [error, setError] = useState<string>("");
   const [errClass, setErrClass] = useState<string>("zero-opacity");
 
+  // Получаем поля текущей таблицы
+  const schema = currentTable?.fields || [];
+
   // Обновленная функция для обработки всех типов значений
   const handleFieldChange = (
     idx: number,
     key: keyof Omit<Field, "id">,
     value: string | boolean
   ) => {
+    if (!currentTableId) return; // Защита от null
+
     const id = schema[idx]?.id;
     if (!id) return;
-    updateField(id, { [key]: value } as Partial<Field>);
+    updateField(currentTableId, id, { [key]: value } as Partial<Field>);
   };
 
   const handleSchemaErrorDisplay = (errorMessage: string) => {
@@ -60,19 +68,35 @@ export const SchemaMaker: React.FC = () => {
   };
 
   const handleAddField = () => {
-    addField();
+    if (!currentTableId) return; // Защита от null
+    addField(currentTableId);
   };
 
   const handleRemoveField = (idx: number) => {
+    if (!currentTableId) return; // Защита от null
+
     const id = schema[idx]?.id;
     if (!id) return;
-    removeField(id, handleSchemaErrorDisplay);
+    removeField(currentTableId, id, handleSchemaErrorDisplay);
   };
 
   const handleOnDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-    reorderFields(result.source.index, result.destination.index);
+    if (!result.destination || !currentTableId) return;
+    reorderFields(
+      currentTableId,
+      result.source.index,
+      result.destination.index
+    );
   };
+
+  // Если нет текущей таблицы, показываем сообщение
+  if (!currentTable || !currentTableId) {
+    return (
+      <div style={{ padding: "20px", textAlign: "center", color: "#888" }}>
+        Выберите или создайте таблицу для работы со схемой
+      </div>
+    );
+  }
 
   return (
     <div>

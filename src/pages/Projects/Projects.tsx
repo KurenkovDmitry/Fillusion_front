@@ -1,78 +1,29 @@
+import { useEffect, useState } from "react";
 import { ProjectCard } from "./components/ProjectCard";
 import { LayoutWithHeader } from "@shared/components/LayoutWithHeader";
 import { Button } from "@mui/material";
 import { ProjectDialog } from "./components/ProjectDialog";
-import { useEffect, useState } from "react";
 import AssignmentLateIcon from "@mui/icons-material/AssignmentLate";
-
-interface Project {
-  name: string;
-  description: string;
-  updatedAt: string;
-}
-
-// const projects: Project[] = [
-//   {
-//     name: "Редизайн веб-сайта",
-//     description:
-//       "Полное обновление корпоративного сайта с современным дизайном и улучшенной навигацией. Включает адаптивную верстку и оптимизацию производительности.",
-//     updatedAt: new Date(2025, 9, 25).toLocaleDateString("ru-RU"),
-//   },
-//   {
-//     name: "Мобильное приложение",
-//     description:
-//       "Разработка нативного мобильного приложения для iOS и Android с синхронизацией данных в реальном времени.",
-//     updatedAt: new Date(2025, 9, 27).toLocaleDateString("ru-RU"),
-//   },
-//   {
-//     name: "Система аналитики",
-//     description:
-//       "Внедрение комплексной системы аналитики для отслеживания пользовательского поведения и метрик производительности.",
-//     updatedAt: new Date(2025, 9, 22).toLocaleDateString("ru-RU"),
-//   },
-//   {
-//     name: "API интеграция",
-//     description:
-//       "Интеграция с внешними API-сервисами для расширения функциональности платформы и автоматизации процессов.",
-//     updatedAt: new Date(2025, 9, 28).toLocaleDateString("ru-RU"),
-//   },
-//   {
-//     name: "База знаний",
-//     description:
-//       "Создание внутренней базы знаний для команды с возможностью поиска и категоризации документации.",
-//     updatedAt: new Date(2025, 9, 20).toLocaleDateString("ru-RU"),
-//   },
-//   {
-//     name: "Оптимизация производительности",
-//     description:
-//       "Анализ и улучшение производительности существующих систем, оптимизация запросов к базе данных и кеширование.",
-//     updatedAt: new Date(2025, 9, 26).toLocaleDateString("ru-RU"),
-//   },
-// ];
+import { ProjectService } from "@services/api/ProjectService/ProjectService";
+import type { Project } from "@services/api/ProjectService/ProjectService.types";
 
 export const Projects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const token = import.meta.env.VITE_TOKEN;
     const fetchProjects = async () => {
-      const response = await fetch("http://127.0.0.1:8085/api/v1/projects", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`, // Формат: Bearer <токен>
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
-      if (!response.ok) {
-        console.error(await response.json());
+      try {
+        const data = await ProjectService.getProjects();
+        const { projects } = data;
+        setProjects(projects);
+      } catch (error) {
+        console.error("Не удалось загрузить проекты:", error);
       }
-      setProjects(await response.json());
     };
     fetchProjects();
   }, []);
 
-  const [open, setOpen] = useState(false);
   return (
     <LayoutWithHeader noJustify>
       <div style={{ width: "70%" }}>
@@ -109,7 +60,7 @@ export const Projects = () => {
             {projects.map((val, idx) => (
               <ProjectCard
                 key={idx}
-                id={idx.toString()}
+                id={val.id}
                 title={val.name}
                 description={val.description}
                 updatedAt={val.updatedAt}

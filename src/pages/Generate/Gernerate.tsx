@@ -30,6 +30,7 @@ const selectOutputOptions = [
 ];
 
 const initialValues = {
+  name: "",
   query: "",
   totalRecords: 50,
   examples: "",
@@ -139,11 +140,23 @@ export const Generate = () => {
                 <Form
                   style={{ display: "flex", flexDirection: "column", gap: 10 }}
                 >
-                  <InputField label="Название таблицы" name="name" required />
+                  <InputField
+                    label="Название таблицы"
+                    name="name"
+                    required
+                    value={values.name}
+                    onChange={(e) =>
+                      setValues({ ...values, name: e.target.value })
+                    }
+                  />
                   <InputField
                     label="Правила генерации"
                     name="query"
                     labelIcon={<TableIcon />}
+                    value={values.query}
+                    onChange={(e) =>
+                      setValues({ ...values, query: e.target.value })
+                    }
                     multiline
                     placeholder="Например: name: русские имена и фамилии"
                     required
@@ -161,6 +174,10 @@ export const Generate = () => {
                     label="Примеры данных"
                     name="examples"
                     labelIcon={<TableIcon />}
+                    value={values.examples}
+                    onChange={(e) =>
+                      setValues({ ...values, examples: e.target.value })
+                    }
                     multiline
                     placeholder='Например: { "name": "Иван Петров" }'
                   />

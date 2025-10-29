@@ -2,6 +2,7 @@ import { Button, Dialog } from "@mui/material";
 import { InputField } from "../../Generate/components/InputField";
 import React, { useState } from "react";
 import { useStyles } from "./ProjectDialog.styles";
+import { ProjectService } from "@services/api/ProjectService/ProjectService";
 
 interface ProjectDialogProps {
   open: boolean;
@@ -9,6 +10,8 @@ interface ProjectDialogProps {
   title?: string;
   description?: string;
   newProject?: boolean;
+  projectId?: string;
+  onSuccess?: () => void;
 }
 
 export const ProjectDialog = (props: ProjectDialogProps) => {
@@ -38,24 +41,25 @@ export const ProjectDialog = (props: ProjectDialogProps) => {
   };
 
   const handleSubmit = async () => {
-    const token = import.meta.env.VITE_TOKEN;
-    const response = await fetch("http://localhost:8085/api/v1/projects", {
-      method: props.newProject ? "POST" : "PATCH",
-      body: JSON.stringify({
-        name: nameInputValue,
-        description: descriptionInputValue,
-      }),
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-type": "application/json",
-      },
-      credentials: "include",
-    });
-    const text = await response.json();
-    if (!response.ok) {
-      console.error(text);
+    try {
+      if (props.newProject) {
+        await ProjectService.createProject({
+          name: nameInputValue,
+          description: descriptionInputValue,
+        });
+      } else if (props.projectId) {
+        await ProjectService.updateProject(props.projectId, {
+          name: nameInputValue,
+          description: descriptionInputValue,
+        });
+      }
+
+      props.onSuccess?.();
+      props.onClose();
+    } catch (error) {
+      console.error("Failed to save project:", error);
+      // Here you might want to show an error message to the user
     }
-    console.log(text);
   };
 
   return (

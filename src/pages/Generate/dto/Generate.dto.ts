@@ -1,4 +1,5 @@
 export interface GenerateDataDTO {
+  name: string;
   projectId: string;
   query: string;
   network: string;

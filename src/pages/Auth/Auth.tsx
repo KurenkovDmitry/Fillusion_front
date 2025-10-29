@@ -15,6 +15,7 @@ import * as yup from "yup";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TextInput } from "../../ui/form";
 import { useAuth } from "@shared/hooks";
+import { useTokenStore } from "../../store/tokenStore";
 
 // Схемы валидации
 const loginSchema = yup.object({
