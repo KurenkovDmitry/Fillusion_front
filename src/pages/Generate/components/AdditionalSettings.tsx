@@ -19,8 +19,6 @@ interface AdditionalSettingsProps {
 export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   const updateField = useSchemaStore((s) => s.updateField);
   const removeFieldProperties = useSchemaStore((s) => s.removeFieldProperties);
-  const currentTableId = useSchemaStore((s) => s.currentTableId); // Получаем ID текущей таблицы
-
   const { classes } = useStyles();
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [approach, setApproach] = useState("ai");
@@ -28,12 +26,14 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   const [checkedUnique, setCheckedUnique] = useState(false);
   const [checkedAutoincrement, setCheckedAutoincrement] = useState(false);
 
-  const [locale, setLocale] = useState<"RU_RU" | "EN_US">("RU_RU");
+  const [locale, setLocale] = useState<"LOCALE_RU_RU" | "LOCALE_EN_US">(
+    "LOCALE_RU_RU"
+  );
   const [fakerType, setFakerType] = useState("name");
 
   const lacaleSelectOptions = [
-    { value: "RU_RU", label: "Русский (RU)" },
-    { value: "EN_US", label: "Английский (EN)" },
+    { value: "LOCALE_RU_RU", label: "Русский (RU)" },
+    { value: "LOCALE_EN_US", label: "Английский (EN)" },
   ];
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -45,35 +45,29 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   };
 
   const handleAutoIncrementChange = () => {
-    if (!currentTableId) return; // Защита от null
-    updateField(currentTableId, props.fieldId, {
-      autoIncrement: !checkedAutoincrement,
-    });
+    updateField(props.fieldId, { autoIncrement: !checkedAutoincrement });
     setCheckedAutoincrement((pr) => !pr);
   };
 
   const handleUniqueChange = () => {
-    if (!currentTableId) return; // Защита от null
-    updateField(currentTableId, props.fieldId, { unique: !checkedUnique });
+    updateField(props.fieldId, { unique: !checkedUnique });
     setCheckedUnique((pr) => !pr);
   };
 
   const open = Boolean(anchorEl);
 
   const handleApproachChange = (event: any, newApproach: string) => {
-    if (newApproach === null || !currentTableId) {
+    if (newApproach === null) {
       return;
     }
     removeFieldProperties(
-      currentTableId, // Добавлен tableId
       props.fieldId,
-      // Инвертированная логика из-за того, что approach еще не поменялся
+      // Инвертированая логика изза того, что approach еще не поменялся
       approach === "ai"
         ? ["unique", "autoIncrement"]
         : ["viaFaker", "fakerType", "locale"]
     );
     updateField(
-      currentTableId, // Добавлен tableId
       props.fieldId,
       approach === "ai"
         ? { viaFaker: true, fakerType: fakerType, locale: locale }
@@ -83,23 +77,16 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   };
 
   const handleFakerTypeChange = (type: string) => {
-    if (!currentTableId) return; // Защита от null
-
     const update = {
       viaFaker: true,
       fakerType: type,
       locale: locale,
       type: "string",
     };
-    updateField(currentTableId, props.fieldId, update);
+    updateField(props.fieldId, update);
     setFakerType(type);
     handleClose();
   };
-
-  // Если нет текущей таблицы, не рендерим компонент
-  if (!currentTableId) {
-    return null;
-  }
 
   return (
     <>
@@ -193,14 +180,8 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                         >
                           {category === "personalInfo"
                             ? "Личные данные"
-                            : category === "address"
-                            ? "Адрес"
-                            : category === "datetime"
-                            ? "Дата и время"
-                            : category === "workFinance"
-                            ? "Работа и финансы"
-                            : category === "internet"
-                            ? "Интернет"
+                            : category === "basicTypes"
+                            ? "Базовые типы"
                             : category}
                         </h4>
                         <div
@@ -212,7 +193,6 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                         >
                           {types.map((type) => (
                             <div
-                              key={type.value}
                               className={classes.dataTypeBox}
                               onClick={() => handleFakerTypeChange(type.value)}
                             >

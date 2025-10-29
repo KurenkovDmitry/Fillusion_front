@@ -60,10 +60,10 @@ interface DatabaseDiagramProps {
 }
 
 const typeOptions = [
-  { value: "TEXT", label: "TEXT" },
-  { value: "INT", label: "INT" },
-  { value: "VARCHAR", label: "VARCHAR" },
-  { value: "TIMESTAMP", label: "TIMESTAMP" },
+  { value: "TEXT", label: "String" },
+  { value: "INT", label: "Integer" },
+  { value: "TIMESTAMP", label: "Float" },
+  { value: "VARCHAR", label: "Text" },
 ];
 
 const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
@@ -148,7 +148,6 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
             {tableName}
           </div>
         )}
-        <>Generate</>
       </div>
 
       <div>
@@ -441,7 +440,7 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
           position: "relative",
         }}
       >
-        <button
+        {/* <button
           onClick={handleSave}
           style={{
             position: "absolute",
@@ -459,7 +458,7 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
           }}
         >
           Сохранить диаграмму
-        </button>
+        </button> */}
 
         {/* SIDEBAR */}
         <aside

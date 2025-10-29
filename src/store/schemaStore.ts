@@ -11,301 +11,266 @@ export type SchemaField = {
   locale?: "RU_RU" | "EN_US";
 };
 
-export type TableSchema = {
-  id: string;
-  name: string;
-  fields: SchemaField[];
-};
-
-// Типы для API response
-type ApiField = {
-  id: string;
-  name: string;
-  type: string;
-  generation?: {
-    uniqueValues?: boolean;
-    autoIncrement?: boolean;
-    viaFaker?: boolean;
-    fakerType?: string;
-    fakerLocale?: string;
-  };
-};
-
-type ApiTable = {
-  id: string;
-  name: string;
-  fields: ApiField[];
-};
-
-type ApiResponse = {
-  schema: {
-    tables: ApiTable[];
-    relations: any[];
-  };
-};
-
 interface SchemaState {
-  tables: Record<string, TableSchema>; // Все таблицы по ID
-  currentTableId: string | null; // Текущая активная таблица
-
-  // Загрузка данных из API
-  loadFromApi: (apiResponse: ApiResponse) => void;
-
-  // Работа с таблицами
-  setCurrentTable: (tableId: string) => void;
-  addTable: (name?: string) => string;
-  removeTable: (tableId: string) => void;
-  updateTableName: (tableId: string, name: string) => void;
-
-  // Работа с полями текущей таблицы
-  addField: (tableId: string, partial?: Partial<SchemaField>) => void;
-  updateField: (
-    tableId: string,
-    fieldId: string,
-    updates: Partial<SchemaField>
-  ) => void;
-  removeField: (
-    tableId: string,
-    fieldId: string,
-    callback: (arg0: string) => void
-  ) => void;
-  reorderFields: (tableId: string, sourceIdx: number, destIdx: number) => void;
-  removeFieldProperties: (
-    tableId: string,
-    fieldId: string,
-    keys: (keyof SchemaField)[]
-  ) => void;
-
-  // Утилиты
-  getCurrentTable: () => TableSchema | null;
+  schema: SchemaField[];
+  setSchema: (s: SchemaField[]) => void;
+  addField: (partial?: Partial<SchemaField>) => void;
+  updateField: (id: string, updates: Partial<SchemaField>) => void;
+  removeField: (id: string, callback: (arg0: string) => void) => void;
+  reorderFields: (sourceIdx: number, destIdx: number) => void;
   reset: () => void;
+  removeFieldProperties: (id: string, keys: (keyof SchemaField)[]) => void;
 }
 
 const defaultField = (): SchemaField => ({
-  id: `field-${Date.now()}-${Math.random()}`,
+  id: `field-${Date.now()}`,
   name: "",
   type: "string",
 });
 
-const createDefaultTable = (name: string = "New Table"): TableSchema => ({
-  id: `table-${Date.now()}-${Math.random()}`,
-  name,
-  fields: [defaultField()],
-});
-
-// Маппер из API формата в формат store
-const mapApiFieldToSchemaField = (apiField: ApiField): SchemaField => {
-  const field: SchemaField = {
-    id: apiField.id,
-    name: apiField.name,
-    type: apiField.type,
-  };
-
-  if (apiField.generation) {
-    if (apiField.generation.uniqueValues) field.unique = true;
-    if (apiField.generation.autoIncrement) field.autoIncrement = true;
-    if (apiField.generation.viaFaker) field.viaFaker = true;
-    if (apiField.generation.fakerType)
-      field.fakerType = apiField.generation.fakerType;
-    if (apiField.generation.fakerLocale) {
-      field.locale =
-        apiField.generation.fakerLocale === "ru_RU" ? "RU_RU" : "EN_US";
-    }
-  }
-
-  return field;
-};
-
-const mapApiResponseToTables = (
-  apiResponse: ApiResponse
-): Record<string, TableSchema> => {
-  const tables: Record<string, TableSchema> = {};
-
-  apiResponse.schema.tables.forEach((apiTable) => {
-    tables[apiTable.id] = {
-      id: apiTable.id,
-      name: apiTable.name,
-      fields: apiTable.fields.map(mapApiFieldToSchemaField),
-    };
-  });
-
-  return tables;
-};
-
 const useSchemaStore = create<SchemaState>((set, get) => ({
-  tables: {},
-  currentTableId: null,
+  schema: [defaultField()],
 
-  // Загрузка из API
-  loadFromApi: (apiResponse) => {
-    const tables = mapApiResponseToTables(apiResponse);
-    const firstTableId = Object.keys(tables)[0] || null;
+  setSchema: (s) => set({ schema: s }),
 
-    set({
-      tables,
-      currentTableId: firstTableId,
-    });
-  },
-
-  // Работа с таблицами
-  setCurrentTable: (tableId) => set({ currentTableId: tableId }),
-
-  addTable: (name) => {
-    const newTable = createDefaultTable(name);
+  addField: (partial = {}) =>
     set((state) => ({
-      tables: {
-        ...state.tables,
-        [newTable.id]: newTable,
-      },
-      currentTableId: newTable.id,
-    }));
-    return newTable.id;
-  },
-
-  removeTable: (tableId) =>
-    set((state) => {
-      const { [tableId]: removed, ...rest } = state.tables;
-      const newCurrentId =
-        state.currentTableId === tableId
-          ? Object.keys(rest)[0] || null
-          : state.currentTableId;
-
-      return {
-        tables: rest,
-        currentTableId: newCurrentId,
-      };
-    }),
-
-  updateTableName: (tableId, name) =>
-    set((state) => ({
-      tables: {
-        ...state.tables,
-        [tableId]: {
-          ...state.tables[tableId],
-          name,
+      schema: [
+        ...state.schema,
+        {
+          ...defaultField(),
+          ...partial,
         },
-      },
+      ],
     })),
 
-  // Работа с полями
-  addField: (tableId, partial = {}) =>
+  updateField: (id, updates) =>
+    set((state) => ({
+      schema: state.schema.map((f) => (f.id === id ? { ...f, ...updates } : f)),
+    })),
+
+  removeField: (id, callback) =>
     set((state) => {
-      const table = state.tables[tableId];
-      if (!table) return state;
-
-      return {
-        tables: {
-          ...state.tables,
-          [tableId]: {
-            ...table,
-            fields: [
-              ...table.fields,
-              {
-                ...defaultField(),
-                ...partial,
-              },
-            ],
-          },
-        },
-      };
-    }),
-
-  updateField: (tableId, fieldId, updates) =>
-    set((state) => {
-      const table = state.tables[tableId];
-      if (!table) return state;
-
-      return {
-        tables: {
-          ...state.tables,
-          [tableId]: {
-            ...table,
-            fields: table.fields.map((f) =>
-              f.id === fieldId ? { ...f, ...updates } : f
-            ),
-          },
-        },
-      };
-    }),
-
-  removeField: (tableId, fieldId, callback) =>
-    set((state) => {
-      const table = state.tables[tableId];
-      if (!table) return state;
-
-      if (table.fields.length <= 1) {
+      if (state.schema.length <= 1) {
         callback("(Не может быть меньше одного поля)");
         return state;
       }
-
-      return {
-        tables: {
-          ...state.tables,
-          [tableId]: {
-            ...table,
-            fields: table.fields.filter((f) => f.id !== fieldId),
-          },
-        },
-      };
+      return { schema: state.schema.filter((f) => f.id !== id) };
     }),
 
-  reorderFields: (tableId, sourceIdx, destIdx) =>
+  reorderFields: (sourceIdx, destIdx) =>
     set((state) => {
-      const table = state.tables[tableId];
-      if (!table) return state;
-
-      const items = Array.from(table.fields);
+      const items = Array.from(state.schema);
       const [moved] = items.splice(sourceIdx, 1);
       items.splice(destIdx, 0, moved);
-
-      return {
-        tables: {
-          ...state.tables,
-          [tableId]: {
-            ...table,
-            fields: items,
-          },
-        },
-      };
+      return { schema: items };
     }),
 
-  removeFieldProperties: (tableId, fieldId, keys) =>
-    set((state) => {
-      const table = state.tables[tableId];
-      if (!table) return state;
+  reset: () => set({ schema: [defaultField()] }),
 
-      return {
-        tables: {
-          ...state.tables,
-          [tableId]: {
-            ...table,
-            fields: table.fields.map((f) => {
-              if (f.id !== fieldId) return f;
+  removeFieldProperties: (id, keys) =>
+    set((state) => ({
+      schema: state.schema.map((f) => {
+        if (f.id !== id) return f;
 
-              const updated = { ...f };
-              keys.forEach((key) => {
-                delete updated[key];
-              });
-              return updated;
-            }),
-          },
-        },
-      };
-    }),
-
-  // Утилиты
-  getCurrentTable: () => {
-    const { tables, currentTableId } = get();
-    return currentTableId ? tables[currentTableId] || null : null;
-  },
-
-  reset: () => {
-    const defaultTable = createDefaultTable();
-    set({
-      tables: { [defaultTable.id]: defaultTable },
-      currentTableId: defaultTable.id,
-    });
-  },
+        const updated = { ...f };
+        keys.forEach((key) => {
+          delete updated[key];
+        });
+        return updated;
+      }),
+    })),
 }));
 
 export default useSchemaStore;
+
+// import { create } from "zustand";
+
+// export type SchemaField = {
+//   id: string;
+//   name: string;
+//   type: string;
+//   unique?: boolean;
+//   autoIncrement?: boolean;
+//   viaFaker?: boolean;
+//   fakerType?: string;
+//   locale?: "RU_RU" | "EN_US";
+// };
+
+// // Новый тип для схемы
+// export type Schema = {
+//   id: string;
+//   name: string;
+//   fields: SchemaField[];
+// };
+
+// interface SchemaState {
+//   schemas: Schema[];
+//   activeSchemaId: string | null;
+
+//   // Методы для работы со схемами
+//   addSchema: (name?: string) => void;
+//   removeSchema: (schemaId: string) => void;
+//   updateSchemaName: (schemaId: string, name: string) => void;
+//   setActiveSchema: (schemaId: string) => void;
+//   getActiveSchema: () => Schema | undefined;
+
+//   // Методы для работы с полями в конкретной схеме
+//   addField: (schemaId: string, partial?: Partial<SchemaField>) => void;
+//   updateField: (schemaId: string, fieldId: string, updates: Partial<SchemaField>) => void;
+//   removeField: (schemaId: string, fieldId: string, callback: (arg0: string) => void) => void;
+//   reorderFields: (schemaId: string, sourceIdx: number, destIdx: number) => void;
+//   removeFieldProperties: (schemaId: string, fieldId: string, keys: (keyof SchemaField)[]) => void;
+
+//   // Утилиты
+//   reset: () => void;
+// }
+
+// const defaultField = (): SchemaField => ({
+//   id: `field-${Date.now()}`,
+//   name: "",
+//   type: "string",
+// });
+
+// const defaultSchema = (name: string = "Новая схема"): Schema => ({
+//   id: `schema-${Date.now()}`,
+//   name,
+//   fields: [defaultField()],
+// });
+
+// const useSchemaStore = create<SchemaState>((set, get) => ({
+//   schemas: [defaultSchema("Схема 1")],
+//   activeSchemaId: null,
+
+//   // Работа со схемами
+//   addSchema: (name = "Новая схема") =>
+//     set((state) => {
+//       const newSchema = defaultSchema(name);
+//       return {
+//         schemas: [...state.schemas, newSchema],
+//         activeSchemaId: newSchema.id,
+//       };
+//     }),
+
+//   removeSchema: (schemaId) =>
+//     set((state) => {
+//       if (state.schemas.length <= 1) {
+//         return state; // Не удаляем последнюю схему
+//       }
+//       const newSchemas = state.schemas.filter((s) => s.id !== schemaId);
+//       return {
+//         schemas: newSchemas,
+//         activeSchemaId:
+//           state.activeSchemaId === schemaId
+//             ? newSchemas[0]?.id || null
+//             : state.activeSchemaId,
+//       };
+//     }),
+
+//   updateSchemaName: (schemaId, name) =>
+//     set((state) => ({
+//       schemas: state.schemas.map((s) =>
+//         s.id === schemaId ? { ...s, name } : s
+//       ),
+//     })),
+
+//   setActiveSchema: (schemaId) =>
+//     set({ activeSchemaId: schemaId }),
+
+//   getActiveSchema: () => {
+//     const state = get();
+//     return state.schemas.find((s) => s.id === state.activeSchemaId);
+//   },
+
+//   // Работа с полями
+//   addField: (schemaId, partial = {}) =>
+//     set((state) => ({
+//       schemas: state.schemas.map((schema) =>
+//         schema.id === schemaId
+//           ? {
+//               ...schema,
+//               fields: [
+//                 ...schema.fields,
+//                 {
+//                   ...defaultField(),
+//                   ...partial,
+//                 },
+//               ],
+//             }
+//           : schema
+//       ),
+//     })),
+
+//   updateField: (schemaId, fieldId, updates) =>
+//     set((state) => ({
+//       schemas: state.schemas.map((schema) =>
+//         schema.id === schemaId
+//           ? {
+//               ...schema,
+//               fields: schema.fields.map((f) =>
+//                 f.id === fieldId ? { ...f, ...updates } : f
+//               ),
+//             }
+//           : schema
+//       ),
+//     })),
+
+//   removeField: (schemaId, fieldId, callback) =>
+//     set((state) => {
+//       const schema = state.schemas.find((s) => s.id === schemaId);
+//       if (!schema) return state;
+
+//       if (schema.fields.length <= 1) {
+//         callback("(Не может быть меньше одного поля)");
+//         return state;
+//       }
+
+//       return {
+//         schemas: state.schemas.map((s) =>
+//           s.id === schemaId
+//             ? { ...s, fields: s.fields.filter((f) => f.id !== fieldId) }
+//             : s
+//         ),
+//       };
+//     }),
+
+//   reorderFields: (schemaId, sourceIdx, destIdx) =>
+//     set((state) => ({
+//       schemas: state.schemas.map((schema) => {
+//         if (schema.id !== schemaId) return schema;
+
+//         const items = Array.from(schema.fields);
+//         const [moved] = items.splice(sourceIdx, 1);
+//         items.splice(destIdx, 0, moved);
+//         return { ...schema, fields: items };
+//       }),
+//     })),
+
+//   removeFieldProperties: (schemaId, fieldId, keys) =>
+//     set((state) => ({
+//       schemas: state.schemas.map((schema) => {
+//         if (schema.id !== schemaId) return schema;
+
+//         return {
+//           ...schema,
+//           fields: schema.fields.map((f) => {
+//             if (f.id !== fieldId) return f;
+
+//             const updated = { ...f };
+//             keys.forEach((key) => {
+//               delete updated[key];
+//             });
+//             return updated;
+//           }),
+//         };
+//       }),
+//     })),
+
+//   reset: () =>
+//     set({
+//       schemas: [defaultSchema("Схема 1")],
+//       activeSchemaId: null,
+//     }),
+// }));
+
+// export default useSchemaStore;

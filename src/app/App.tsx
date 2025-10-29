@@ -16,7 +16,7 @@ export const App = () => {
           <Route path="/history" element={<QueryHistory />} />
           <Route path="/auth" element={<Auth />} />
           <Route
-            path="/projects/:id"
+            path="/projects/:projectId"
             element={<DatabaseDiagram tables={tables} relations={relations} />}
           />
           <Route path="/projects" element={<Projects />} />
