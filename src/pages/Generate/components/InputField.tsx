@@ -4,7 +4,7 @@ import React from "react";
 
 interface InputFieldProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "name"> {
-  name: string;
+  name?: string;
   label?: string;
   placeholder?: string;
   value?: string;
@@ -20,7 +20,7 @@ export const InputField = (props: InputFieldProps) => {
   const { classes } = useStyles();
 
   // Используй Formik только если useFormik !== false и onChange не передан
-  const shouldUseFormik = props.useFormik !== false && !props.onChange;
+  const shouldUseFormik = props.useFormik && !props.onChange;
 
   // Условно вызывай useField
   let field, meta;

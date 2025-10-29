@@ -12,6 +12,9 @@ export const theme = createTheme({
     secondary: {
       main: "#dc004e",
     },
+    text: {
+      primary: "#000000de",
+    },
   },
   typography: {
     fontFamily: "onest, Roboto, Arial, sans-serif",
@@ -72,6 +75,13 @@ export const theme = createTheme({
           "&:hover": {
             backgroundColor: "#003a99",
           },
+        },
+      },
+    },
+    MuiCssBaseline: {
+      styleOverrides: {
+        "&:focus-visible": {
+          outline: "none",
         },
       },
     },
