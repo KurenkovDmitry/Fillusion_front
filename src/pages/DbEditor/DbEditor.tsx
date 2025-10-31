@@ -307,6 +307,7 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
     useState<Relation[]>(relations);
 
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [editingTableId, setEditingTableId] = useState<string | null>(null);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
     convertTablesToNodes(currentTables, (tableId, updates) => {
@@ -431,6 +432,22 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
     setSelectedTableId(newTable.id);
   };
 
+  const handleTableNameChange = (tableId: string, newName: string) => {
+    setCurrentTables((prev) =>
+      prev.map((t) => (t.id === tableId ? { ...t, name: newName } : t))
+    );
+    setNodes((nodes) =>
+      nodes.map((node) =>
+        node.id === tableId
+          ? { ...node, data: { ...node.data, name: newName } }
+          : node
+      )
+    );
+    if (onTableUpdate) {
+      onTableUpdate(tableId, { name: newName });
+    }
+  };
+
   return (
     <LayoutWithHeader noJustify transparent>
       <div
@@ -533,7 +550,44 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
                   justifyContent: "space-between",
                 }}
               >
-                <div style={{}}>{t.name}</div>
+                {editingTableId === t.id ? (
+                  <input
+                    autoFocus
+                    value={t.name}
+                    onChange={(e) =>
+                      handleTableNameChange(t.id, e.target.value)
+                    }
+                    onBlur={() => setEditingTableId(null)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") setEditingTableId(null);
+                      if (e.key === "Escape") {
+                        handleTableNameChange(t.id, t.name);
+                        setEditingTableId(null);
+                      }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid #444",
+                      borderRadius: "4px",
+                      color: "white",
+                      padding: "4px 8px",
+                      width: "100%",
+                      fontSize: "14px",
+                      outline: "none",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{ fontSize: "14px" }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setEditingTableId(t.id);
+                    }}
+                  >
+                    {t.name}
+                  </div>
+                )}
                 <div style={{ fontSize: 12, color: "#aaa" }}>
                   {t.fields.length} полей — x: {Math.round(t.x)}, y:{" "}
                   {Math.round(t.y)}

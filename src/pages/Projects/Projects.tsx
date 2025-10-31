@@ -11,18 +11,24 @@ export const Projects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [open, setOpen] = useState(false);
 
+  const fetchProjects = async () => {
+    try {
+      const data = await ProjectService.getProjects();
+      const { projects } = data;
+      setProjects(projects);
+    } catch (error) {
+      console.error("Не удалось загрузить проекты:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const data = await ProjectService.getProjects();
-        const { projects } = data;
-        setProjects(projects);
-      } catch (error) {
-        console.error("Не удалось загрузить проекты:", error);
-      }
-    };
     fetchProjects();
   }, []);
+
+  // Функция для обновления списка проектов после создания/изменения
+  const handleProjectUpdate = () => {
+    fetchProjects();
+  };
 
   return (
     <LayoutWithHeader noJustify>
@@ -59,11 +65,12 @@ export const Projects = () => {
           >
             {projects.map((val, idx) => (
               <ProjectCard
-                key={idx}
+                key={val.id} // Используй id вместо idx для ключа!
                 id={val.id}
                 title={val.name}
                 description={val.description}
                 updatedAt={val.updatedAt}
+                onUpdate={handleProjectUpdate} // Передаем callback
               />
             ))}
           </div>
@@ -94,7 +101,12 @@ export const Projects = () => {
           </div>
         )}
       </div>
-      <ProjectDialog open={open} onClose={() => setOpen(false)} newProject />
+      <ProjectDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        newProject
+        onSuccess={handleProjectUpdate} // Передаем callback
+      />
     </LayoutWithHeader>
   );
 };

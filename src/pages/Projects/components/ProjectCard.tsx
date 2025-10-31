@@ -11,14 +11,34 @@ interface ProjectCardProps {
   title: string;
   description: string;
   updatedAt: string;
+  onUpdate?: () => void; // Новый prop
 }
 
 export const ProjectCard = (props: ProjectCardProps) => {
   const { classes } = useStyles();
   const navigate = useNavigate();
-  const beautifyUpdatedAt = (date: string) => {
-    return date;
-  };
+
+  function beautifyUpdatedAt(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return "только что";
+    if (diffMins < 60) return `${diffMins} мин назад`;
+
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} ч назад`;
+
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays} дн назад`;
+
+    return date.toLocaleString("ru-RU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
 
   const [open, setOpen] = useState(false);
 
@@ -56,6 +76,7 @@ export const ProjectCard = (props: ProjectCardProps) => {
         title={props.title}
         description={props.description}
         projectId={props.id}
+        onSuccess={props.onUpdate} // Передаем callback дальше
       />
     </article>
   );

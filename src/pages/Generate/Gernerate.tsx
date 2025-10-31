@@ -34,6 +34,7 @@ const initialValues = {
   query: "",
   totalRecords: 50,
   examples: "",
+  export_type: selectModelOptions[0].value,
 };
 
 export const Generate = () => {
@@ -62,6 +63,8 @@ export const Generate = () => {
   const mapValuesToDTO = (values: any) => ({
     projectId: import.meta.env.VITE_PROJECT_ID,
     query: values.query.trim(),
+    name: values.name,
+    export_type: selectOutputValue,
     network: selectModelValue,
     totalRecords: String(values.totalRecords),
     schema: formatSchemaForDTO(schema),

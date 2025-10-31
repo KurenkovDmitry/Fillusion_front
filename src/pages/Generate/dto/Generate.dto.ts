@@ -4,6 +4,7 @@ export interface GenerateDataDTO {
   query: string;
   network: string;
   totalRecords: string;
+  export_type: string;
   schema: {
     id: string;
     name: string;
