@@ -37,7 +37,8 @@ export default [ // defineConfig() можно убрать, если не исп
 
       // И отключаем то, что нам не нужно
       '@typescript-eslint/no-explicit-any': 'off',
-      'no-unused-vars': 'off'
+      'no-unused-vars': 'off',
+      'no-undef': 'off'
     },
   },
 ]

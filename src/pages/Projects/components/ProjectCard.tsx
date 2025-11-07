@@ -2,11 +2,10 @@ import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined
 import { useStyles } from "./ProjectCard.styles";
 import { IconButton, Tooltip } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
-import { ProjectDialog } from "./ProjectDialog";
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 interface ProjectCardProps {
+  setOpenFromCard: (projectId: string, open: boolean) => void;
   id: string;
   title: string;
   description: string;
@@ -16,14 +15,30 @@ interface ProjectCardProps {
 export const ProjectCard = (props: ProjectCardProps) => {
   const { classes } = useStyles();
   const navigate = useNavigate();
-  const beautifyUpdatedAt = (date: string) => {
-    return date;
-  };
+  function beautifyUpdatedAt(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
 
-  const [open, setOpen] = useState(false);
+    if (diffMins < 1) return "только что";
+    if (diffMins < 60) return `${diffMins} мин назад`;
+
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} ч назад`;
+
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays} дн назад`;
+
+    return date.toLocaleString("ru-RU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
 
   const handleSettingsClick = () => {
-    setOpen(true);
+    props.setOpenFromCard(props.id, true);
   };
 
   return (
@@ -50,13 +65,6 @@ export const ProjectCard = (props: ProjectCardProps) => {
       >
         Открыть проект
       </a>
-      <ProjectDialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title={props.title}
-        description={props.description}
-        projectId={props.id}
-      />
     </article>
   );
 };

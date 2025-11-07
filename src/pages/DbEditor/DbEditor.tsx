@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect } from "react";
 import {
   ReactFlow,
   Node,
   Edge,
-  Controls,
   Background,
   useNodesState,
   useEdgesState,
@@ -20,74 +19,115 @@ import { SelectField } from "../Generate/components/SelectField";
 import { LayoutWithHeader } from "@shared/components/LayoutWithHeader";
 import { Button } from "@mui/material";
 import { AdditionalSettings } from "../Generate/components/AdditionalSettings";
-
-interface Field {
-  name: string;
-  type: string;
-  isPrimaryKey?: boolean;
-  isForeignKey?: boolean;
-}
-
-interface Table {
-  id: string;
-  name: string;
-  fields: Field[];
-  x: number;
-  y: number;
-}
+import { SchemaService } from "@services/api/SchemaService/SchemaService";
+import { useParams } from "react-router-dom";
+import useSchemaStore, {
+  TableSchema,
+  SchemaField,
+} from "../../store/schemaStore";
+import { Generate } from "../Generate";
 
 interface TableNodeData {
   id: string;
   name: string;
-  fields: Field[];
-  onUpdate?: (tableId: string, updates: Partial<Table>) => void;
+  fields: SchemaField[];
 }
 
-type RelationType = "one-to-one" | "one-to-many" | "many-to-many";
-
-interface Relation {
-  fromTable: string;
-  toTable: string;
-  fromField: string;
-  toField: string;
-  type: RelationType;
-}
-
-interface DatabaseDiagramProps {
-  tables: Table[];
-  relations?: Relation[];
-  onTableUpdate?: (tableId: string, updates: Partial<Table>) => void;
-}
+export type DatabaseTableNodeType = Node<TableNodeData, "databaseTable">;
 
 const typeOptions = [
-  { value: "TEXT", label: "TEXT" },
-  { value: "INT", label: "INT" },
-  { value: "VARCHAR", label: "VARCHAR" },
-  { value: "TIMESTAMP", label: "TIMESTAMP" },
+  { value: "string", label: "String" },
+  { value: "int", label: "Integer" },
+  { value: "float", label: "Float" },
 ];
 
-const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [tableName, setTableName] = useState(data.name);
-  const [fields, setFields] = useState<Field[]>(data.fields);
+const getTableLayoutPayload = (currentTable: TableSchema) => {
+  return {
+    x: Math.round(currentTable.layout.x),
+    y: Math.round(currentTable.layout.y),
+  };
+};
+
+const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
+  const { projectId } = useParams();
+  const {
+    updateTable,
+    updateField,
+    removeField,
+    getCurrentTable,
+    setCurrentTable,
+  } = useSchemaStore();
+  const data = props.data;
+  const id = props.id;
+  const [isEditingName, setIsEditingName] = React.useState(false);
+  const [tableName, setTableName] = React.useState(data.name);
+
+  // чтобы в handleFieldBlur не слать запросы, когда изменений не было
+  const [isFieldChanged, setFieldChanged] = React.useState<
+    Map<string, boolean>
+  >(new Map());
 
   const handleTableNameBlur = () => {
     setIsEditingName(false);
-    if (data.onUpdate) {
-      data.onUpdate(id, { name: tableName });
-    }
+    updateTable(id, { name: tableName });
   };
 
   const handleFieldChange = (
-    index: number,
+    fieldId: string,
     key: "name" | "type",
     value: string
   ) => {
-    const updated = [...fields];
-    updated[index] = { ...updated[index], [key]: value };
-    setFields(updated);
-    if (data.onUpdate) {
-      data.onUpdate(id, { fields: updated });
+    updateField(id, fieldId, { [key]: value });
+    setFieldChanged((prev) => prev.set(fieldId, true));
+  };
+
+  const handleFieldBlur = (fieldId: string) => {
+    if (!isFieldChanged.get(fieldId)) return;
+    setCurrentTable(id);
+    const currentTable = getCurrentTable();
+    const updatedTable = {
+      table: {
+        ...getCurrentTable(),
+        layout: getTableLayoutPayload(currentTable!),
+      },
+    };
+    if (!updatedTable.table || !projectId) return;
+    SchemaService.updateTable(projectId, id, updatedTable);
+    setFieldChanged((prev) => prev.set(fieldId, false));
+  };
+
+  const handleAddField = async () => {
+    setCurrentTable(id);
+    const currentTable = getCurrentTable();
+    if (!currentTable) return;
+    const updatedTable = {
+      table: {
+        ...currentTable,
+        layout: getTableLayoutPayload(currentTable),
+        fields: [
+          ...currentTable.fields,
+          {
+            name: `field_${data.fields.length + 1}`,
+            type: "string",
+            isPrimaryKey: false,
+            isForeignKey: false,
+          },
+        ],
+      },
+    };
+    if (projectId && updatedTable.table) {
+      const newTable = await SchemaService.updateTable(
+        projectId,
+        id,
+        updatedTable
+      );
+      updateTable(id, newTable.table);
+    }
+  };
+
+  const handleDeleteField = (fieldId: string) => {
+    if (data.fields.length > 1) {
+      removeField(id, fieldId);
     }
   };
 
@@ -109,6 +149,7 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
           color: "white",
           display: "flex",
           justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
         {isEditingName ? (
@@ -148,19 +189,18 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
             {tableName}
           </div>
         )}
-        <>Generate</>
       </div>
 
       <div>
-        {fields.map((field, index) => (
+        {data.fields.map((field, index) => (
           <div
-            key={index}
+            key={field.id}
             style={{
               padding: "8px 12px",
               borderBottom:
-                index < fields.length - 1 ? "1px solid #E0E0E0" : "none",
+                index < data.fields.length - 1 ? "1px solid #E0E0E0" : "none",
               display: "grid",
-              gridTemplateColumns: "1fr 135px 30px",
+              gridTemplateColumns: "1fr 135px 30px 30px",
               alignItems: "center",
               gap: "8px",
               position: "relative",
@@ -169,7 +209,7 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
             <Handle
               type="target"
               position={Position.Left}
-              id={`${field.name}-left`}
+              id={`${field.id}-left`}
               style={{
                 left: -8,
                 top: "50%",
@@ -183,7 +223,7 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
             <Handle
               type="source"
               position={Position.Right}
-              id={`${field.name}-right`}
+              id={`${field.id}-right`}
               style={{
                 right: -8,
                 top: "50%",
@@ -195,15 +235,12 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
               }}
             />
             <input
-              // value={`${
-              //   field.isPrimaryKey ? "🔑 " : field.isForeignKey ? "🔗 " : ""
-              // }${field.name}`}
               value={field.name}
-              onChange={(e) => {
-                const cleaned = e.target.value.replace(/^(🔑 |🔗 )/, "");
-                handleFieldChange(index, "name", cleaned);
-              }}
+              onChange={(e) =>
+                handleFieldChange(field.id, "name", e.target.value)
+              }
               onDoubleClick={(e) => e.currentTarget.select()}
+              onBlur={() => handleFieldBlur(field.id)}
               style={{
                 border: "none",
                 background: "transparent",
@@ -218,16 +255,79 @@ const DatabaseTableNode = ({ data, id }: NodeProps<TableNodeData>) => {
               <SelectField
                 options={typeOptions}
                 value={field.type}
-                onChange={(val) =>
-                  handleFieldChange(index, "type", val as string)
+                onChange={(val: string | string[]) =>
+                  handleFieldChange(field.id, "type", val as string)
                 }
               />
             </div>
             <div className="nodrag">
-              <AdditionalSettings fieldId="1" />
+              <AdditionalSettings fieldId={field.id} />
             </div>
+            <button
+              onClick={() => handleDeleteField(field.id)}
+              className="nodrag"
+              disabled={data.fields.length <= 1}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: data.fields.length <= 1 ? "#ddd" : "#999",
+                cursor: data.fields.length <= 1 ? "not-allowed" : "pointer",
+                fontSize: "18px",
+                padding: "4px",
+                lineHeight: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              title={
+                data.fields.length <= 1
+                  ? "Нельзя удалить последнее поле"
+                  : "Удалить поле"
+              }
+            >
+              ×
+            </button>
           </div>
         ))}
+      </div>
+
+      <div
+        style={{
+          padding: "8px 12px",
+          borderTop: data.fields.length > 0 ? "1px solid #E0E0E0" : "none",
+        }}
+      >
+        <button
+          onClick={handleAddField}
+          className="nodrag"
+          style={{
+            width: "100%",
+            padding: "8px",
+            background: "#f5f5f5",
+            border: "1px dashed #ccc",
+            borderRadius: "4px",
+            color: "#666",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "500",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "6px",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#e8e8e8";
+            e.currentTarget.style.borderColor = "#999";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "#f5f5f5";
+            e.currentTarget.style.borderColor = "#ccc";
+          }}
+        >
+          <span style={{ fontSize: "18px", lineHeight: 1 }}>+</span>
+          Добавить поле
+        </button>
       </div>
     </div>
   );
@@ -237,115 +337,133 @@ const nodeTypes = {
   databaseTable: DatabaseTableNode,
 };
 
-const convertTablesToNodes = (
-  tables: Table[],
-  onUpdate?: (tableId: string, updates: Partial<Table>) => void
-): Node<TableNodeData>[] => {
-  return tables.map((table) => ({
-    id: table.id,
-    type: "databaseTable",
-    position: { x: table.x, y: table.y },
-    data: {
-      id: table.id,
-      name: table.name,
-      fields: table.fields,
-      onUpdate,
+export const DatabaseDiagram: React.FC = () => {
+  const { projectId } = useParams();
+  const {
+    tables,
+    relations,
+    loadFromApi,
+    addTable,
+    updateTablePosition,
+    addRelation,
+    removeRelation,
+    getAllTables,
+    getAllRelations,
+    setCurrentTable,
+  } = useSchemaStore();
+
+  const [rfInstance, setRfInstance] = React.useState<ReactFlowInstance | null>(
+    null
+  );
+  const [open, setOpen] = React.useState(false);
+
+  // Конвертация таблиц в ноды
+  const convertTablesToNodes = useCallback(
+    (tables: Record<string, TableSchema>): Node<TableNodeData>[] => {
+      return Object.values(tables).map((table) => ({
+        id: table.id,
+        type: "databaseTable",
+        position: { x: table.layout.x, y: table.layout.y },
+        data: {
+          id: table.id,
+          name: table.name,
+          fields: table.fields,
+        },
+      }));
     },
-  }));
-};
+    []
+  );
 
-const convertRelationsToEdges = (relations: Relation[]): Edge[] => {
-  return relations.map((relation) => {
-    let label = "";
+  // Конвертация связей в рёбра
+  const convertRelationsToEdges = useCallback(() => {
+    return getAllRelations().map((relation) => {
+      let label = "";
+      switch (relation.type) {
+        case "one-to-one":
+          label = "1:1";
+          break;
+        case "one-to-many":
+          label = "1:N";
+          break;
+        case "many-to-many":
+          label = "N:M";
+          break;
+      }
 
-    switch (relation.type) {
-      case "one-to-one":
-        label = "1:1";
-        break;
-      case "one-to-many":
-        label = "1:N";
-        break;
-      case "many-to-many":
-        label = "N:M";
-        break;
-    }
-
-    return {
-      id: `${relation.fromTable}-${relation.toTable}-${relation.fromField}-${relation.toField}`,
-      source: relation.fromTable,
-      target: relation.toTable,
-      sourceHandle: `${relation.fromField}-right`,
-      targetHandle: `${relation.toField}-left`,
-      type: "default",
-      animated: false,
-      style: {
-        stroke: "#666",
-        strokeWidth: 2,
-      },
-      label,
-      labelStyle: {
-        fill: "#666",
-        fontSize: 11,
-        fontWeight: "bold",
-      },
-      labelBgStyle: {
-        fill: "white",
-        fillOpacity: 0.8,
-      },
-    };
-  });
-};
-
-export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
-  tables,
-  relations = [],
-  onTableUpdate,
-}) => {
-  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
-
-  const [currentTables, setCurrentTables] = useState<Table[]>(tables);
-  const [currentRelations, setCurrentRelations] =
-    useState<Relation[]>(relations);
-
-  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+      return {
+        id: relation.id,
+        source: relation.fromTable,
+        target: relation.toTable,
+        sourceHandle: `${relation.fromField}-right`,
+        targetHandle: `${relation.toField}-left`,
+        type: "default",
+        animated: false,
+        style: {
+          stroke: "#666",
+          strokeWidth: 2,
+        },
+        label,
+        labelStyle: {
+          fill: "#666",
+          fontSize: 11,
+          fontWeight: "bold",
+        },
+        labelBgStyle: {
+          fill: "white",
+          fillOpacity: 0.8,
+        },
+      };
+    });
+  }, [getAllRelations]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
-    convertTablesToNodes(currentTables, (tableId, updates) => {
-      setCurrentTables((prev) =>
-        prev.map((t) => (t.id === tableId ? { ...t, ...updates } : t))
-      );
-      if (onTableUpdate) {
-        onTableUpdate(tableId, updates);
+    []
+  );
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // Загрузка схемы из API
+  useEffect(() => {
+    const fetchSchema = async () => {
+      try {
+        const res = await SchemaService.getSchema(projectId!);
+        loadFromApi(res);
+      } catch (e) {
+        console.error(e);
       }
-    })
-  );
+    };
+    fetchSchema();
+  }, [projectId, loadFromApi]);
 
-  const [edges, setEdges, onEdgesChange] = useEdgesState(
-    convertRelationsToEdges(currentRelations)
-  );
-
+  // Обновление нод при изменении таблиц
   useEffect(() => {
-    setCurrentTables(tables);
-    setNodes(convertTablesToNodes(tables, onTableUpdate));
-  }, [tables, setNodes, onTableUpdate]);
+    setNodes(convertTablesToNodes(tables));
+  }, [tables, convertTablesToNodes, setNodes]);
 
+  // Обновление рёбер при изменении связей
   useEffect(() => {
-    setCurrentRelations(relations);
-    setEdges(convertRelationsToEdges(relations));
-  }, [relations, setEdges]);
+    setEdges(convertRelationsToEdges());
+  }, [relations, convertRelationsToEdges, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => {
-      const newEdge = {
-        ...params,
-        type: "smoothstep",
-        animated: false,
-        style: { stroke: "#666", strokeWidth: 2 },
-        label: "1:N",
-      };
-      setEdges((eds) => addEdge(newEdge, eds));
+      if (
+        !params.source ||
+        !params.target ||
+        !params.sourceHandle ||
+        !params.targetHandle
+      )
+        return;
+
+      addRelation({
+        fromTable: params.source,
+        toTable: params.target,
+        fromField: params.sourceHandle.replace("-right", ""),
+        toField: params.targetHandle.replace("-left", ""),
+        type: "one-to-many",
+        id: "12",
+      });
     },
-    [setEdges]
+    [addRelation]
   );
 
   const handleNodesChange = useCallback(
@@ -353,83 +471,54 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
       onNodesChange(changes);
 
       changes.forEach((change: any) => {
-        if (change.type === "position" && change.position) {
-          setCurrentTables((prev) =>
-            prev.map((t) =>
-              t.id === change.id
-                ? { ...t, x: change.position.x, y: change.position.y }
-                : t
-            )
-          );
-
-          if (onTableUpdate) {
-            onTableUpdate(change.id, {
-              x: change.position.x,
-              y: change.position.y,
-            });
-          }
+        if (change.type === "position" && change.position && !change.dragging) {
+          updateTablePosition(change.id, change.position.x, change.position.y);
         }
       });
     },
-    [onNodesChange, onTableUpdate]
+    [onNodesChange, updateTablePosition]
   );
 
-  // Функция сохранения с выводом в консоль
-  // const handleSave = useCallback(() => {
-  //   if (rfInstance) {
-  //     // Способ 1: React Flow toObject() - полное состояние с viewport
-  //     const flowState = rfInstance.toObject();
-  //     console.log("React Flow полное состояние:", flowState);
-  //     console.log("JSON:", JSON.stringify(flowState, null, 2));
-  //   }
+  const handleEdgesChange = useCallback(
+    (changes: any) => {
+      onEdgesChange(changes);
 
-  //   // Способ 2: Ваш кастомный формат (рекомендуется для БД)
-  //   const customState = {
-  //     tables: currentTables,
-  //     relations: currentRelations,
-  //   };
-  //   console.log("Кастомное состояние для API:", customState);
-  //   console.log("JSON для API:", JSON.stringify(customState, null, 2));
+      changes.forEach((change: any) => {
+        if (change.type === "remove") {
+          removeRelation(change.id);
+        }
+      });
+    },
+    [onEdgesChange, removeRelation]
+  );
 
-  //   // Пример вызова API:
-  //   // fetch('/api/save-diagram', {
-  //   //   method: 'POST',
-  //   //   headers: { 'Content-Type': 'application/json' },
-  //   //   body: JSON.stringify(customState)
-  //   // });
-  // }, [rfInstance, currentTables, currentRelations]);
+  const handleSave = useCallback(async () => {
+    const allTables = getAllTables();
+    const allRelations = getAllRelations();
 
-  const handleSave = async () => {
-    const res = await fetch("http://localhost:8080/api/users/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json", // Добавьте этот заголовок!
-      },
-      body: JSON.stringify({
-        email: "itwasnear78@gmail.com",
-        password: "SecurePassword123",
-      }),
-      credentials: "include",
-    });
-    if (!res.ok) {
-      console.log("error");
-    }
-    console.log(await res.json());
-  };
-
-  // Добавить новую таблицу
-  const handleAddTable = () => {
-    const newTable: Table = {
-      id: `table-${Date.now()}`,
-      name: `Table_${currentTables.length + 1}`,
-      fields: [],
-      x: 200,
-      y: 200,
+    const payload = {
+      tables: allTables,
+      relations: allRelations,
     };
-    const newTables = [...currentTables, newTable];
-    setCurrentTables(newTables);
-    setNodes(convertTablesToNodes(newTables, onTableUpdate));
-    setSelectedTableId(newTable.id);
+
+    console.log("Сохранение схемы:", payload);
+
+    // try {
+    //   await SchemaService.updateSchema(projectId!, payload);
+    //   console.log("Схема успешно сохранена");
+    // } catch (error) {
+    //   console.error("Ошибка сохранения:", error);
+    // }
+  }, [getAllTables, getAllRelations]);
+
+  const handleAddTable = () => {
+    const allTables = getAllTables();
+    addTable({
+      name: `Table_${allTables.length + 1}`,
+      fields: [],
+      x: 200 + allTables.length * 50,
+      y: 200 + allTables.length * 50,
+    });
   };
 
   return (
@@ -461,7 +550,6 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
           Сохранить диаграмму
         </button>
 
-        {/* SIDEBAR */}
         <aside
           style={{
             position: "absolute",
@@ -516,10 +604,10 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
               scrollbarColor: "#333 #18191b",
             }}
           >
-            {currentTables.length === 0 && (
+            {Object.keys(tables).length === 0 && (
               <div style={{ color: "#bbb", fontSize: 13 }}>Таблиц пока нет</div>
             )}
-            {currentTables.map((t) => (
+            {Object.values(tables).map((t) => (
               <div
                 key={t.id}
                 style={{
@@ -530,14 +618,30 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
                   marginBottom: 8,
                   height: "70px",
                   display: "flex",
-                  flexDirection: "column",
                   justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
-                <div style={{}}>{t.name}</div>
-                <div style={{ fontSize: 12, color: "#aaa" }}>
-                  {t.fields.length} полей — x: {Math.round(t.x)}, y:{" "}
-                  {Math.round(t.y)}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div>{t.name}</div>
+                  <div style={{ fontSize: 12, color: "#aaa" }}>
+                    {t.fields.length} полей — x: {Math.round(t.layout.x)}, y:{" "}
+                    {Math.round(t.layout.y)}
+                  </div>
+                </div>
+                <div
+                  onClick={() => {
+                    setCurrentTable(t.id);
+                    setOpen(true);
+                  }}
+                >
+                  sldlsk
                 </div>
               </div>
             ))}
@@ -546,11 +650,11 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
 
         <ReactFlow
           nodes={nodes}
-          // edges={edges}
+          edges={edges}
           onNodesChange={handleNodesChange}
-          // onEdgesChange={onEdgesChange}
-          // onConnect={onConnect}
-          onInit={setRfInstance} // Получаем инстанс через onInit
+          onEdgesChange={handleEdgesChange}
+          onConnect={onConnect}
+          onInit={setRfInstance}
           nodeTypes={nodeTypes}
           fitView
           defaultEdgeOptions={{
@@ -566,6 +670,7 @@ export const DatabaseDiagram: React.FC<DatabaseDiagramProps> = ({
           />
         </ReactFlow>
       </div>
+      <Generate open={open} setOpen={setOpen} />
     </LayoutWithHeader>
   );
 };

@@ -18,7 +18,7 @@ export const AuthService = {
   },
 
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
-    return apiAuthClient.post<RegisterResponse>("/auth/register", userData);
+    return apiAuthClient.post<RegisterResponse>("/register", userData);
   },
 
   async getCurrentUser(): Promise<{ user: User }> {

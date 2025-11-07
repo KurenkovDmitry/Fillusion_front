@@ -58,8 +58,8 @@ export const SchemaMaker: React.FC = () => {
     updateField(currentTableId, id, { [key]: value } as Partial<Field>);
   };
 
-  const handleSchemaErrorDisplay = (errorMessage: string) => {
-    setError(errorMessage);
+  const handleSchemaErrorDisplay = () => {
+    setError("(Не может быть меньше одного поля)");
     setErrClass("");
     setTimeout(() => {
       setErrClass("zero-opacity");
@@ -69,7 +69,12 @@ export const SchemaMaker: React.FC = () => {
 
   const handleAddField = () => {
     if (!currentTableId) return; // Защита от null
-    addField(currentTableId);
+    addField(currentTableId, {
+      name: `field_${currentTable ? currentTable.fields.length + 1 : "new"}`,
+      type: "string",
+      isPrimaryKey: false,
+      isForeignKey: false,
+    });
   };
 
   const handleRemoveField = (idx: number) => {

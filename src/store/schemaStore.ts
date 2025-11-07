@@ -4,6 +4,8 @@ export type SchemaField = {
   id: string;
   name: string;
   type: string;
+  isPrimaryKey?: boolean;
+  isForeignKey?: boolean;
   unique?: boolean;
   autoIncrement?: boolean;
   viaFaker?: boolean;
@@ -14,7 +16,22 @@ export type SchemaField = {
 export type TableSchema = {
   id: string;
   name: string;
+  layout: {
+    x: number;
+    y: number;
+  };
   fields: SchemaField[];
+};
+
+export type RelationType = "one-to-one" | "one-to-many" | "many-to-many";
+
+export type Relation = {
+  id: string;
+  fromTable: string;
+  toTable: string;
+  fromField: string;
+  toField: string;
+  type: RelationType;
 };
 
 // Типы для API response
@@ -22,6 +39,8 @@ type ApiField = {
   id: string;
   name: string;
   type: string;
+  isPrimaryKey?: boolean;
+  isForeignKey?: boolean;
   generation?: {
     uniqueValues?: boolean;
     autoIncrement?: boolean;
@@ -34,31 +53,47 @@ type ApiField = {
 type ApiTable = {
   id: string;
   name: string;
+  x: number;
+  y: number;
   fields: ApiField[];
 };
 
+type ApiRelation = {
+  id: string;
+  fromTable: string;
+  toTable: string;
+  fromField: string;
+  toField: string;
+  type: string;
+};
+
 type ApiResponse = {
-  schema: {
-    tables: ApiTable[];
-    relations: any[];
-  };
+  schema: { tables: ApiTable[]; relations: ApiRelation[] };
+};
+
+type Schema = {
+  tables: Record<string, TableSchema>;
+  relations: Record<string, Relation>;
 };
 
 interface SchemaState {
   tables: Record<string, TableSchema>; // Все таблицы по ID
+  relations: Record<string, Relation>; // Все связи по ID
   currentTableId: string | null; // Текущая активная таблица
 
   // Загрузка данных из API
   loadFromApi: (apiResponse: ApiResponse) => void;
+  getSchema: () => Schema;
 
   // Работа с таблицами
   setCurrentTable: (tableId: string) => void;
-  addTable: (name?: string) => string;
+  addTable: (table: Omit<TableSchema, "id">) => string;
   removeTable: (tableId: string) => void;
-  updateTableName: (tableId: string, name: string) => void;
+  updateTable: (tableId: string, updates: Partial<TableSchema>) => void;
+  updateTablePosition: (tableId: string, x: number, y: number) => void;
 
-  // Работа с полями текущей таблицы
-  addField: (tableId: string, partial?: Partial<SchemaField>) => void;
+  // Работа с полями
+  addField: (tableId: string, field: Omit<SchemaField, "id">) => void;
   updateField: (
     tableId: string,
     fieldId: string,
@@ -67,7 +102,7 @@ interface SchemaState {
   removeField: (
     tableId: string,
     fieldId: string,
-    callback: (arg0: string) => void
+    callback?: () => void
   ) => void;
   reorderFields: (tableId: string, sourceIdx: number, destIdx: number) => void;
   removeFieldProperties: (
@@ -76,22 +111,18 @@ interface SchemaState {
     keys: (keyof SchemaField)[]
   ) => void;
 
+  // Работа со связями
+  addRelation: (relation: Relation) => string;
+  updateRelation: (relationId: string, updates: Partial<Relation>) => void;
+  removeRelation: (relationId: string) => void;
+  getRelationsByTable: (tableId: string) => Relation[];
+
   // Утилиты
   getCurrentTable: () => TableSchema | null;
+  getAllTables: () => TableSchema[];
+  getAllRelations: () => Relation[];
   reset: () => void;
 }
-
-const defaultField = (): SchemaField => ({
-  id: `field-${Date.now()}-${Math.random()}`,
-  name: "",
-  type: "string",
-});
-
-const createDefaultTable = (name: string = "New Table"): TableSchema => ({
-  id: `table-${Date.now()}-${Math.random()}`,
-  name,
-  fields: [defaultField()],
-});
 
 // Маппер из API формата в формат store
 const mapApiFieldToSchemaField = (apiField: ApiField): SchemaField => {
@@ -99,6 +130,8 @@ const mapApiFieldToSchemaField = (apiField: ApiField): SchemaField => {
     id: apiField.id,
     name: apiField.name,
     type: apiField.type,
+    isPrimaryKey: apiField.isPrimaryKey,
+    isForeignKey: apiField.isForeignKey,
   };
 
   if (apiField.generation) {
@@ -116,33 +149,59 @@ const mapApiFieldToSchemaField = (apiField: ApiField): SchemaField => {
   return field;
 };
 
-const mapApiResponseToTables = (
+const mapApiResponseToState = (
   apiResponse: ApiResponse
-): Record<string, TableSchema> => {
+): {
+  tables: Record<string, TableSchema>;
+  relations: Record<string, Relation>;
+} => {
   const tables: Record<string, TableSchema> = {};
+  const relations: Record<string, Relation> = {};
 
   apiResponse.schema.tables.forEach((apiTable) => {
     tables[apiTable.id] = {
       id: apiTable.id,
       name: apiTable.name,
+      layout: {
+        x: apiTable.x,
+        y: apiTable.y,
+      },
       fields: apiTable.fields.map(mapApiFieldToSchemaField),
     };
   });
 
-  return tables;
+  apiResponse.schema.relations.forEach((apiRelation) => {
+    relations[apiRelation.id] = {
+      id: apiRelation.id,
+      fromTable: apiRelation.fromTable,
+      toTable: apiRelation.toTable,
+      fromField: apiRelation.fromField,
+      toField: apiRelation.toField,
+      type: apiRelation.type as RelationType,
+    };
+  });
+
+  return { tables, relations };
 };
 
 const useSchemaStore = create<SchemaState>((set, get) => ({
   tables: {},
+  relations: {},
   currentTableId: null,
+
+  getSchema: () => {
+    const { tables, relations } = get();
+    return { tables, relations };
+  },
 
   // Загрузка из API
   loadFromApi: (apiResponse) => {
-    const tables = mapApiResponseToTables(apiResponse);
+    const { tables, relations } = mapApiResponseToState(apiResponse);
     const firstTableId = Object.keys(tables)[0] || null;
 
     set({
       tables,
+      relations,
       currentTableId: firstTableId,
     });
   },
@@ -150,45 +209,45 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
   // Работа с таблицами
   setCurrentTable: (tableId) => set({ currentTableId: tableId }),
 
-  addTable: (name) => {
-    const newTable = createDefaultTable(name);
+  addTable: (table) => {
+    const id = `table-${Date.now()}-${Math.random()}`;
+    const newTable: TableSchema = { ...table, id };
+
     set((state) => ({
       tables: {
         ...state.tables,
-        [newTable.id]: newTable,
+        [id]: newTable,
       },
-      currentTableId: newTable.id,
+      currentTableId: id,
     }));
-    return newTable.id;
+
+    return id;
   },
 
   removeTable: (tableId) =>
     set((state) => {
-      const { [tableId]: removed, ...rest } = state.tables;
+      const { [tableId]: removed, ...restTables } = state.tables;
+
+      // Удаляем все связи, связанные с этой таблицей
+      const restRelations = Object.fromEntries(
+        Object.entries(state.relations).filter(
+          ([_, rel]) => rel.fromTable !== tableId && rel.toTable !== tableId
+        )
+      );
+
       const newCurrentId =
         state.currentTableId === tableId
-          ? Object.keys(rest)[0] || null
+          ? Object.keys(restTables)[0] || null
           : state.currentTableId;
 
       return {
-        tables: rest,
+        tables: restTables,
+        relations: restRelations,
         currentTableId: newCurrentId,
       };
     }),
 
-  updateTableName: (tableId, name) =>
-    set((state) => ({
-      tables: {
-        ...state.tables,
-        [tableId]: {
-          ...state.tables[tableId],
-          name,
-        },
-      },
-    })),
-
-  // Работа с полями
-  addField: (tableId, partial = {}) =>
+  updateTable: (tableId, updates) =>
     set((state) => {
       const table = state.tables[tableId];
       if (!table) return state;
@@ -198,13 +257,46 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
           ...state.tables,
           [tableId]: {
             ...table,
-            fields: [
-              ...table.fields,
-              {
-                ...defaultField(),
-                ...partial,
-              },
-            ],
+            ...updates,
+          },
+        },
+      };
+    }),
+
+  updateTablePosition: (tableId, x, y) =>
+    set((state) => {
+      const table = state.tables[tableId];
+      if (!table) return state;
+
+      return {
+        tables: {
+          ...state.tables,
+          [tableId]: {
+            ...table,
+            layout: {
+              x,
+              y,
+            },
+          },
+        },
+      };
+    }),
+
+  // Работа с полями
+  addField: (tableId, field) =>
+    set((state) => {
+      const table = state.tables[tableId];
+      if (!table) return state;
+
+      const id = `field-${Date.now()}-${Math.random()}`;
+      const newField: SchemaField = { ...field, id };
+
+      return {
+        tables: {
+          ...state.tables,
+          [tableId]: {
+            ...table,
+            fields: [...table.fields, newField],
           },
         },
       };
@@ -234,9 +326,20 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
       if (!table) return state;
 
       if (table.fields.length <= 1) {
-        callback("(Не может быть меньше одного поля)");
-        return state;
+        if (callback) {
+          callback();
+        }
+        return state; // Не удаляем последнее поле
       }
+
+      // Удаляем связи, связанные с этим полем
+      const restRelations = Object.fromEntries(
+        Object.entries(state.relations).filter(
+          ([_, rel]) =>
+            !(rel.fromTable === tableId && rel.fromField === fieldId) &&
+            !(rel.toTable === tableId && rel.toField === fieldId)
+        )
+      );
 
       return {
         tables: {
@@ -246,6 +349,7 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
             fields: table.fields.filter((f) => f.id !== fieldId),
           },
         },
+        relations: restRelations,
       };
     }),
 
@@ -293,17 +397,69 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
       };
     }),
 
+  // Работа со связями
+  addRelation: (relation) => {
+    const id = `relation-${Date.now()}-${Math.random()}`;
+    const newRelation: Relation = { ...relation, id };
+
+    set((state) => ({
+      relations: {
+        ...state.relations,
+        [id]: newRelation,
+      },
+    }));
+
+    return id;
+  },
+
+  updateRelation: (relationId, updates) =>
+    set((state) => {
+      const relation = state.relations[relationId];
+      if (!relation) return state;
+
+      return {
+        relations: {
+          ...state.relations,
+          [relationId]: {
+            ...relation,
+            ...updates,
+          },
+        },
+      };
+    }),
+
+  removeRelation: (relationId) =>
+    set((state) => {
+      const { [relationId]: removed, ...rest } = state.relations;
+      return { relations: rest };
+    }),
+
+  getRelationsByTable: (tableId) => {
+    const { relations } = get();
+    return Object.values(relations).filter(
+      (rel) => rel.fromTable === tableId || rel.toTable === tableId
+    );
+  },
+
   // Утилиты
   getCurrentTable: () => {
     const { tables, currentTableId } = get();
     return currentTableId ? tables[currentTableId] || null : null;
   },
 
+  getAllTables: () => {
+    return Object.values(get().tables);
+  },
+
+  getAllRelations: () => {
+    return Object.values(get().relations);
+  },
+
   reset: () => {
-    const defaultTable = createDefaultTable();
     set({
-      tables: { [defaultTable.id]: defaultTable },
-      currentTableId: defaultTable.id,
+      tables: {},
+      relations: {},
+      currentTableId: null,
     });
   },
 }));

@@ -7,20 +7,46 @@ import AssignmentLateIcon from "@mui/icons-material/AssignmentLate";
 import { ProjectService } from "@services/api/ProjectService/ProjectService";
 import type { Project } from "@services/api/ProjectService/ProjectService.types";
 
+export interface DialogState {
+  open: boolean;
+  initiator: "page" | "card";
+  projectId?: string;
+}
+
 export const Projects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [open, setOpen] = useState(false);
+  const [dialogState, setDialogState] = useState<DialogState>({
+    open: false,
+    initiator: "page",
+  });
+
+  const setOpen = (open: boolean) =>
+    setDialogState({ open: open, initiator: "page" });
+
+  const onClose = () => setDialogState((s) => ({ ...s, open: false }));
+
+  const setOpenFromCard = (projectId: string, open: boolean) =>
+    setDialogState({ open: open, projectId: projectId, initiator: "card" });
+
+  const [newProject, setNewProject] = useState(
+    dialogState.initiator === "page"
+  );
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const data = await ProjectService.getProjects();
-        const { projects } = data;
-        setProjects(projects);
-      } catch (error) {
-        console.error("Не удалось загрузить проекты:", error);
-      }
-    };
+    setNewProject(dialogState.initiator === "page");
+  }, [dialogState.initiator]);
+
+  const fetchProjects = async () => {
+    try {
+      const data = await ProjectService.getProjects();
+      const { projects } = data;
+      setProjects(projects);
+    } catch (error) {
+      console.error("Не удалось загрузить проекты:", error);
+    }
+  };
+
+  useEffect(() => {
     fetchProjects();
   }, []);
 
@@ -59,6 +85,7 @@ export const Projects = () => {
           >
             {projects.map((val, idx) => (
               <ProjectCard
+                setOpenFromCard={setOpenFromCard}
                 key={idx}
                 id={val.id}
                 title={val.name}
@@ -94,7 +121,13 @@ export const Projects = () => {
           </div>
         )}
       </div>
-      <ProjectDialog open={open} onClose={() => setOpen(false)} newProject />
+      <ProjectDialog
+        newProject={newProject}
+        dialogState={dialogState}
+        onClose={onClose}
+        projects={projects}
+        onSuccess={fetchProjects} // Add this to refresh the list after changes
+      />
     </LayoutWithHeader>
   );
 };

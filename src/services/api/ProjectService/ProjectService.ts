@@ -6,8 +6,8 @@ import {
 } from "./ProjectService.types";
 
 export const ProjectService = {
-  async getProjects(): Promise<any> {
-    return apiServiceClient.get<any>("/projects");
+  async getProjects(): Promise<{ projects: Project[] }> {
+    return apiServiceClient.get<{ projects: Project[] }>("/projects");
   },
 
   async createProject(data: CreateProjectRequest): Promise<Project> {

@@ -20,6 +20,7 @@ import { Edit, Logout, Person } from "@mui/icons-material";
 import { useAuth } from "../hooks/useAuth";
 import { Form, Formik } from "formik";
 import * as yup from "yup";
+import { Auth } from "@pages";
 
 // Схема валидации для изменения имени
 const updateNameSchema = yup.object({
@@ -40,12 +41,14 @@ export const LayoutWithHeader = ({
 }) => {
   const navigate = useNavigate();
   const { user, logout, updateProfile } = useAuth();
-  // const user = undefined; //{ name: "124124", email: "3r12141@12414.ru" };
+  // const user = { name: "124124", email: "3r12141@12414.ru" };
   // const logout = () => {};
   // const updateProfile = (name: { name: string }) => {};
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  const [open, setOpen] = useState(false);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -144,7 +147,7 @@ export const LayoutWithHeader = ({
           Fillusion
         </h2>
 
-        {user && (
+        {user ? (
           <Box display="flex" alignItems="center" gap={1}>
             <Typography
               variant="body1"
@@ -200,8 +203,9 @@ export const LayoutWithHeader = ({
                   alignItems: "center",
                   gap: 1,
                   padding: "12px 16px",
+                  cursor: "default",
                 }}
-                disabled
+                disableRipple
               >
                 <Person fontSize="small" />
                 <Box>
@@ -244,6 +248,23 @@ export const LayoutWithHeader = ({
               </MenuItem>
             </Menu>
           </Box>
+        ) : (
+          <div>
+            <Button
+              variant="outlined"
+              onClick={() => setOpen(true)}
+              sx={{
+                color: "white",
+                borderColor: "white",
+                "&:hover": {
+                  backgroundColor: "#2b2b2bff",
+                },
+              }}
+            >
+              Войти
+            </Button>
+            <Auth open={open} onClose={() => setOpen(false)} />
+          </div>
         )}
       </header>
 

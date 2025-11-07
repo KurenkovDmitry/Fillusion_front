@@ -41,6 +41,7 @@ export const useStyles = makeStyles()((_theme) => ({
     gap: "10px",
     fontSize: "14px",
     color: "#717182",
+    lineHeight: "20px",
   },
 
   card__link: {

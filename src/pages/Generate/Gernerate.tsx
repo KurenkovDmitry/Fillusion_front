@@ -7,13 +7,12 @@ import {
   DialogContent,
   Snackbar,
 } from "@mui/material";
-import { Field, Form, Formik } from "formik";
+import { Form, Formik } from "formik";
 import { object, string, number } from "yup";
 import { InputField } from "./components/InputField";
 import { SliderWithInput } from "./components/SliderWithinput";
 import TableIcon from "@assets/table.svg?react";
 import { SelectField } from "./components/SelectField";
-import { NonModalGenerate } from "./NonModalGenerate";
 import { SchemaMaker } from "./components/SchemaMaker";
 import { generateData } from "./actions/Generate.actions";
 import useSchemaStore, { type SchemaField } from "../../store/schemaStore";
@@ -36,8 +35,13 @@ const initialValues = {
   examples: "",
 };
 
-export const Generate = () => {
-  const [open, setOpen] = useState(false);
+interface GenerateProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}
+
+export const Generate = (props: GenerateProps) => {
+  const { open, setOpen } = props;
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -51,6 +55,7 @@ export const Generate = () => {
   );
 
   const schema = useSchemaStore((s) => s.schema);
+  const currentTable = useSchemaStore().getCurrentTable();
 
   // Убираем id из запроса
   const formatSchemaForDTO = (
@@ -79,7 +84,6 @@ export const Generate = () => {
 
   return (
     <>
-      <NonModalGenerate open={open} setOpen={setOpen} />
       <Dialog
         open={open}
         maxWidth="lg"
@@ -103,7 +107,7 @@ export const Generate = () => {
             </>
           ) : (
             <Formik
-              initialValues={initialValues}
+              initialValues={{ ...initialValues, name: currentTable?.name }}
               validationSchema={object({
                 query: string().required("Обязательное поле"),
                 totalRecords: number()
@@ -111,7 +115,7 @@ export const Generate = () => {
                   .max(100)
                   .required("Обязательное поле"),
               })}
-              validateOnMount
+              // validateOnMount
               onSubmit={async (values) => {
                 const emptyNameField = schema.find(
                   (field) => !field.name.trim()
