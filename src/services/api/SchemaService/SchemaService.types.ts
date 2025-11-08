@@ -2,8 +2,8 @@ export type ApiField = {
   id: string;
   name: string;
   type: string;
-  isPrimaryKey: boolean;
-  isForeignKey: boolean;
+  isPrimaryKey?: boolean;
+  isForeignKey?: boolean;
   generation?: {
     uniqueValues?: boolean;
     autoIncrement?: boolean;
@@ -23,15 +23,27 @@ export type ApiTableInternal = {
   fields: ApiField[];
 };
 
+export type ApiTableResponseInternal = {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  fields: ApiField[];
+};
+
 export type ApiTable = {
   table: ApiTableInternal;
 };
 
 export type ApiResponse = {
   schema: {
-    tables: ApiTableInternal[];
+    tables: ApiTableResponseInternal[];
     relations: any[];
   };
+};
+
+export type ApiTableResponse = {
+  table: ApiTableResponseInternal;
 };
 
 export interface Relation {
@@ -51,7 +63,7 @@ export type RelationCreate = Omit<Relation, "id">;
 
 export type FieldCreate = Omit<ApiField, "id">;
 
-type TableCreateInternal = Omit<ApiTable, "id"> & {
+type TableCreateInternal = Omit<ApiTableInternal, "id"> & {
   fields: FieldCreate[];
 };
 

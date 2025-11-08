@@ -1,15 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SelectField } from "./SelectField";
 import { InputField } from "./InputField";
-import { IconButton, Button } from "@mui/material";
+import { IconButton, Button, Tooltip } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
 import { AdditionalSettings } from "./AdditionalSettings";
 import useSchemaStore from "../../../store/schemaStore";
 import { getLabelByValue } from "./constants/constants";
+import { PkSettings } from "./PkSettings";
+import { useParams } from "react-router-dom";
 
 const typeOptions = [
   { value: "string", label: "String" },
@@ -17,7 +20,6 @@ const typeOptions = [
   { value: "float", label: "Float" },
 ];
 
-// Обновленный интерфейс для поддержки всех полей
 interface Field {
   id: string;
   name: string;
@@ -30,7 +32,7 @@ interface Field {
 }
 
 export const SchemaMaker: React.FC = () => {
-  // Получаем текущую таблицу и её ID
+  const { projectId } = useParams();
   const currentTable = useSchemaStore((s) => s.getCurrentTable());
   const currentTableId = useSchemaStore((s) => s.currentTableId);
 
@@ -42,20 +44,55 @@ export const SchemaMaker: React.FC = () => {
   const [error, setError] = useState<string>("");
   const [errClass, setErrClass] = useState<string>("zero-opacity");
 
-  // Получаем поля текущей таблицы
+  // Локальные значения для быстрой печати
+  const [localFieldNames, setLocalFieldNames] = useState<
+    Record<string, string>
+  >({});
+  const [localFieldTypes, setLocalFieldTypes] = useState<
+    Record<string, string>
+  >({});
+
   const schema = currentTable?.fields || [];
 
-  // Обновленная функция для обработки всех типов значений
-  const handleFieldChange = (
-    idx: number,
-    key: keyof Omit<Field, "id">,
-    value: string | boolean
-  ) => {
-    if (!currentTableId) return; // Защита от null
+  // Инициализируем локальные значения когда меняется таблица
+  useEffect(() => {
+    const names: Record<string, string> = {};
+    const types: Record<string, string> = {};
 
-    const id = schema[idx]?.id;
-    if (!id) return;
-    updateField(currentTableId, id, { [key]: value } as Partial<Field>);
+    schema.forEach((field) => {
+      names[field.id] = field.name;
+      types[field.id] = field.type;
+    });
+
+    setLocalFieldNames(names);
+    setLocalFieldTypes(types);
+  }, [currentTableId, schema]);
+
+  // Обновляем локальное значение при печати
+  const handleFieldNameChange = (fieldId: string, value: string) => {
+    setLocalFieldNames((prev) => ({
+      ...prev,
+      [fieldId]: value,
+    }));
+  };
+
+  // Сохраняем в стор при blur
+  const handleFieldNameBlur = (fieldId: string) => {
+    if (!currentTableId) return;
+    const newName = localFieldNames[fieldId];
+    updateField(currentTableId, fieldId, { name: newName });
+  };
+
+  // Обновляем тип в стор сразу (так как select быстрый)
+  const handleFieldTypeChange = (fieldId: string, value: string) => {
+    if (!currentTableId) return;
+
+    setLocalFieldTypes((prev) => ({
+      ...prev,
+      [fieldId]: value,
+    }));
+
+    updateField(currentTableId, fieldId, { type: value });
   };
 
   const handleSchemaErrorDisplay = () => {
@@ -68,7 +105,7 @@ export const SchemaMaker: React.FC = () => {
   };
 
   const handleAddField = () => {
-    if (!currentTableId) return; // Защита от null
+    if (!currentTableId) return;
     addField(currentTableId, {
       name: `field_${currentTable ? currentTable.fields.length + 1 : "new"}`,
       type: "string",
@@ -78,7 +115,7 @@ export const SchemaMaker: React.FC = () => {
   };
 
   const handleRemoveField = (idx: number) => {
-    if (!currentTableId) return; // Защита от null
+    if (!currentTableId) return;
 
     const id = schema[idx]?.id;
     if (!id) return;
@@ -94,7 +131,6 @@ export const SchemaMaker: React.FC = () => {
     );
   };
 
-  // Если нет текущей таблицы, показываем сообщение
   if (!currentTable || !currentTableId) {
     return (
       <div style={{ padding: "20px", textAlign: "center", color: "#888" }}>
@@ -108,7 +144,7 @@ export const SchemaMaker: React.FC = () => {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "30px 1fr 1fr 90px 40px",
+          gridTemplateColumns: "30px 50px 1fr 1fr 90px 40px",
           alignItems: "center",
           gap: "12px",
           marginBottom: "8px",
@@ -117,6 +153,25 @@ export const SchemaMaker: React.FC = () => {
         }}
       >
         <div />
+        <div
+          style={{
+            display: "flex",
+            justifySelf: "center",
+            alignItems: "center",
+            gap: "2px",
+          }}
+        >
+          PK{" "}
+          <Tooltip
+            title="Настройка типа ключа (Primary key, Foreign key)"
+            arrow
+            placement="top-start"
+          >
+            <HelpOutlineIcon
+              sx={{ width: "16px", height: "16px", color: "#9c9c9cff" }}
+            />
+          </Tooltip>
+        </div>
         <div>
           Название поля{" "}
           <span style={{ color: "red" }} className={errClass + " error-span"}>
@@ -140,7 +195,7 @@ export const SchemaMaker: React.FC = () => {
                       {...provided.draggableProps}
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "30px 1fr 1fr 90px 40px",
+                        gridTemplateColumns: "30px 50px 1fr 1fr 90px 40px",
                         alignItems: "center",
                         gap: "12px",
                         marginBottom: "8px",
@@ -156,21 +211,29 @@ export const SchemaMaker: React.FC = () => {
                         />
                       </div>
 
-                      <InputField
-                        name={`${idx}`}
-                        value={field.name}
-                        placeholder="Введите название поля"
-                        onChange={(e) =>
-                          handleFieldChange(idx, "name", e.target.value)
-                        }
-                        useFormik={false}
+                      <PkSettings
+                        field={field}
+                        tableId={currentTable.id}
+                        projectId={projectId!}
                       />
 
+                      {/* Используем локальное значение */}
+                      <InputField
+                        name={`${idx}`}
+                        value={localFieldNames[field.id] || field.name}
+                        placeholder="Введите название поля"
+                        onChange={(e) =>
+                          handleFieldNameChange(field.id, e.target.value)
+                        }
+                        onBlur={() => handleFieldNameBlur(field.id)}
+                        useFormik={false}
+                      />
+                      {/* Тип сохраняется сразу при изменении */}
                       <SelectField
-                        value={field.type}
+                        value={localFieldTypes[field.id] || field.type}
                         options={typeOptions}
                         onChange={(val: any) =>
-                          handleFieldChange(idx, "type", val as string)
+                          handleFieldTypeChange(field.id, val as string)
                         }
                         displayLabel={
                           field.viaFaker
@@ -182,14 +245,12 @@ export const SchemaMaker: React.FC = () => {
                         }
                         disabled={field.viaFaker}
                       />
-
                       {/* Настройки */}
                       <div
                         style={{ display: "flex", justifyContent: "center" }}
                       >
                         <AdditionalSettings fieldId={field.id} />
                       </div>
-
                       <IconButton
                         size="small"
                         onClick={() => handleRemoveField(idx)}

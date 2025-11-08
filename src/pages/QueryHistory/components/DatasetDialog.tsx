@@ -44,6 +44,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
     };
     fetchRequest();
   }, [props.open]);
+
   return (
     <Dialog
       open={props.open}

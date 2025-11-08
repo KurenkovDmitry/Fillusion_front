@@ -6,7 +6,7 @@ import {
   ToggleButton,
   Checkbox,
 } from "@mui/material";
-import React, { useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useStyles } from "./AdditionalSettings.styles";
 import { SelectField } from "./SelectField";
 import { availableDataTypes } from "./constants/constants";
@@ -16,25 +16,45 @@ interface AdditionalSettingsProps {
   fieldId: string;
 }
 
+const lacaleSelectOptions = [
+  { value: "RU_RU", label: "Русский (RU)" },
+  { value: "EN_US", label: "Английский (EN)" },
+];
+
 export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   const updateField = useSchemaStore((s) => s.updateField);
   const removeFieldProperties = useSchemaStore((s) => s.removeFieldProperties);
-  const currentTableId = useSchemaStore((s) => s.currentTableId); // Получаем ID текущей таблицы
+  const currentTableId = useSchemaStore((s) => s.currentTableId);
+  const getCurrentTable = useSchemaStore((state) => state.getCurrentTable);
 
   const { classes } = useStyles();
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const [approach, setApproach] = useState("ai");
 
-  const [checkedUnique, setCheckedUnique] = useState(false);
-  const [checkedAutoincrement, setCheckedAutoincrement] = useState(false);
+  const currentField = getCurrentTable()?.fields.find(
+    (f) => f.id === props.fieldId
+  );
+
+  // Локальное состояние для мгновенного UI
+  const [approach, setApproach] = useState(
+    currentField?.viaFaker ? "faker" : "ai"
+  );
+  const [checkedUnique, setCheckedUnique] = useState(
+    currentField?.unique ?? false
+  );
+  const [checkedAutoincrement, setCheckedAutoincrement] = useState(
+    currentField?.autoIncrement ?? false
+  );
+
+  // Синхронизация при изменении поля
+  useEffect(() => {
+    if (!currentField) return;
+    setApproach(currentField.viaFaker ? "faker" : "ai");
+    setCheckedUnique(currentField.unique ?? false);
+    setCheckedAutoincrement(currentField.autoIncrement ?? false);
+  }, [currentField]);
 
   const [locale, setLocale] = useState<"RU_RU" | "EN_US">("RU_RU");
   const [fakerType, setFakerType] = useState("name");
-
-  const lacaleSelectOptions = [
-    { value: "RU_RU", label: "Русский (RU)" },
-    { value: "EN_US", label: "Английский (EN)" },
-  ];
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -44,59 +64,94 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
     setAnchorEl(null);
   };
 
-  const handleAutoIncrementChange = () => {
-    if (!currentTableId) return; // Защита от null
-    updateField(currentTableId, props.fieldId, {
-      autoIncrement: !checkedAutoincrement,
-    });
-    setCheckedAutoincrement((pr) => !pr);
-  };
+  const handleAutoIncrementChange = useCallback(() => {
+    if (!currentTableId) return;
 
-  const handleUniqueChange = () => {
-    if (!currentTableId) return; // Защита от null
-    updateField(currentTableId, props.fieldId, { unique: !checkedUnique });
-    setCheckedUnique((pr) => !pr);
-  };
+    const newValue = !checkedAutoincrement;
+    setCheckedAutoincrement(newValue);
+
+    updateField(currentTableId, props.fieldId, {
+      autoIncrement: newValue,
+    });
+  }, [currentTableId, props.fieldId, checkedAutoincrement, updateField]);
+
+  const handleUniqueChange = useCallback(() => {
+    if (!currentTableId) return;
+
+    const newValue = !checkedUnique;
+    setCheckedUnique(newValue);
+
+    updateField(currentTableId, props.fieldId, {
+      unique: newValue,
+    });
+  }, [currentTableId, props.fieldId, checkedUnique, updateField]);
 
   const open = Boolean(anchorEl);
 
-  const handleApproachChange = (event: any, newApproach: string) => {
-    if (newApproach === null || !currentTableId) {
-      return;
-    }
-    removeFieldProperties(
-      currentTableId, // Добавлен tableId
+  const handleApproachChange = useCallback(
+    (event: any, newApproach: string) => {
+      if (newApproach === null || !currentTableId || approach === newApproach) {
+        return;
+      }
+
+      setApproach(newApproach);
+
+      const isSwitchingToAI = newApproach === "ai";
+
+      if (isSwitchingToAI) {
+        removeFieldProperties(currentTableId, props.fieldId, [
+          "viaFaker",
+          "fakerType",
+          "locale",
+        ]);
+        updateField(currentTableId, props.fieldId, {
+          unique: checkedUnique,
+          autoIncrement: checkedAutoincrement,
+        });
+      } else {
+        removeFieldProperties(currentTableId, props.fieldId, [
+          "unique",
+          "autoIncrement",
+        ]);
+        updateField(currentTableId, props.fieldId, {
+          viaFaker: true,
+          fakerType: fakerType,
+          locale: locale,
+        });
+      }
+    },
+    [
+      currentTableId,
       props.fieldId,
-      // Инвертированная логика из-за того, что approach еще не поменялся
-      approach === "ai"
-        ? ["unique", "autoIncrement"]
-        : ["viaFaker", "fakerType", "locale"]
-    );
-    updateField(
-      currentTableId, // Добавлен tableId
-      props.fieldId,
-      approach === "ai"
-        ? { viaFaker: true, fakerType: fakerType, locale: locale }
-        : { unique: checkedUnique, autoIncrement: checkedAutoincrement }
-    );
-    setApproach(newApproach);
-  };
+      approach,
+      checkedUnique,
+      checkedAutoincrement,
+      fakerType,
+      locale,
+      removeFieldProperties,
+      updateField,
+    ]
+  );
 
-  const handleFakerTypeChange = (type: string) => {
-    if (!currentTableId) return; // Защита от null
+  // ОПТИМИЗИРОВАННЫЙ обработчик типа faker
+  const handleFakerTypeChange = useCallback(
+    (type: string) => {
+      if (!currentTableId) return;
 
-    const update = {
-      viaFaker: true,
-      fakerType: type,
-      locale: locale,
-      type: "string",
-    };
-    updateField(currentTableId, props.fieldId, update);
-    setFakerType(type);
-    handleClose();
-  };
+      setFakerType(type);
+      handleClose();
 
-  // Если нет текущей таблицы, не рендерим компонент
+      const update = {
+        viaFaker: true,
+        fakerType: type,
+        locale: locale,
+        type: "string",
+      };
+      updateField(currentTableId, props.fieldId, update);
+    },
+    [currentTableId, props.fieldId, locale, updateField]
+  );
+
   if (!currentTableId) {
     return null;
   }
@@ -165,11 +220,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                 Faker
               </ToggleButton>
             </ToggleButtonGroup>
-            <section
-              style={{
-                marginBottom: "20px",
-              }}
-            >
+            <section style={{ marginBottom: "20px" }}>
               {approach === "faker" ? (
                 <>
                   <div>
@@ -256,7 +307,13 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                       className={classes.parametrs}
                       onClick={handleUniqueChange}
                     >
-                      <Checkbox checked={checkedUnique} />
+                      <Checkbox
+                        checked={checkedUnique}
+                        sx={{
+                          transition: "all 0.1s ease-in-out",
+                          "&:active": { transform: "scale(0.95)" },
+                        }}
+                      />
                       <div
                         style={{
                           display: "grid",
@@ -275,7 +332,13 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                       className={classes.parametrs}
                       onClick={handleAutoIncrementChange}
                     >
-                      <Checkbox checked={checkedAutoincrement} />
+                      <Checkbox
+                        checked={checkedAutoincrement}
+                        sx={{
+                          transition: "all 0.1s ease-in-out",
+                          "&:active": { transform: "scale(0.95)" },
+                        }}
+                      />
                       <div
                         style={{
                           display: "grid",

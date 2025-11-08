@@ -7,7 +7,7 @@ import type {
   RegisterRequest,
   UpdateProfileRequest,
 } from "@services/api";
-import { useTokenStore } from "../../store/tokenStore";
+import { useTokenStore } from "@store/tokenStore";
 
 interface AuthContextType {
   user: User | null;

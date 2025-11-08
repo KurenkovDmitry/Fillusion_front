@@ -1,4 +1,5 @@
-import { useState } from "react";
+// components/Generate.tsx
+import { useState, useEffect } from "react";
 import {
   Dialog,
   Button,
@@ -7,94 +8,303 @@ import {
   DialogContent,
   Snackbar,
 } from "@mui/material";
-import { Form, Formik } from "formik";
-import { object, string, number } from "yup";
 import { InputField } from "./components/InputField";
 import { SliderWithInput } from "./components/SliderWithinput";
 import TableIcon from "@assets/table.svg?react";
 import { SelectField } from "./components/SelectField";
 import { SchemaMaker } from "./components/SchemaMaker";
 import { generateData } from "./actions/Generate.actions";
-import useSchemaStore, { type SchemaField } from "../../store/schemaStore";
+import useSchemaStore, { type SchemaField } from "@store/schemaStore";
+import useGenerateStore from "@store/generateStore";
 
-const selectModelOptions = [
+const SELECT_MODEL_OPTIONS = [
   { value: "deepseek", label: "Deepseek" },
   { value: "gemini", label: "Gemini" },
 ];
 
-const selectOutputOptions = [
+const SELECT_OUTPUT_OPTIONS = [
   { value: "json", label: "JSON" },
   { value: "csv", label: "CSV" },
   { value: "sql", label: "SQL" },
 ];
-
-const initialValues = {
-  name: "",
-  query: "",
-  totalRecords: 50,
-  examples: "",
-};
 
 interface GenerateProps {
   open: boolean;
   setOpen: (open: boolean) => void;
 }
 
+const GenerateFormContent = ({
+  tableId,
+  onClose,
+  onSubmit,
+  loading,
+  error,
+}: {
+  tableId: string;
+  onClose: () => void;
+  onSubmit: () => Promise<void>;
+  loading: boolean;
+  error: string;
+}) => {
+  // Локальные стейты для быстрой печати
+  const [name, setName] = useState("");
+  const [query, setQuery] = useState("");
+  const [totalRecords, setTotalRecords] = useState(50);
+  const [examples, setExamples] = useState("");
+  const [selectModelValue, setSelectModelValue] = useState("deepseek");
+  const [selectOutputValue, setSelectOutputValue] = useState("json");
+
+  const getTableSettings = useGenerateStore((state) => state.getTableSettings);
+  const saveTableSettings = useGenerateStore(
+    (state) => state.saveTableSettings
+  );
+
+  // Загружаем значения из store при открытии
+  useEffect(() => {
+    const settings = getTableSettings(tableId);
+    setName(settings.name);
+    setQuery(settings.query);
+    setTotalRecords(settings.totalRecords);
+    setExamples(settings.examples);
+    setSelectModelValue(settings.selectModelValue);
+    setSelectOutputValue(settings.selectOutputValue);
+  }, [tableId, getTableSettings]);
+
+  // Сохраняем в store при blur (для каждого поля)
+  const handleNameBlur = () => {
+    saveTableSettings(tableId, {
+      name,
+      query,
+      totalRecords,
+      examples,
+      selectModelValue,
+      selectOutputValue,
+    });
+  };
+
+  const handleQueryBlur = () => {
+    saveTableSettings(tableId, {
+      name,
+      query,
+      totalRecords,
+      examples,
+      selectModelValue,
+      selectOutputValue,
+    });
+  };
+
+  const handleExamplesBlur = () => {
+    saveTableSettings(tableId, {
+      name,
+      query,
+      totalRecords,
+      examples,
+      selectModelValue,
+      selectOutputValue,
+    });
+  };
+
+  const isValid =
+    query.trim().length > 0 && totalRecords >= 1 && totalRecords <= 100;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <InputField
+        label="Название таблицы"
+        name="name"
+        required
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={handleNameBlur}
+      />
+      <InputField
+        label="Правила генерации"
+        name="query"
+        labelIcon={<TableIcon />}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onBlur={handleQueryBlur}
+        multiline
+        placeholder="Например: name: русские имена и фамилии"
+        required
+      />
+      <SliderWithInput
+        label="Количество строк"
+        value={totalRecords}
+        min={1}
+        max={100}
+        onChange={(value) => {
+          setTotalRecords(value);
+          // Сохраняем сразу при изменении slider
+          saveTableSettings(tableId, {
+            name,
+            query,
+            totalRecords: value,
+            examples,
+            selectModelValue,
+            selectOutputValue,
+          });
+        }}
+      />
+      <InputField
+        label="Примеры данных"
+        name="examples"
+        labelIcon={<TableIcon />}
+        value={examples}
+        onChange={(e) => setExamples(e.target.value)}
+        onBlur={handleExamplesBlur}
+        multiline
+        placeholder='Например: { "name": "Иван Петров" }'
+      />
+      <SelectField
+        label="Модель для генерации"
+        value={selectModelValue}
+        options={SELECT_MODEL_OPTIONS}
+        onChange={(val: string) => {
+          const newValue = val;
+          setSelectModelValue(newValue);
+          saveTableSettings(tableId, {
+            name,
+            query,
+            totalRecords,
+            examples,
+            selectModelValue: newValue,
+            selectOutputValue,
+          });
+        }}
+      />
+      <SelectField
+        label="Тип выходных данных"
+        value={selectOutputValue}
+        options={SELECT_OUTPUT_OPTIONS}
+        onChange={(val: string) => {
+          const newValue = val;
+          setSelectOutputValue(newValue);
+          // Сохраняем сразу при изменении
+          saveTableSettings(tableId, {
+            name,
+            query,
+            totalRecords,
+            examples,
+            selectModelValue,
+            selectOutputValue: newValue,
+          });
+        }}
+      />
+      <SchemaMaker />
+
+      {error && (
+        <div style={{ color: "#d32f2f", fontSize: "14px", padding: "8px" }}>
+          {error}
+        </div>
+      )}
+
+      <Box width="100%" display="flex" justifyContent="space-between">
+        <Button
+          onClick={onClose}
+          sx={{
+            border: "1px solid #4f8cff",
+            height: "40px",
+            transition: "background-color 0.3s ease, color 0.3s ease",
+            "&:hover": {
+              backgroundColor: "#4f8cff",
+              color: "white",
+            },
+          }}
+        >
+          Отмена
+        </Button>
+        <Button
+          onClick={onSubmit}
+          disabled={!isValid || loading}
+          variant="contained"
+          sx={{ height: "40px" }}
+        >
+          {loading ? "Загрузка..." : "Начать генерацию"}
+        </Button>
+      </Box>
+    </div>
+  );
+};
+
 export const Generate = (props: GenerateProps) => {
   const { open, setOpen } = props;
-  const [openSnackbar, setOpenSnackbar] = useState(false);
+
+  const [snackbar, setSnackbar] = useState({ open: false, message: "" });
+  const [responseJson, setResponseJson] = useState<JSON | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [responseJson, setResponseJson] = useState<JSON | null>(null);
 
-  const [selectModelValue, setSelectModelValue] = useState(
-    selectModelOptions[0].value
-  );
-  const [selectOutputValue, setSelectOutputValue] = useState(
-    selectOutputOptions[0].value
-  );
-
-  const schema = useSchemaStore((s) => s.schema);
+  const schema = useSchemaStore((state) => state.tables);
   const currentTable = useSchemaStore().getCurrentTable();
-
-  // Убираем id из запроса
-  const formatSchemaForDTO = (
-    schema: SchemaField[]
-  ): Omit<SchemaField, "id">[] => {
-    return schema.map(({ id, ...rest }) => rest);
-  };
-
-  const mapValuesToDTO = (values: any) => ({
-    projectId: import.meta.env.VITE_PROJECT_ID,
-    query: values.query.trim(),
-    network: selectModelValue,
-    totalRecords: String(values.totalRecords),
-    schema: formatSchemaForDTO(schema),
-    examples: values.examples.trim() || undefined,
-  });
-
-  const handleError = (err: string) => {
-    setError(err);
-    setOpenSnackbar(true);
-  };
+  const getTableSettings = useGenerateStore((state) => state.getTableSettings);
 
   const handleClose = () => {
-    openSnackbar && setOpenSnackbar(false);
+    setOpen(false);
+    setResponseJson(null);
+  };
+
+  const handleFormSubmit = async () => {
+    if (!currentTable) return;
+
+    const schemaArray = Object.values(schema).flatMap(
+      (table: any) => table?.fields || []
+    );
+
+    const emptyNameField = (schemaArray as SchemaField[]).find(
+      (field) => !field.name.trim()
+    );
+
+    if (emptyNameField) {
+      setSnackbar({
+        open: true,
+        message: "Все поля 'Название' должны быть заполнены",
+      });
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // Берём значения из store
+      const settings = getTableSettings(currentTable.id);
+
+      const dto = {
+        projectId: import.meta.env.VITE_PROJECT_ID,
+        query: settings.query.trim(),
+        network: settings.selectModelValue,
+        totalRecords: String(settings.totalRecords),
+        schema: schemaArray.map(({ id, ...rest }: SchemaField) => rest),
+        examples: settings.examples.trim() || undefined,
+      };
+
+      const response = await generateData(dto);
+
+      if (!response.ok) {
+        throw new Error("Ошибка при отправке формы");
+      }
+
+      const data = await response.json();
+      setResponseJson(data);
+    } catch (err) {
+      const message = (err as Error).message;
+      setError(message);
+      setSnackbar({
+        open: true,
+        message,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <>
-      <Dialog
-        open={open}
-        maxWidth="lg"
-        fullWidth
-        onClose={() => setOpen(false)}
-      >
-        {!responseJson && (
-          <DialogTitle style={{ fontSize: 20 }}>
-            {responseJson ? "Результат генерации" : "Настройка генерации"}
-          </DialogTitle>
-        )}
+      <Dialog open={open} maxWidth="lg" fullWidth onClose={handleClose}>
+        <DialogTitle style={{ fontSize: 20 }}>
+          {responseJson ? "Результат генерации" : "Настройка генерации"}
+        </DialogTitle>
         <DialogContent
           style={{ scrollbarWidth: "thin", scrollbarColor: "#c0c0c0ff white" }}
         >
@@ -105,153 +315,33 @@ export const Generate = (props: GenerateProps) => {
                 Посмотреть результат можно будет на странице истории запросов
               </h3>
             </>
-          ) : (
-            <Formik
-              initialValues={{ ...initialValues, name: currentTable?.name }}
-              validationSchema={object({
-                query: string().required("Обязательное поле"),
-                totalRecords: number()
-                  .min(1)
-                  .max(100)
-                  .required("Обязательное поле"),
-              })}
-              // validateOnMount
-              onSubmit={async (values) => {
-                const emptyNameField = schema.find(
-                  (field) => !field.name.trim()
-                );
-                if (emptyNameField) {
-                  handleError("Все поля 'Название' должны быть заполнены");
-                  return;
-                }
-                setLoading(true);
-                setError("");
-                try {
-                  const dto = mapValuesToDTO(values);
-                  const response = await generateData(dto);
-                  if (!response.ok)
-                    throw new Error("Ошибка при отправке формы");
-                  const data = await response.json();
-                  setResponseJson(data);
-                } catch (err) {
-                  handleError((err as Error).message);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-            >
-              {({ values, setValues, isValid }) => (
-                <Form
-                  style={{ display: "flex", flexDirection: "column", gap: 10 }}
-                >
-                  <InputField
-                    label="Название таблицы"
-                    name="name"
-                    required
-                    value={values.name}
-                    onChange={(e) =>
-                      setValues({ ...values, name: e.target.value })
-                    }
-                  />
-                  <InputField
-                    label="Правила генерации"
-                    name="query"
-                    labelIcon={<TableIcon />}
-                    value={values.query}
-                    onChange={(e) =>
-                      setValues({ ...values, query: e.target.value })
-                    }
-                    multiline
-                    placeholder="Например: name: русские имена и фамилии"
-                    required
-                  />
-                  <SliderWithInput
-                    label="Количество строк"
-                    value={values.totalRecords}
-                    min={1}
-                    max={100}
-                    onChange={(value) =>
-                      setValues({ ...values, totalRecords: value })
-                    }
-                  />
-                  <InputField
-                    label="Примеры данных"
-                    name="examples"
-                    labelIcon={<TableIcon />}
-                    value={values.examples}
-                    onChange={(e) =>
-                      setValues({ ...values, examples: e.target.value })
-                    }
-                    multiline
-                    placeholder='Например: { "name": "Иван Петров" }'
-                  />
-                  <SelectField
-                    label="Модель для генерации"
-                    value={selectModelValue}
-                    options={selectModelOptions}
-                    onChange={setSelectModelValue}
-                  />
-                  <SelectField
-                    label="Тип выходных данных"
-                    value={selectOutputValue}
-                    options={selectOutputOptions}
-                    onChange={setSelectOutputValue}
-                  />
-                  <SchemaMaker />
-                  <Box
-                    width="100%"
-                    display="flex"
-                    justifyContent="space-between"
-                  >
-                    <Button
-                      onClick={() => setOpen(false)}
-                      sx={{
-                        border: "1px solid #4f8cff",
-                        height: "40px",
-                        "&": {
-                          transition:
-                            "background-color 0.3s ease, color 0.3s ease",
-                        },
-                        "&:hover": {
-                          backgroundColor: "#4f8cff",
-                          color: "white",
-                        },
-                      }}
-                    >
-                      Отмена
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={!isValid || loading}
-                      variant="contained"
-                      sx={{ height: "40px" }}
-                    >
-                      {loading ? "Загрузка..." : "Начать генерацию"}
-                    </Button>
-                  </Box>
-                  {!!error && (
-                    <Snackbar
-                      onClose={handleClose}
-                      open={openSnackbar}
-                      message={error}
-                      autoHideDuration={6000}
-                      anchorOrigin={{ vertical: "top", horizontal: "center" }}
-                      sx={{
-                        "& .MuiSnackbarContent-root": {
-                          backgroundColor: "#940d0dff",
-                          color: "white",
-                          fontSize: "16px",
-                          borderRadius: "12px",
-                        },
-                      }}
-                    />
-                  )}
-                </Form>
-              )}
-            </Formik>
-          )}
+          ) : currentTable ? (
+            <GenerateFormContent
+              tableId={currentTable.id}
+              onClose={handleClose}
+              onSubmit={handleFormSubmit}
+              loading={loading}
+              error={error}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
+
+      <Snackbar
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        open={snackbar.open}
+        message={snackbar.message}
+        autoHideDuration={6000}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        sx={{
+          "& .MuiSnackbarContent-root": {
+            backgroundColor: "#940d0dff",
+            color: "white",
+            fontSize: "16px",
+            borderRadius: "12px",
+          },
+        }}
+      />
     </>
   );
 };

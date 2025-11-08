@@ -23,7 +23,11 @@ export type TableSchema = {
   fields: SchemaField[];
 };
 
-export type RelationType = "one-to-one" | "one-to-many" | "many-to-many";
+export type RelationType =
+  | "one-to-one"
+  | "one-to-many"
+  | "many-to-many"
+  | "many-to-one";
 
 export type Relation = {
   id: string;
@@ -32,6 +36,8 @@ export type Relation = {
   fromField: string;
   toField: string;
   type: RelationType;
+  fromHandle: "left" | "right"; // Какой Handle у исходящей связи
+  toHandle: "left" | "right"; // Какой Handle у входящей связи
 };
 
 // Типы для API response
@@ -77,6 +83,8 @@ type Schema = {
 };
 
 interface SchemaState {
+  isEditingRelations: boolean;
+  setIsEditingRelations: (value: boolean) => void;
   tables: Record<string, TableSchema>; // Все таблицы по ID
   relations: Record<string, Relation>; // Все связи по ID
   currentTableId: string | null; // Текущая активная таблица
@@ -87,7 +95,7 @@ interface SchemaState {
 
   // Работа с таблицами
   setCurrentTable: (tableId: string) => void;
-  addTable: (table: Omit<TableSchema, "id">) => string;
+  addTable: (table: ApiTable) => string;
   removeTable: (tableId: string) => void;
   updateTable: (tableId: string, updates: Partial<TableSchema>) => void;
   updateTablePosition: (tableId: string, x: number, y: number) => void;
@@ -122,6 +130,18 @@ interface SchemaState {
   getAllTables: () => TableSchema[];
   getAllRelations: () => Relation[];
   reset: () => void;
+  getFieldKeyType: (
+    tableId: string,
+    fieldId: string
+  ) => "regular" | "primary" | "foreign";
+  getReferencedInfo: (
+    tableId: string,
+    fieldId: string
+  ) => {
+    referencedTableId: string;
+    referencedFieldId: string;
+  } | null;
+  isFieldForeignKey: (tableId: string, fieldId: string) => boolean;
 }
 
 // Маппер из API формата в формат store
@@ -178,6 +198,8 @@ const mapApiResponseToState = (
       fromField: apiRelation.fromField,
       toField: apiRelation.toField,
       type: apiRelation.type as RelationType,
+      fromHandle: "right", //////////////////////////////////////////////////// ЗАМЕНИТЬ ................
+      toHandle: "left",
     };
   });
 
@@ -185,6 +207,8 @@ const mapApiResponseToState = (
 };
 
 const useSchemaStore = create<SchemaState>((set, get) => ({
+  isEditingRelations: false,
+  setIsEditingRelations: (value) => set({ isEditingRelations: value }),
   tables: {},
   relations: {},
   currentTableId: null,
@@ -210,13 +234,19 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
   setCurrentTable: (tableId) => set({ currentTableId: tableId }),
 
   addTable: (table) => {
-    const id = `table-${Date.now()}-${Math.random()}`;
-    const newTable: TableSchema = { ...table, id };
-
+    const id = table.id;
     set((state) => ({
       tables: {
         ...state.tables,
-        [id]: newTable,
+        [id]: {
+          id: id,
+          name: table.name,
+          layout: {
+            x: table.x,
+            y: table.y,
+          },
+          fields: table.fields,
+        },
       },
       currentTableId: id,
     }));
@@ -461,6 +491,41 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
       relations: {},
       currentTableId: null,
     });
+  },
+
+  getFieldKeyType: (tableId, fieldId) => {
+    const state = get();
+    const field = state.tables[tableId]?.fields.find((f) => f.id === fieldId);
+
+    if (field?.isPrimaryKey) return "primary";
+
+    const hasRelation = Object.values(state.relations).some(
+      (relation) => relation.toTable === tableId && relation.toField === fieldId
+    );
+
+    return hasRelation ? "foreign" : "regular";
+  },
+
+  getReferencedInfo: (tableId, fieldId) => {
+    const state = get();
+
+    const relation = Object.values(state.relations).find(
+      (relation) => relation.toTable === tableId && relation.toField === fieldId
+    );
+
+    if (!relation) return null;
+
+    return {
+      referencedTableId: relation.fromTable,
+      referencedFieldId: relation.fromField,
+    };
+  },
+
+  isFieldForeignKey: (tableId, fieldId) => {
+    const state = get();
+    return Object.values(state.relations).some(
+      (relation) => relation.toTable === tableId && relation.toField === fieldId
+    );
   },
 }));
 

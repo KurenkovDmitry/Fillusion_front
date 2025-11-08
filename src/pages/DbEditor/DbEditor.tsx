@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect } from "react";
+// DatabaseDiagram.tsx - ПОЛНЫЙ КОД
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+} from "react";
 import {
   ReactFlow,
   Node,
@@ -10,22 +17,27 @@ import {
   Position,
   NodeProps,
   Connection,
-  addEdge,
   BackgroundVariant,
   ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { SelectField } from "../Generate/components/SelectField";
 import { LayoutWithHeader } from "@shared/components/LayoutWithHeader";
-import { Button } from "@mui/material";
+import { Button, IconButton, Tooltip } from "@mui/material";
 import { AdditionalSettings } from "../Generate/components/AdditionalSettings";
 import { SchemaService } from "@services/api/SchemaService/SchemaService";
 import { useParams } from "react-router-dom";
 import useSchemaStore, {
   TableSchema,
   SchemaField,
-} from "../../store/schemaStore";
+  Relation,
+} from "@store/schemaStore";
 import { Generate } from "../Generate";
+import { shallow } from "zustand/shallow";
+import { DeleteDialog } from "./components/DeleteDialog";
+import { RelationDialog } from "./components/RelationDialog";
+import CodeIcon from "@mui/icons-material/Code";
+import { getLabelByValue } from "../Generate/components/constants/constants";
 
 interface TableNodeData {
   id: string;
@@ -48,28 +60,122 @@ const getTableLayoutPayload = (currentTable: TableSchema) => {
   };
 };
 
+// Утилита debounce
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null;
+
+  const debounced = (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+
+  debounced.cancel = () => {
+    if (timeout) clearTimeout(timeout);
+  };
+
+  return debounced;
+}
+
+// ✅ Парсер Handle ID
+const parseHandleId = (handleId: string) => {
+  if (handleId.endsWith("-left")) {
+    return {
+      fieldId: handleId.replace("-left", ""),
+      direction: "left" as const,
+    };
+  } else if (handleId.endsWith("-right")) {
+    return {
+      fieldId: handleId.replace("-right", ""),
+      direction: "right" as const,
+    };
+  }
+  return { fieldId: handleId, direction: "unknown" as const };
+};
+
 const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
   const { projectId } = useParams();
-  const {
-    updateTable,
-    updateField,
-    removeField,
-    getCurrentTable,
-    setCurrentTable,
-  } = useSchemaStore();
-  const data = props.data;
-  const id = props.id;
-  const [isEditingName, setIsEditingName] = React.useState(false);
-  const [tableName, setTableName] = React.useState(data.name);
 
-  // чтобы в handleFieldBlur не слать запросы, когда изменений не было
-  const [isFieldChanged, setFieldChanged] = React.useState<
-    Map<string, boolean>
-  >(new Map());
+  const table: TableSchema = useSchemaStore(
+    (state) => state.tables[props.id],
+    shallow
+  );
+
+  const updateTable = useSchemaStore((state) => state.updateTable);
+  const updateField = useSchemaStore((state) => state.updateField);
+  const removeField = useSchemaStore((state) => state.removeField);
+  const getCurrentTable = useSchemaStore((state) => state.getCurrentTable);
+  const setCurrentTable = useSchemaStore((state) => state.setCurrentTable);
+  const isEditingRelations = useSchemaStore(
+    (state) => state.isEditingRelations
+  );
+
+  const id = props.id;
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tableName, setTableName] = useState(table?.name || "");
+  const [open, setOpen] = useState(false);
+
+  const [localFieldValues, setLocalFieldValues] = useState<
+    Record<string, string>
+  >({});
+
+  useEffect(() => {
+    if (table) {
+      setTableName(table.name);
+      const values: Record<string, string> = {};
+      table.fields.forEach((field) => {
+        values[field.id] = field.name;
+      });
+      setLocalFieldValues(values);
+    }
+  }, [table]);
+
+  const debouncedUpdateField = useRef(
+    debounce(
+      (tableId: string, fieldId: string, updates: Partial<SchemaField>) => {
+        updateField(tableId, fieldId, updates);
+      },
+      300
+    )
+  ).current;
+
+  const debouncedSaveToServer = useRef(
+    debounce(async (tableId: string) => {
+      setCurrentTable(tableId);
+      const currentTable = getCurrentTable();
+      if (!currentTable || !projectId) return;
+
+      const updatedTable = {
+        table: {
+          ...currentTable,
+          layout: getTableLayoutPayload(currentTable),
+        },
+      };
+
+      try {
+        await SchemaService.updateTable(projectId, tableId, updatedTable);
+      } catch (err) {
+        console.error("Failed to save table:", err);
+      }
+    }, 1000)
+  ).current;
+
+  useEffect(() => {
+    return () => {
+      debouncedUpdateField.cancel?.();
+      debouncedSaveToServer.cancel?.();
+    };
+  }, []);
 
   const handleTableNameBlur = () => {
     setIsEditingName(false);
-    updateTable(id, { name: tableName });
+    if (tableName !== table?.name) {
+      updateTable(id, { name: tableName });
+      debouncedSaveToServer(id);
+    }
   };
 
   const handleFieldChange = (
@@ -77,59 +183,62 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     key: "name" | "type",
     value: string
   ) => {
-    updateField(id, fieldId, { [key]: value });
-    setFieldChanged((prev) => prev.set(fieldId, true));
+    if (key === "name") {
+      setLocalFieldValues((prev) => ({ ...prev, [fieldId]: value }));
+    }
+
+    debouncedUpdateField(id, fieldId, { [key]: value });
   };
 
   const handleFieldBlur = (fieldId: string) => {
-    if (!isFieldChanged.get(fieldId)) return;
-    setCurrentTable(id);
-    const currentTable = getCurrentTable();
-    const updatedTable = {
-      table: {
-        ...getCurrentTable(),
-        layout: getTableLayoutPayload(currentTable!),
-      },
-    };
-    if (!updatedTable.table || !projectId) return;
-    SchemaService.updateTable(projectId, id, updatedTable);
-    setFieldChanged((prev) => prev.set(fieldId, false));
+    debouncedUpdateField.cancel?.();
+    const currentValue = localFieldValues[fieldId];
+    updateField(id, fieldId, { name: currentValue });
+    debouncedSaveToServer(id);
   };
 
   const handleAddField = async () => {
     setCurrentTable(id);
     const currentTable = getCurrentTable();
     if (!currentTable) return;
+
+    const newField = {
+      name: `field_${table?.fields.length || 0 + 1}`,
+      type: "string",
+      isPrimaryKey: false,
+      isForeignKey: false,
+    };
+
     const updatedTable = {
       table: {
         ...currentTable,
         layout: getTableLayoutPayload(currentTable),
-        fields: [
-          ...currentTable.fields,
-          {
-            name: `field_${data.fields.length + 1}`,
-            type: "string",
-            isPrimaryKey: false,
-            isForeignKey: false,
-          },
-        ],
+        fields: [...currentTable.fields, newField],
       },
     };
+
     if (projectId && updatedTable.table) {
-      const newTable = await SchemaService.updateTable(
-        projectId,
-        id,
-        updatedTable
-      );
-      updateTable(id, newTable.table);
+      try {
+        const newTable = await SchemaService.updateTable(
+          projectId,
+          id,
+          updatedTable
+        );
+        updateTable(id, newTable.table);
+      } catch (err) {
+        console.error("Failed to add field:", err);
+      }
     }
   };
 
   const handleDeleteField = (fieldId: string) => {
-    if (data.fields.length > 1) {
+    if (table?.fields.length && table.fields.length > 1) {
       removeField(id, fieldId);
+      debouncedSaveToServer(id);
     }
   };
+
+  if (!table) return null;
 
   return (
     <div
@@ -138,7 +247,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
         border: "2px solid #000",
         borderRadius: "8px",
         minWidth: "250px",
-        overflow: "hidden",
+        overflow: "visible",
         boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       }}
     >
@@ -150,6 +259,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          userSelect: isEditingRelations ? "none" : "auto",
         }}
       >
         {isEditingName ? (
@@ -161,7 +271,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
             onKeyDown={(e) => {
               if (e.key === "Enter") handleTableNameBlur();
               if (e.key === "Escape") {
-                setTableName(data.name);
+                setTableName(table.name);
                 setIsEditingName(false);
               }
             }}
@@ -189,53 +299,56 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
             {tableName}
           </div>
         )}
+        <IconButton
+          size="small"
+          onClick={() => setOpen(true)}
+          sx={{ color: "#d32f2f" }}
+          aria-label="Удалить таблицу"
+          className="nodrag"
+        >
+          ×
+        </IconButton>
       </div>
 
-      <div>
-        {data.fields.map((field, index) => (
+      <div style={{ overflow: "visible" }}>
+        {table.fields.map((field, index) => (
           <div
             key={field.id}
             style={{
               padding: "8px 12px",
               borderBottom:
-                index < data.fields.length - 1 ? "1px solid #E0E0E0" : "none",
+                index < table.fields.length - 1 ? "1px solid #E0E0E0" : "none",
               display: "grid",
               gridTemplateColumns: "1fr 135px 30px 30px",
               alignItems: "center",
               gap: "8px",
               position: "relative",
+              userSelect: isEditingRelations ? "none" : "auto",
+              overflow: "visible",
             }}
           >
             <Handle
-              type="target"
+              type="source"
               position={Position.Left}
               id={`${field.id}-left`}
               style={{
-                left: -8,
+                left: -14,
                 top: "50%",
                 transform: "translateY(-50%)",
-                background: "#666",
-                width: 8,
-                height: 8,
-                border: "2px solid white",
+                background: "#fff",
+                width: 10,
+                height: 10,
+                border: "2px solid black",
+                borderRadius: "50%",
+                cursor: "crosshair",
+                zIndex: 10000,
+                opacity: isEditingRelations ? 1 : 0,
+                transition: "opacity 0.2s",
               }}
             />
-            <Handle
-              type="source"
-              position={Position.Right}
-              id={`${field.id}-right`}
-              style={{
-                right: -8,
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "#666",
-                width: 8,
-                height: 8,
-                border: "2px solid white",
-              }}
-            />
+
             <input
-              value={field.name}
+              value={localFieldValues[field.id] || field.name}
               onChange={(e) =>
                 handleFieldChange(field.id, "name", e.target.value)
               }
@@ -251,6 +364,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
               }}
               className="nodrag"
             />
+
             <div className="nodrag">
               <SelectField
                 options={typeOptions}
@@ -258,20 +372,31 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
                 onChange={(val: string | string[]) =>
                   handleFieldChange(field.id, "type", val as string)
                 }
+                displayLabel={
+                  field.viaFaker
+                    ? getLabelByValue(field.fakerType!) +
+                      " (" +
+                      field.locale +
+                      ")"
+                    : undefined
+                }
+                disabled={field.viaFaker}
               />
             </div>
+
             <div className="nodrag">
               <AdditionalSettings fieldId={field.id} />
             </div>
+
             <button
               onClick={() => handleDeleteField(field.id)}
               className="nodrag"
-              disabled={data.fields.length <= 1}
+              disabled={table.fields.length <= 1}
               style={{
                 background: "transparent",
                 border: "none",
-                color: data.fields.length <= 1 ? "#ddd" : "#999",
-                cursor: data.fields.length <= 1 ? "not-allowed" : "pointer",
+                color: table.fields.length <= 1 ? "#ddd" : "#999",
+                cursor: table.fields.length <= 1 ? "not-allowed" : "pointer",
                 fontSize: "18px",
                 padding: "4px",
                 lineHeight: 1,
@@ -280,13 +405,33 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
                 justifyContent: "center",
               }}
               title={
-                data.fields.length <= 1
+                table.fields.length <= 1
                   ? "Нельзя удалить последнее поле"
                   : "Удалить поле"
               }
             >
               ×
             </button>
+
+            <Handle
+              type="source"
+              position={Position.Right}
+              id={`${field.id}-right`}
+              style={{
+                right: -14,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "#fff",
+                width: 10,
+                height: 10,
+                border: "2px solid black",
+                borderRadius: "50%",
+                cursor: "crosshair",
+                zIndex: 10000,
+                opacity: isEditingRelations ? 1 : 0,
+                transition: "opacity 0.2s",
+              }}
+            />
           </div>
         ))}
       </div>
@@ -294,7 +439,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
       <div
         style={{
           padding: "8px 12px",
-          borderTop: data.fields.length > 0 ? "1px solid #E0E0E0" : "none",
+          borderTop: table.fields.length > 0 ? "1px solid #E0E0E0" : "none",
         }}
       >
         <button
@@ -329,54 +474,83 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
           Добавить поле
         </button>
       </div>
+
+      <DeleteDialog
+        tableId={props.id}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
     </div>
   );
 };
 
+const MemoizedDatabaseTableNode = React.memo(
+  DatabaseTableNode,
+  (prev, next) => {
+    return (
+      prev.id === next.id &&
+      prev.data.name === next.data.name &&
+      prev.data.fields.length === next.data.fields.length &&
+      prev.selected === next.selected
+    );
+  }
+);
+
 const nodeTypes = {
-  databaseTable: DatabaseTableNode,
+  databaseTable: MemoizedDatabaseTableNode,
 };
 
 export const DatabaseDiagram: React.FC = () => {
   const { projectId } = useParams();
-  const {
-    tables,
-    relations,
-    loadFromApi,
-    addTable,
-    updateTablePosition,
-    addRelation,
-    removeRelation,
-    getAllTables,
-    getAllRelations,
-    setCurrentTable,
-  } = useSchemaStore();
 
-  const [rfInstance, setRfInstance] = React.useState<ReactFlowInstance | null>(
-    null
+  const tables: TableSchema[] = useSchemaStore(
+    (state) => state.tables,
+    shallow
   );
-  const [open, setOpen] = React.useState(false);
+  const relations: Relation[] = useSchemaStore(
+    (state) => state.relations,
+    shallow
+  );
 
-  // Конвертация таблиц в ноды
-  const convertTablesToNodes = useCallback(
-    (tables: Record<string, TableSchema>): Node<TableNodeData>[] => {
-      return Object.values(tables).map((table) => ({
+  const loadFromApi = useSchemaStore((state) => state.loadFromApi);
+  const addTable = useSchemaStore((state) => state.addTable);
+  const updateTablePosition = useSchemaStore(
+    (state) => state.updateTablePosition
+  );
+  const updateTable = useSchemaStore((state) => state.updateTable);
+  const addRelation = useSchemaStore((state) => state.addRelation);
+  const removeRelation = useSchemaStore((state) => state.removeRelation);
+  const getAllTables = useSchemaStore((state) => state.getAllTables);
+  const getAllRelations = useSchemaStore((state) => state.getAllRelations);
+  const setCurrentTable = useSchemaStore((state) => state.setCurrentTable);
+
+  const isEditingRelations = useSchemaStore(
+    (state) => state.isEditingRelations
+  );
+  const setIsEditingRelations = useSchemaStore(
+    (state) => state.setIsEditingRelations
+  );
+
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
+  const [open, setOpen] = useState(false);
+  const [selectedRelation, setSelectedRelation] = useState<string | null>(null);
+  const [relationDialogOpen, setRelationDialogOpen] = useState(false);
+
+  const nodes = useMemo(() => {
+    return Object.values(tables).map((table) => ({
+      id: table.id,
+      type: "databaseTable",
+      position: { x: table.layout.x, y: table.layout.y },
+      data: {
         id: table.id,
-        type: "databaseTable",
-        position: { x: table.layout.x, y: table.layout.y },
-        data: {
-          id: table.id,
-          name: table.name,
-          fields: table.fields,
-        },
-      }));
-    },
-    []
-  );
+        name: table.name,
+        fields: table.fields,
+      },
+    }));
+  }, [tables]);
 
-  // Конвертация связей в рёбра
-  const convertRelationsToEdges = useCallback(() => {
-    return getAllRelations().map((relation) => {
+  const edges = useMemo(() => {
+    return Object.values(relations).map((relation) => {
       let label = "";
       switch (relation.type) {
         case "one-to-one":
@@ -388,14 +562,17 @@ export const DatabaseDiagram: React.FC = () => {
         case "many-to-many":
           label = "N:M";
           break;
+        case "many-to-one":
+          label = "N:1";
+          break;
       }
 
       return {
         id: relation.id,
         source: relation.fromTable,
         target: relation.toTable,
-        sourceHandle: `${relation.fromField}-right`,
-        targetHandle: `${relation.toField}-left`,
+        sourceHandle: `${relation.fromField}-${relation.fromHandle}`,
+        targetHandle: `${relation.toField}-${relation.toHandle}`,
         type: "default",
         animated: false,
         style: {
@@ -414,14 +591,21 @@ export const DatabaseDiagram: React.FC = () => {
         },
       };
     });
-  }, [getAllRelations]);
+  }, [relations]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
-    []
-  );
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [reactFlowNodes, setReactFlowNodes, onNodesChange] =
+    useNodesState<Node<TableNodeData>>(nodes);
+  const [reactFlowEdges, setReactFlowEdges, onEdgesChange] =
+    useEdgesState(edges);
 
-  // Загрузка схемы из API
+  useEffect(() => {
+    setReactFlowNodes(nodes);
+  }, [nodes, setReactFlowNodes]);
+
+  useEffect(() => {
+    setReactFlowEdges(edges);
+  }, [edges, setReactFlowEdges]);
+
   useEffect(() => {
     const fetchSchema = async () => {
       try {
@@ -434,18 +618,18 @@ export const DatabaseDiagram: React.FC = () => {
     fetchSchema();
   }, [projectId, loadFromApi]);
 
-  // Обновление нод при изменении таблиц
-  useEffect(() => {
-    setNodes(convertTablesToNodes(tables));
-  }, [tables, convertTablesToNodes, setNodes]);
-
-  // Обновление рёбер при изменении связей
-  useEffect(() => {
-    setEdges(convertRelationsToEdges());
-  }, [relations, convertRelationsToEdges, setEdges]);
+  const isConnectable = useCallback(
+    (connection: Connection) => {
+      if (!isEditingRelations) return false;
+      return !!connection.source && !!connection.target;
+    },
+    [isEditingRelations]
+  );
 
   const onConnect = useCallback(
-    (params: Connection) => {
+    async (params: Connection) => {
+      if (!isEditingRelations || !projectId) return;
+
       if (
         !params.source ||
         !params.target ||
@@ -454,16 +638,34 @@ export const DatabaseDiagram: React.FC = () => {
       )
         return;
 
+      const source = parseHandleId(params.sourceHandle);
+      const target = parseHandleId(params.targetHandle);
+
+      const newRelation = {
+        fromTable: params.source,
+        toTable: params.target,
+        fromField: source.fieldId,
+        toField: target.fieldId,
+        type: "one-to-many",
+      };
+
+      const createdRelation = await SchemaService.createRelation(
+        projectId,
+        newRelation
+      );
+
       addRelation({
         fromTable: params.source,
         toTable: params.target,
-        fromField: params.sourceHandle.replace("-right", ""),
-        toField: params.targetHandle.replace("-left", ""),
+        fromField: source.fieldId,
+        toField: target.fieldId,
         type: "one-to-many",
-        id: "12",
+        id: createdRelation.relation.id,
+        fromHandle: source.direction as "left" | "right",
+        toHandle: target.direction as "left" | "right",
       });
     },
-    [addRelation]
+    [addRelation, isEditingRelations]
   );
 
   const handleNodesChange = useCallback(
@@ -485,40 +687,63 @@ export const DatabaseDiagram: React.FC = () => {
 
       changes.forEach((change: any) => {
         if (change.type === "remove") {
-          removeRelation(change.id);
+          if (isEditingRelations) {
+            removeRelation(change.id);
+          }
         }
       });
     },
-    [onEdgesChange, removeRelation]
+    [onEdgesChange, removeRelation, isEditingRelations]
   );
 
-  const handleSave = useCallback(async () => {
+  // ✅ Обработчик клика на edge
+  const onEdgeClick = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      if (!isEditingRelations) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      setSelectedRelation(edge.id);
+      setRelationDialogOpen(true);
+    },
+    [isEditingRelations]
+  );
+
+  const handleAddTable = async () => {
     const allTables = getAllTables();
-    const allRelations = getAllRelations();
-
-    const payload = {
-      tables: allTables,
-      relations: allRelations,
-    };
-
-    console.log("Сохранение схемы:", payload);
-
-    // try {
-    //   await SchemaService.updateSchema(projectId!, payload);
-    //   console.log("Схема успешно сохранена");
-    // } catch (error) {
-    //   console.error("Ошибка сохранения:", error);
-    // }
-  }, [getAllTables, getAllRelations]);
-
-  const handleAddTable = () => {
-    const allTables = getAllTables();
-    addTable({
+    const newTable = {
       name: `Table_${allTables.length + 1}`,
       fields: [],
-      x: 200 + allTables.length * 50,
-      y: 200 + allTables.length * 50,
-    });
+      layout: {
+        x: 200 + allTables.length * 50,
+        y: 200,
+      },
+    };
+
+    if (projectId) {
+      try {
+        const newApiTable = await SchemaService.createTable(projectId, {
+          table: newTable,
+        });
+        addTable(newApiTable.table);
+      } catch (e) {
+        console.log("error");
+      }
+    }
+  };
+
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    tableId: string | null;
+  }>({ open: false, tableId: null });
+
+  const handleDeleteClose = () => {
+    setDeleteDialog({ open: false, tableId: null });
+  };
+
+  const toggleEditRelations = () => {
+    setIsEditingRelations(!isEditingRelations);
   };
 
   return (
@@ -531,25 +756,50 @@ export const DatabaseDiagram: React.FC = () => {
         }}
       >
         <button
-          onClick={handleSave}
+          onClick={toggleEditRelations}
           style={{
             position: "absolute",
             top: 100,
             right: 20,
             zIndex: 10,
             padding: "10px 20px",
-            background: "#4A90E2",
+            background: isEditingRelations ? "rgb(54, 244, 101)" : "#4A90E2",
             color: "white",
             border: "none",
             borderRadius: "5px",
             cursor: "pointer",
             fontWeight: "bold",
             boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            transition: "all 0.3s",
           }}
         >
-          Сохранить диаграмму
+          {isEditingRelations
+            ? "✓ Завершить редактирование"
+            : "Редактировать связи"}
         </button>
 
+        {isEditingRelations && (
+          <div
+            style={{
+              position: "absolute",
+              top: 150,
+              right: 20,
+              zIndex: 10,
+              padding: "12px 16px",
+              background: "rgba(54, 244, 101, 0.9)",
+              color: "white",
+              borderRadius: "5px",
+              fontSize: "14px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            }}
+          >
+            🔗 Проведите линию для создания связи
+            <br />
+            💬 Кликните на связь для изменения типа
+          </div>
+        )}
+
+        {/* Сайдбар с таблицами */}
         <aside
           style={{
             position: "absolute",
@@ -558,14 +808,16 @@ export const DatabaseDiagram: React.FC = () => {
             width: `350px`,
             bottom: 0,
             zIndex: 20,
-            background: "#18191b",
-            color: "#fff",
+            backgroundColor: "rgb(24, 25, 27)",
+
+            color: "#000",
             padding: "12px",
             display: "flex",
             flexDirection: "column",
             gap: "12px",
             overflow: "hidden",
-            borderTop: "1px solid #3b3b3bff",
+            borderTop: "1px solid #242424ff",
+            borderRight: "1px solid #242424ff",
           }}
         >
           <div
@@ -576,7 +828,7 @@ export const DatabaseDiagram: React.FC = () => {
               gap: 8,
             }}
           >
-            <h3 style={{ margin: 0, fontSize: 16 }}>Таблицы</h3>
+            <h3 style={{ margin: 0, fontSize: 16, color: "#fff" }}>Таблицы</h3>
             <Button
               onClick={handleAddTable}
               aria-label="Добавить таблицу"
@@ -598,14 +850,15 @@ export const DatabaseDiagram: React.FC = () => {
             style={{
               display: "flex",
               flexDirection: "column",
+              backgroundColor: "rgb(24, 25, 27)",
               gap: "8px",
               overflowY: "auto",
               scrollbarWidth: "thin",
-              scrollbarColor: "#333 #18191b",
+              scrollbarColor: "#949494ff rgb(24, 25, 27)",
             }}
           >
             {Object.keys(tables).length === 0 && (
-              <div style={{ color: "#bbb", fontSize: 13 }}>Таблиц пока нет</div>
+              <div style={{ color: "#999", fontSize: 13 }}>Таблиц пока нет</div>
             )}
             {Object.values(tables).map((t) => (
               <div
@@ -613,13 +866,14 @@ export const DatabaseDiagram: React.FC = () => {
                 style={{
                   padding: "10px",
                   borderRadius: 8,
-                  border: "1px solid #333",
+                  border: "1px solid #929292ff",
                   cursor: "pointer",
                   marginBottom: 8,
                   height: "70px",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
                 }}
               >
                 <div
@@ -629,34 +883,57 @@ export const DatabaseDiagram: React.FC = () => {
                     justifyContent: "space-between",
                   }}
                 >
-                  <div>{t.name}</div>
-                  <div style={{ fontSize: 12, color: "#aaa" }}>
+                  <div style={{ color: "#fff", fontWeight: 500 }}>{t.name}</div>
+                  <div style={{ fontSize: 12, color: "#999" }}>
                     {t.fields.length} полей — x: {Math.round(t.layout.x)}, y:{" "}
                     {Math.round(t.layout.y)}
                   </div>
                 </div>
                 <div
-                  onClick={() => {
-                    setCurrentTable(t.id);
-                    setOpen(true);
+                  style={{
+                    display: "flex",
+                    gap: "8px",
+                    alignItems: "center",
                   }}
                 >
-                  sldlsk
+                  <IconButton
+                    onClick={() => {
+                      setCurrentTable(t.id);
+                      setOpen(true);
+                    }}
+                  >
+                    <Tooltip title="Настройки генерации таблицы" arrow>
+                      <CodeIcon sx={{ color: "#fff" }} />
+                    </Tooltip>
+                  </IconButton>
                 </div>
               </div>
             ))}
           </div>
         </aside>
 
+        {/* React Flow */}
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
+          nodes={reactFlowNodes}
+          edges={reactFlowEdges}
           onNodesChange={handleNodesChange}
           onEdgesChange={handleEdgesChange}
           onConnect={onConnect}
+          onEdgeClick={onEdgeClick}
           onInit={setRfInstance}
           nodeTypes={nodeTypes}
           fitView
+          isConnectable={isConnectable}
+          connectionMode="loose"
+          connectOnClick={isEditingRelations}
+          connectionLineStyle={{
+            stroke: isEditingRelations ? "#f44336" : "#666",
+            strokeWidth: isEditingRelations ? 3 : 2,
+          }}
+          edgesFocusable={isEditingRelations}
+          edgesUpdatable={isEditingRelations}
+          nodesDraggable={!isEditingRelations}
+          nodesConnectable={isEditingRelations}
           defaultEdgeOptions={{
             type: "smoothstep",
             animated: false,
@@ -670,7 +947,31 @@ export const DatabaseDiagram: React.FC = () => {
           />
         </ReactFlow>
       </div>
+
       <Generate open={open} setOpen={setOpen} />
+
+      {deleteDialog.tableId && (
+        <DeleteDialog
+          tableId={deleteDialog.tableId}
+          open={deleteDialog.open}
+          onClose={handleDeleteClose}
+        />
+      )}
+
+      {selectedRelation && (
+        <RelationDialog
+          relation={
+            Object.values(relations).find((r) => r.id === selectedRelation) ||
+            null
+          }
+          open={relationDialogOpen}
+          onClose={() => {
+            setRelationDialogOpen(false);
+            setSelectedRelation(null);
+          }}
+          projectId={projectId!}
+        />
+      )}
     </LayoutWithHeader>
   );
 };

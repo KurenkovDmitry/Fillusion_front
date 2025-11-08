@@ -3,6 +3,7 @@ import { apiServiceClient } from "../client";
 import {
   ApiResponse,
   ApiTable,
+  ApiTableResponse,
   RelationApi,
   RelationCreate,
   TableCreate,
@@ -29,8 +30,11 @@ export const SchemaService = {
     );
   },
 
-  async createTable(projectId: string, data: TableCreate): Promise<ApiTable> {
-    return apiServiceClient.post<ApiTable>(
+  async createTable(
+    projectId: string,
+    data: TableCreate
+  ): Promise<ApiTableResponse> {
+    return apiServiceClient.post<ApiTableResponse>(
       `/projects/${projectId}/tables`,
       data
     );
@@ -50,7 +54,7 @@ export const SchemaService = {
   async updateTable(
     projectId: string,
     tableId: string,
-    data: TableCreate
+    data: ApiTable
   ): Promise<ApiTable> {
     return apiServiceClient.patch<ApiTable>(
       `/projects/${projectId}/tables/${tableId}`,
