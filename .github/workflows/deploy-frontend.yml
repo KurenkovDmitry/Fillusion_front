@@ -35,34 +35,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Server resource diagnostics
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            echo "=== System Diagnostics (Memory, CPU, Disk, SSH connections) ==="
-
-            echo "--- System uptime ---"
-            uptime || true
-
-            echo "--- Memory (RAM + Swap) ---"
-            free -h || true
-
-            echo "--- Disk usage ---"
-            df -hT | grep -v tmpfs || true
-
-            echo "--- Top 10 memory consumers ---"
-            ps aux --sort=-%mem | head -n 10 || true
-
-            echo "--- Network ports listening ---"
-            sudo ss -tulpn | grep -E '(:22|:80|:443)' || true
-
-            echo "--- Active SSH connections ---"
-            sudo lsof -i :22 | grep ESTABLISHED || echo "No established SSH sessions"
-
-            echo "--- End diagnostics ---"
+      - name: Build project
+        run: npm run build
 
       - name: Ensure release directories exist
         uses: appleboy/ssh-action@v1.0.3
@@ -74,74 +48,30 @@ jobs:
             set -euo pipefail
             mkdir -p "${{ env.RELEASES_DIR }}" "${{ env.SHARED_DIR }}"
 
-      - name: Remove unnecessary files before copy
-        run: |
-          rm -rf .git .github .idea .env node_modules dist
-
-      - name: Copy project to server
-        uses: appleboy/scp-action@v0.1.4
+      - name: Copy dist to server
+        uses: appleboy/scp-action@v0.1.6
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "."
-          target: "${{ env.RELEASES_DIR }}/${{ env.RELEASE_NAME }}"
+          source: "dist"
+          target: "${{ env.RELEASES_DIR }}/${{ env.RELEASE_NAME }}/dist"
           overwrite: true
           rm: true
-          strip_components: 0
 
-      - name: Build and activate release on server
+      - name: Activate release on server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
-          port: 22
-          command_timeout: 10m
-          envs: HOME_DIR,FRONT_ROOT,RELEASE_NAME,RELEASES_DIR,CURRENT_LINK,SHARED_DIR,KEEP_RELEASES,NODE_VERSION
+          envs: RELEASE_NAME,RELEASES_DIR,CURRENT_LINK,KEEP_RELEASES
           script: |
             set -euo pipefail
 
-            if ! command -v npm >/dev/null 2>&1; then
-              echo "npm is required on the target host" >&2
-              exit 1
-            fi
-
             RELEASE_PATH="${RELEASES_DIR}/${RELEASE_NAME}"
 
-            if [ ! -d "${RELEASE_PATH}" ]; then
-              echo "Release directory ${RELEASE_PATH} is missing" >&2
-              exit 1
-            fi
-
-            echo "Using release at ${RELEASE_PATH}"
-
-            if [ -L "${CURRENT_LINK}" ]; then
-              OLD_RELEASE=$(readlink "${CURRENT_LINK}")
-              echo "Previous release: ${OLD_RELEASE}"
-            else
-              OLD_RELEASE=""
-              echo "No previous release detected"
-            fi
-
-            echo "Syncing shared .env (if present)"
-            if [ -f "${SHARED_DIR}/.env" ]; then
-              cp -f "${SHARED_DIR}/.env" "${RELEASE_PATH}/.env"
-            else
-              echo ".env not found in ${SHARED_DIR}, skipping copy"
-            fi
-
-            cd "${RELEASE_PATH}"
-
-            export NODE_ENV=production
-
-            if [ -f package-lock.json ]; then
-              npm ci
-            else
-              npm install --production=false
-            fi
-
-            npm run dev
+            echo "Using prebuilt release at ${RELEASE_PATH}"
 
             ln -sfn "${RELEASE_PATH}" "${CURRENT_LINK}"
             echo "Current release now points to ${RELEASE_PATH}"
@@ -163,8 +93,6 @@ jobs:
             if [ -L "${{ env.CURRENT_LINK }}" ]; then
               echo "Current release:"
               readlink -f "${{ env.CURRENT_LINK }}"
-              echo
-              ls -l "${{ env.CURRENT_LINK }}"
               echo
               ls -l "${{ env.CURRENT_LINK }}/dist" || true
             else
