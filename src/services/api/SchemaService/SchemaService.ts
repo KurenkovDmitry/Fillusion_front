@@ -48,7 +48,6 @@ const mapSchemaToBack = (table: TableSchema): ApiTableInternal => {
     layout: table.layout,
     fields: table.fields.map((field: FrontSchemaField): ApiField => {
       return {
-        id: field.id,
         name: field.name,
         type: field.type,
         isPrimaryKey: field.isPrimaryKey,

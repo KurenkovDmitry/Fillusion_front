@@ -1,5 +1,4 @@
 export type ApiField = {
-  id: string;
   name: string;
   type: string;
   isPrimaryKey?: boolean;
