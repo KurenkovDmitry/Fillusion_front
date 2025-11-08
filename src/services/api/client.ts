@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://127.0.0.1:8085/api/v1";
+import { API_BASE_URL } from "./config";
 
 class ApiClient {
   private baseURL: string;
