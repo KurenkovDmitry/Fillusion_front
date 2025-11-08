@@ -141,7 +141,7 @@ jobs:
               npm install --production=false
             fi
 
-            npm run rev
+            npm run dev
 
             ln -sfn "${RELEASE_PATH}" "${CURRENT_LINK}"
             echo "Current release now points to ${RELEASE_PATH}"
