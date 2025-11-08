@@ -4,6 +4,7 @@ export type ApiField = {
   type: string;
   isPrimaryKey?: boolean;
   isForeignKey?: boolean;
+  visible?: boolean; // если чо подключим
   generation?: {
     uniqueValues?: boolean;
     autoIncrement?: boolean;
