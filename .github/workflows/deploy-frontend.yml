@@ -74,6 +74,10 @@ jobs:
             set -euo pipefail
             mkdir -p "${{ env.RELEASES_DIR }}" "${{ env.SHARED_DIR }}"
 
+      - name: Remove unnecessary files before copy
+        run: |
+          rm -rf .git .github .idea .env node_modules dist
+
       - name: Copy project to server
         uses: appleboy/scp-action@v0.1.4
         with:
@@ -83,14 +87,8 @@ jobs:
           source: "."
           target: "${{ env.RELEASES_DIR }}/${{ env.RELEASE_NAME }}"
           overwrite: true
+          rm: true
           strip_components: 0
-          exclude: |
-            .git
-            .github
-            .idea
-            .env
-            node_modules
-            dist
 
       - name: Build and activate release on server
         uses: appleboy/ssh-action@v1.0.3
