@@ -21,7 +21,7 @@ type GenerateDataDTO = {
 };
 
 export async function generateData(values: GenerateDataDTO): Promise<JSON> {
-  return apiServiceClient.post(`${API_BASE_URL}/datasets/generate`, values);
+  return apiServiceClient.post(`/datasets/generate`, values);
 
   // return fetch(`${API_BASE_URL}/datasets/generate`, {
   //   method: "POST",
