@@ -203,7 +203,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     if (!currentTable) return;
 
     const newField = {
-      name: `field_${table?.fields.length || 0 + 1}`,
+      name: `field_${(table?.fields.length || 0) + 1}`,
       type: "string",
       isPrimaryKey: false,
       isForeignKey: false,
