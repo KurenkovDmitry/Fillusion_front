@@ -1,0 +1,180 @@
+name: Deploy Fillusion Frontend
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  HOME_DIR: /home/fillusion
+  FRONT_ROOT: /home/fillusion/fillusion/front
+  RELEASE_NAME: release_${{ github.run_number }}
+  RELEASES_DIR: /home/fillusion/fillusion/front/releases
+  CURRENT_LINK: /home/fillusion/fillusion/front/current
+  SHARED_DIR: /home/fillusion/fillusion/front/shared
+  KEEP_RELEASES: "3"
+  NODE_VERSION: "20"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint source
+        run: npm run lint
+
+      - name: Build for verification
+        run: npm run build
+
+      - name: Server resource diagnostics
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            echo "=== System Diagnostics (Memory, CPU, Disk, SSH connections) ==="
+
+            echo "--- System uptime ---"
+            uptime || true
+
+            echo "--- Memory (RAM + Swap) ---"
+            free -h || true
+
+            echo "--- Disk usage ---"
+            df -hT | grep -v tmpfs || true
+
+            echo "--- Top 10 memory consumers ---"
+            ps aux --sort=-%mem | head -n 10 || true
+
+            echo "--- Network ports listening ---"
+            sudo ss -tulpn | grep -E '(:22|:80|:443)' || true
+
+            echo "--- Active SSH connections ---"
+            sudo lsof -i :22 | grep ESTABLISHED || echo "No established SSH sessions"
+
+            echo "--- End diagnostics ---"
+
+      - name: Ensure release directories exist
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euo pipefail
+            mkdir -p "${{ env.RELEASES_DIR }}" "${{ env.SHARED_DIR }}"
+
+      - name: Copy project to server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "."
+          target: "${{ env.RELEASES_DIR }}/${{ env.RELEASE_NAME }}"
+          overwrite: true
+          strip_components: 0
+          exclude: |
+            .git
+            .github
+            .idea
+            .env
+            node_modules
+            dist
+
+      - name: Build and activate release on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          command_timeout: 10m
+          envs: HOME_DIR,FRONT_ROOT,RELEASE_NAME,RELEASES_DIR,CURRENT_LINK,SHARED_DIR,KEEP_RELEASES,NODE_VERSION
+          script: |
+            set -euo pipefail
+
+            if ! command -v npm >/dev/null 2>&1; then
+              echo "npm is required on the target host" >&2
+              exit 1
+            fi
+
+            RELEASE_PATH="${RELEASES_DIR}/${RELEASE_NAME}"
+
+            if [ ! -d "${RELEASE_PATH}" ]; then
+              echo "Release directory ${RELEASE_PATH} is missing" >&2
+              exit 1
+            fi
+
+            echo "Using release at ${RELEASE_PATH}"
+
+            if [ -L "${CURRENT_LINK}" ]; then
+              OLD_RELEASE=$(readlink "${CURRENT_LINK}")
+              echo "Previous release: ${OLD_RELEASE}"
+            else
+              OLD_RELEASE=""
+              echo "No previous release detected"
+            fi
+
+            echo "Syncing shared .env (if present)"
+            if [ -f "${SHARED_DIR}/.env" ]; then
+              cp -f "${SHARED_DIR}/.env" "${RELEASE_PATH}/.env"
+            else
+              echo ".env not found in ${SHARED_DIR}, skipping copy"
+            fi
+
+            cd "${RELEASE_PATH}"
+
+            export NODE_ENV=production
+
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm install --production=false
+            fi
+
+            npm run build
+
+            ln -sfn "${RELEASE_PATH}" "${CURRENT_LINK}"
+            echo "Current release now points to ${RELEASE_PATH}"
+
+            echo "Cleaning up old releases, keeping ${KEEP_RELEASES}"
+            cd "${RELEASES_DIR}"
+            if ls -1d release_* >/dev/null 2>&1; then
+              ls -1dt release_* | tail -n +$((KEEP_RELEASES + 1)) | xargs -r rm -rf
+            fi
+
+      - name: Show active release
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -euo pipefail
+            if [ -L "${{ env.CURRENT_LINK }}" ]; then
+              echo "Current release:"
+              readlink -f "${{ env.CURRENT_LINK }}"
+              echo
+              ls -l "${{ env.CURRENT_LINK }}"
+              echo
+              ls -l "${{ env.CURRENT_LINK }}/dist" || true
+            else
+              echo "No current release found"
+            fi
