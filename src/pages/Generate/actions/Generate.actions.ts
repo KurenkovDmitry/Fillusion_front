@@ -1,5 +1,6 @@
 import type { GenerateDataDTO } from "../dto";
-import { API_BASE_URL } from "@services/api";
+const API_BASE_URL = "http://127.0.0.1:8085/api/v1";
+
 
 export async function generateData(values: GenerateDataDTO) {
   return fetch(`${API_BASE_URL}/datasets/generate`, {
