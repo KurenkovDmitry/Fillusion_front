@@ -3,7 +3,7 @@ name: Deploy Fillusion Frontend
 on:
   push:
     branches:
-      - main
+      - master
 
 env:
   HOME_DIR: /home/fillusion
