@@ -1,4 +1,4 @@
-name: Deploy Fillusion Frontend
+name: Deploy Fillusion Frontend (Dev Mode)
 
 on:
   push:
@@ -35,66 +35,77 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build project
-        run: npm run build
+      - name: Cleanup unnecessary files
+        run: |
+          rm -rf .git .github .idea node_modules dist
 
-      - name: Ensure release directories exist
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Copy project to server
+        uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
-          script: |
-            set -euo pipefail
-            mkdir -p "${{ env.RELEASES_DIR }}" "${{ env.SHARED_DIR }}"
-
-      - name: Copy dist to server
-        uses: appleboy/scp-action@v0.1.6
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "dist"
-          target: "${{ env.RELEASES_DIR }}/${{ env.RELEASE_NAME }}/dist"
+          source: "."
+          target: "${{ env.RELEASES_DIR }}/${{ env.RELEASE_NAME }}"
           overwrite: true
-          rm: true
 
-      - name: Activate release on server
+      - name: Build and activate dev release on server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
-          envs: RELEASE_NAME,RELEASES_DIR,CURRENT_LINK,KEEP_RELEASES
+          envs: HOME_DIR,FRONT_ROOT,RELEASE_NAME,RELEASES_DIR,CURRENT_LINK,SHARED_DIR,KEEP_RELEASES,NODE_VERSION
           script: |
             set -euo pipefail
 
             RELEASE_PATH="${RELEASES_DIR}/${RELEASE_NAME}"
+            echo "Using release at ${RELEASE_PATH}"
 
-            echo "Using prebuilt release at ${RELEASE_PATH}"
+            mkdir -p "${RELEASES_DIR}" "${SHARED_DIR}"
 
+            # Копируем .env, если есть
+            if [ -f "${SHARED_DIR}/.env" ]; then
+              cp -f "${SHARED_DIR}/.env" "${RELEASE_PATH}/.env"
+            else
+              echo ".env not found in ${SHARED_DIR}, skipping copy"
+            fi
+
+            cd "${RELEASE_PATH}"
+
+            # Разрешаем dev-зависимости
+            export NODE_ENV=development
+
+            # Устанавливаем зависимости
+            npm ci || npm install
+
+            # Проверяем наличие pm2 (для перезапуска без обрыва SSH)
+            if ! command -v pm2 >/dev/null 2>&1; then
+              echo "Installing pm2 globally..."
+              sudo npm install -g pm2
+            fi
+
+            # Останавливаем старый dev-сервер (если есть)
+            pm2 delete fillusion_front || true
+
+            # Запускаем новый dev-сервер Vite
+            echo "Starting Vite dev server..."
+            pm2 start "npm run dev" --name fillusion_front --cwd "${RELEASE_PATH}" --time
+
+            # Переключаем current release
             ln -sfn "${RELEASE_PATH}" "${CURRENT_LINK}"
             echo "Current release now points to ${RELEASE_PATH}"
 
-            echo "Cleaning up old releases, keeping ${KEEP_RELEASES}"
+            # Очистка старых релизов
             cd "${RELEASES_DIR}"
-            if ls -1d release_* >/dev/null 2>&1; then
-              ls -1dt release_* | tail -n +$((KEEP_RELEASES + 1)) | xargs -r rm -rf
-            fi
+            ls -1dt release_* | tail -n +$((KEEP_RELEASES + 1)) | xargs -r rm -rf || true
 
-      - name: Show active release
+      - name: Show running processes
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            set -euo pipefail
-            if [ -L "${{ env.CURRENT_LINK }}" ]; then
-              echo "Current release:"
-              readlink -f "${{ env.CURRENT_LINK }}"
-              echo
-              ls -l "${{ env.CURRENT_LINK }}/dist" || true
-            else
-              echo "No current release found"
-            fi
+            echo "=== Running Vite dev processes ==="
+            pm2 ls || echo "pm2 not found"
