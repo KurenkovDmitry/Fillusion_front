@@ -1,5 +1,4 @@
-const API_AUTH_URL = "http://127.0.0.1:8080/api/users";
-const API_SERVICE_URL = "http://127.0.0.1:8085/api/v1";
+import { API_AUTH_URL, API_SERVICE_URL } from "@services/api";
 import { useTokenStore } from "../../store/tokenStore";
 
 
