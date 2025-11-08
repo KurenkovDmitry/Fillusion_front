@@ -1,0 +1,111 @@
+name: Deploy Fillusion Frontend (Dev Mode)
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  HOME_DIR: /home/fillusion
+  FRONT_ROOT: /home/fillusion/fillusion/front
+  RELEASE_NAME: release_${{ github.run_number }}
+  RELEASES_DIR: /home/fillusion/fillusion/front/releases
+  CURRENT_LINK: /home/fillusion/fillusion/front/current
+  SHARED_DIR: /home/fillusion/fillusion/front/shared
+  KEEP_RELEASES: "3"
+  NODE_VERSION: "20"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cleanup unnecessary files
+        run: |
+          rm -rf .git .github .idea node_modules dist
+
+      - name: Copy project to server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "."
+          target: "${{ env.RELEASES_DIR }}/${{ env.RELEASE_NAME }}"
+          overwrite: true
+
+      - name: Build and activate dev release on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: HOME_DIR,FRONT_ROOT,RELEASE_NAME,RELEASES_DIR,CURRENT_LINK,SHARED_DIR,KEEP_RELEASES,NODE_VERSION
+          script: |
+            set -euo pipefail
+
+            RELEASE_PATH="${RELEASES_DIR}/${RELEASE_NAME}"
+            echo "Using release at ${RELEASE_PATH}"
+
+            mkdir -p "${RELEASES_DIR}" "${SHARED_DIR}"
+
+            # Копируем .env, если есть
+            if [ -f "${SHARED_DIR}/.env" ]; then
+              cp -f "${SHARED_DIR}/.env" "${RELEASE_PATH}/.env"
+            else
+              echo ".env not found in ${SHARED_DIR}, skipping copy"
+            fi
+
+            cd "${RELEASE_PATH}"
+
+            # Разрешаем dev-зависимости
+            export NODE_ENV=development
+
+            # Устанавливаем зависимости
+            npm ci || npm install
+
+            # Проверяем наличие pm2 (для перезапуска без обрыва SSH)
+            if ! command -v pm2 >/dev/null 2>&1; then
+              echo "Installing pm2 globally..."
+              sudo npm install -g pm2
+            fi
+
+            # Останавливаем старый dev-сервер (если есть)
+            pm2 delete fillusion_front || true
+
+            # Запускаем новый dev-сервер Vite
+            echo "Starting Vite dev server..."
+            pm2 start "npm run dev" --name fillusion_front --cwd "${RELEASE_PATH}" --time
+
+            # Переключаем current release
+            ln -sfn "${RELEASE_PATH}" "${CURRENT_LINK}"
+            echo "Current release now points to ${RELEASE_PATH}"
+
+            # Очистка старых релизов
+            cd "${RELEASES_DIR}"
+            ls -1dt release_* | tail -n +$((KEEP_RELEASES + 1)) | xargs -r rm -rf || true
+
+      - name: Show running processes
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            echo "=== Running Vite dev processes ==="
+            pm2 ls || echo "pm2 not found"

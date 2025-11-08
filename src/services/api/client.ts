@@ -2,6 +2,7 @@ const API_AUTH_URL = "http://127.0.0.1:8080/api/users";
 const API_SERVICE_URL = "http://127.0.0.1:8085/api/v1";
 import { useTokenStore } from "../../store/tokenStore";
 
+
 class ApiClient {
   private baseURL: string;
 
