@@ -13,8 +13,8 @@
       "@pages": ["./src/pages"],
       "@assets": ["./src/assets"],
       "@shared/*": ["./src/shared/*"],
-      "@services/*": ["./src/services/*"]
-      // "@store/*": ["./src/store/*"],
+      "@services/*": ["./src/services/*"],
+      "@store/*": ["./src/store/*"],
       // "@api": ["./src/api"],
       // "@utils": ["./src/utils"],
     },

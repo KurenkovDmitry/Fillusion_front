@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import React, { useState, useEffect, createContext, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthService } from "@services/api";
 import type {
@@ -7,6 +7,7 @@ import type {
   RegisterRequest,
   UpdateProfileRequest,
 } from "@services/api";
+import { useTokenStore } from "@store/tokenStore";
 
 interface AuthContextType {
   user: User | null;
@@ -34,26 +35,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { setToken } = useTokenStore();
 
   const checkAuth = async () => {
-    try {
-      const { user } = await AuthService.getCurrentUser();
-      setUser(user);
-    } catch (error) {
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
+    // try {
+    //   const { user } = await AuthService.getCurrentUser();
+    //   setUser(user);
+    // } catch (error) {
+    //   setUser(null);
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   const login = async (credentials: LoginRequest) => {
-    const { user } = await AuthService.login(credentials);
-    setUser(user);
+    const { accessToken } = await AuthService.login(credentials);
+    setToken(accessToken);
   };
 
   const register = async (userData: RegisterRequest) => {
-    const { user } = await AuthService.register(userData);
-    setUser(user);
+    const { accessToken } = await AuthService.register(userData);
+    setToken(accessToken);
   };
 
   const logout = async () => {

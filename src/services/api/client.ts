@@ -1,9 +1,12 @@
-import { API_BASE_URL } from "./config";
+const API_AUTH_URL = "http://127.0.0.1:8080/api/users";
+const API_SERVICE_URL = "http://127.0.0.1:8085/api/v1";
+import { useTokenStore } from "../../store/tokenStore";
+
 
 class ApiClient {
   private baseURL: string;
 
-  constructor(baseURL: string = API_BASE_URL) {
+  constructor(baseURL: string) {
     this.baseURL = baseURL;
   }
 
@@ -13,9 +16,13 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
+    // Получаем актуальный токен при каждом запросе
+    const token = useTokenStore.getState().token;
+
     const config: RequestInit = {
       headers: {
         "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
       credentials: "include",
@@ -67,9 +74,22 @@ class ApiClient {
     });
   }
 
+  async patch<T>(
+    endpoint: string,
+    data?: any,
+    options?: RequestInit
+  ): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: "PATCH",
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
   async delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: "DELETE" });
   }
 }
 
-export const apiClient = new ApiClient();
+export const apiAuthClient = new ApiClient(API_AUTH_URL);
+export const apiServiceClient = new ApiClient(API_SERVICE_URL);

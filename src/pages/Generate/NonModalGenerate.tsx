@@ -1,16 +1,17 @@
 import { LayoutWithHeader } from "@shared/components/LayoutWithHeader";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
+import { useState } from "react";
+import { Generate } from "./Gernerate";
 
-interface NonModalGenerateProps {
-  open?: boolean;
-  setOpen?: (open: boolean) => void;
-}
-
-export const NonModalGenerate = (props: NonModalGenerateProps) => {
+export const NonModalGenerate = () => {
+  const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const navigateToHistory = () => {
     navigate("/history");
+  };
+  const navigateToProjects = () => {
+    navigate("/projects");
   };
   return (
     <LayoutWithHeader>
@@ -82,26 +83,41 @@ export const NonModalGenerate = (props: NonModalGenerateProps) => {
                   background: "#F8F8FA",
                   cursor: "pointer",
                 }}
-                onClick={() => (props.setOpen ? props.setOpen(true) : null)}
+                onClick={() => setOpen(true)}
               >
                 Нажмите, чтобы сгенерировать данные
               </td>
             </tr>
           </tbody>
         </table>
-        <Button
-          onClick={navigateToHistory}
-          variant="contained"
-          style={{
-            width: "480px",
-            height: "32px",
-            marginTop: "20px",
-            borderRadius: "10px",
-          }}
-        >
-          Перейти к истории запросов
-        </Button>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <Button
+            onClick={navigateToHistory}
+            variant="contained"
+            style={{
+              width: "480px",
+              height: "32px",
+              marginTop: "20px",
+              borderRadius: "10px",
+            }}
+          >
+            Перейти к истории запросов
+          </Button>
+          <Button
+            onClick={navigateToProjects}
+            variant="contained"
+            style={{
+              width: "480px",
+              height: "32px",
+              marginTop: "20px",
+              borderRadius: "10px",
+            }}
+          >
+            Перейти к проектам
+          </Button>
+        </div>
       </div>
+      <Generate open={open} setOpen={setOpen} />
     </LayoutWithHeader>
   );
 };

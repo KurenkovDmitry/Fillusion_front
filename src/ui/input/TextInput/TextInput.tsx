@@ -4,8 +4,10 @@ import {
   InputAdornment,
   Box,
   Typography,
+  IconButton,
 } from "@mui/material";
-import React from "react";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import React, { useState } from "react";
 import { useStyles } from "./TextInput.styles";
 
 export type TextInputProps = {
@@ -20,6 +22,7 @@ export type TextInputProps = {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   error?: boolean;
   helperText?: string;
+  isPassword?: boolean; // Add new prop
 } & TextFieldProps;
 
 export const TextInput = React.forwardRef<HTMLDivElement, TextInputProps>(
@@ -32,16 +35,22 @@ export const TextInput = React.forwardRef<HTMLDivElement, TextInputProps>(
       multiline = false,
       error = false,
       helperText,
+      isPassword = false,
       ...rest
     } = props;
 
+    const [showPassword, setShowPassword] = useState(false);
     const { classes } = useStyles();
+
+    const handleClickShowPassword = () => {
+      setShowPassword(!showPassword);
+    };
 
     return (
       <Box sx={{ width: "100%" }}>
         {/* Label с иконкой */}
         {label && (
-          <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
             {labelIcon && (
               <InputAdornment position="start" sx={{ mr: 1 }}>
                 {labelIcon}
@@ -51,6 +60,7 @@ export const TextInput = React.forwardRef<HTMLDivElement, TextInputProps>(
               variant="body1"
               sx={{
                 fontSize: "15px",
+                marginBottom: "3px",
                 fontWeight: "bold",
                 color: "text.primary",
                 "&.Mui-required:after": {
@@ -77,10 +87,25 @@ export const TextInput = React.forwardRef<HTMLDivElement, TextInputProps>(
           required={required}
           error={error}
           helperText={helperText}
-          // Иконка в начале поля
+          // Add type for password field
+          type={isPassword ? (showPassword ? "text" : "password") : rest.type}
           InputProps={{
             startAdornment: inputIcon ? (
               <InputAdornment position="start">{inputIcon}</InputAdornment>
+            ) : undefined,
+            // Add end adornment for password toggle
+            endAdornment: isPassword ? (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label="toggle password visibility"
+                  onClick={handleClickShowPassword}
+                  edge="end"
+                  size="small"
+                  sx={{ color: "#666" }}
+                >
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
             ) : undefined,
             sx: {
               // Стилизация поля ввода

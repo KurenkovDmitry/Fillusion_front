@@ -1,3 +1,5 @@
 export * from "./Generate";
 export * from "./QueryHistory";
+export * from "./DbEditor";
+export * from "./Projects";
 export * from "./Auth";

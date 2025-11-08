@@ -12,10 +12,16 @@ interface SelectFieldProps {
   margin?: boolean;
   value?: string;
   options: { value: string; label: string }[];
-  onChange: (value: string | string[]) => void; // Изменено: может быть строка или массив
+  onChange:
+    | React.Dispatch<React.SetStateAction<string>>
+    | ((value: string) => void)
+    | React.Dispatch<React.SetStateAction<"RU_RU" | "EN_US">>; // Изменено: может быть строка или массив
   labelIcon?: React.ReactNode;
   multiple?: boolean;
   multipleValue?: string[];
+  className?: string;
+  displayLabel?: string; // Добавляем новое свойство для отображения в select
+  disabled?: boolean;
 }
 
 export const SelectField = (props: SelectFieldProps) => {
@@ -48,6 +54,7 @@ export const SelectField = (props: SelectFieldProps) => {
       <FormControl
         fullWidth
         variant="outlined"
+        className={props.className}
         sx={{
           background: "#F3F3F5",
           borderRadius: "7px",
@@ -61,8 +68,9 @@ export const SelectField = (props: SelectFieldProps) => {
       >
         <Select
           value={props.multiple ? props.multipleValue || [] : props.value}
-          onChange={(e) => props.onChange(e.target.value as string | string[])}
+          onChange={(e) => props.onChange(e.target.value)}
           displayEmpty
+          disabled={props.disabled}
           multiple={props.multiple}
           name="select"
           renderValue={
@@ -79,7 +87,11 @@ export const SelectField = (props: SelectFieldProps) => {
                     )
                     .join(", ");
                 }
-              : undefined
+              : props.displayLabel // Используем displayLabel если он есть
+              ? () => props.displayLabel
+              : (value) =>
+                  props.options.find((opt) => opt.value === value)?.label ||
+                  value
           }
           sx={{
             borderRadius: "7px",
@@ -96,7 +108,7 @@ export const SelectField = (props: SelectFieldProps) => {
               background: "#F3F3F5",
             },
             "&&.Mui-focused fieldset": {
-              border: "1px solid black",
+              border: "1px solid #818181ff",
               transition: "border-color 0.2s ease",
             },
           }}

@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Generate } from "../pages";
-import { QueryHistory } from "../pages/QueryHistory";
+import { NonModalGenerate } from "../pages";
+import { QueryHistory } from "../pages";
+import { DatabaseDiagram } from "../pages";
+import { Projects } from "../pages";
 import { Auth } from "../pages/Auth";
 import { AuthProvider } from "@shared/hooks";
 import { ProtectedRoute } from "@shared/components";
@@ -10,9 +12,10 @@ export const App = () => {
     <Router>
       <AuthProvider>
         <Routes>
-          <Route path="/" element={<Generate />} />
+          <Route path="/" element={<NonModalGenerate />} />
           <Route path="/history" element={<QueryHistory />} />
-          <Route path="/auth" element={<Auth />} />
+          <Route path="/projects/:projectId" element={<DatabaseDiagram />} />
+          <Route path="/projects" element={<Projects />} />
         </Routes>
       </AuthProvider>
     </Router>

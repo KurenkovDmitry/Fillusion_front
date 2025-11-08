@@ -1,13 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SelectField } from "./SelectField";
 import { InputField } from "./InputField";
-import { IconButton, Button, Checkbox, FormControlLabel } from "@mui/material";
+import { IconButton, Button, Tooltip } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-
 import type { DropResult } from "@hello-pangea/dnd";
+import { AdditionalSettings } from "./AdditionalSettings";
+import useSchemaStore from "../../../store/schemaStore";
+import { getLabelByValue } from "./constants/constants";
+import { PkSettings } from "./PkSettings";
+import { useParams } from "react-router-dom";
 
 const typeOptions = [
   { value: "string", label: "String" },
@@ -15,40 +20,83 @@ const typeOptions = [
   { value: "float", label: "Float" },
 ];
 
-// Обновленный интерфейс для поддержки всех полей
 interface Field {
   id: string;
   name: string;
   type: string;
-  unique: boolean;
-  autoIncrement: boolean;
+  unique?: boolean;
+  autoIncrement?: boolean;
+  viaFaker?: boolean;
+  fakerType?: string;
+  locale?: "RU_RU" | "EN_US";
 }
 
-interface SchemaMakerProps {
-  schema: Field[];
-  setSchema: (schema: Field[]) => void;
-}
+export const SchemaMaker: React.FC = () => {
+  const { projectId } = useParams();
+  const currentTable = useSchemaStore((s) => s.getCurrentTable());
+  const currentTableId = useSchemaStore((s) => s.currentTableId);
 
-export const SchemaMaker: React.FC<SchemaMakerProps> = ({
-  schema,
-  setSchema,
-}) => {
+  const addField = useSchemaStore((s) => s.addField);
+  const updateField = useSchemaStore((s) => s.updateField);
+  const removeField = useSchemaStore((s) => s.removeField);
+  const reorderFields = useSchemaStore((s) => s.reorderFields);
+
   const [error, setError] = useState<string>("");
   const [errClass, setErrClass] = useState<string>("zero-opacity");
 
-  // Обновленная функция для обработки всех типов значений
-  const handleFieldChange = (
-    idx: number,
-    key: keyof Omit<Field, "id">,
-    value: string | boolean
-  ) => {
-    const updated = [...schema];
-    (updated[idx] as any)[key] = value;
-    setSchema(updated);
+  // Локальные значения для быстрой печати
+  const [localFieldNames, setLocalFieldNames] = useState<
+    Record<string, string>
+  >({});
+  const [localFieldTypes, setLocalFieldTypes] = useState<
+    Record<string, string>
+  >({});
+
+  const schema = currentTable?.fields || [];
+
+  // Инициализируем локальные значения когда меняется таблица
+  useEffect(() => {
+    const names: Record<string, string> = {};
+    const types: Record<string, string> = {};
+
+    schema.forEach((field) => {
+      names[field.id] = field.name;
+      types[field.id] = field.type;
+    });
+
+    setLocalFieldNames(names);
+    setLocalFieldTypes(types);
+  }, [currentTableId, schema]);
+
+  // Обновляем локальное значение при печати
+  const handleFieldNameChange = (fieldId: string, value: string) => {
+    setLocalFieldNames((prev) => ({
+      ...prev,
+      [fieldId]: value,
+    }));
   };
 
-  const handleSchemaErrorDisplay = (errorMessage: string) => {
-    setError(errorMessage);
+  // Сохраняем в стор при blur
+  const handleFieldNameBlur = (fieldId: string) => {
+    if (!currentTableId) return;
+    const newName = localFieldNames[fieldId];
+    updateField(currentTableId, fieldId, { name: newName });
+  };
+
+  // Обновляем тип в стор сразу (так как select быстрый)
+  const handleFieldTypeChange = (fieldId: string, value: string) => {
+    if (!currentTableId) return;
+
+    setLocalFieldTypes((prev) => ({
+      ...prev,
+      [fieldId]: value,
+    }));
+
+    updateField(currentTableId, fieldId, { type: value });
+  };
+
+  const handleSchemaErrorDisplay = () => {
+    setError("(Не может быть меньше одного поля)");
     setErrClass("");
     setTimeout(() => {
       setErrClass("zero-opacity");
@@ -57,43 +105,46 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
   };
 
   const handleAddField = () => {
-    setSchema([
-      ...schema,
-      {
-        id: `field-${Date.now()}`,
-        name: "",
-        type: "string",
-        unique: false,
-        autoIncrement: false,
-      },
-    ]);
+    if (!currentTableId) return;
+    addField(currentTableId, {
+      name: `field_${currentTable ? currentTable.fields.length + 1 : "new"}`,
+      type: "string",
+      isPrimaryKey: false,
+      isForeignKey: false,
+    });
   };
 
   const handleRemoveField = (idx: number) => {
-    if (schema.length === 1) {
-      handleSchemaErrorDisplay("(Не может быть меньше одного поля)");
-      return;
-    }
-    const updated = schema.filter((_, i) => i !== idx);
-    setSchema(updated);
+    if (!currentTableId) return;
+
+    const id = schema[idx]?.id;
+    if (!id) return;
+    removeField(currentTableId, id, handleSchemaErrorDisplay);
   };
 
   const handleOnDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-
-    const items = Array.from(schema);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    setSchema(items);
+    if (!result.destination || !currentTableId) return;
+    reorderFields(
+      currentTableId,
+      result.source.index,
+      result.destination.index
+    );
   };
+
+  if (!currentTable || !currentTableId) {
+    return (
+      <div style={{ padding: "20px", textAlign: "center", color: "#888" }}>
+        Выберите или создайте таблицу для работы со схемой
+      </div>
+    );
+  }
 
   return (
     <div>
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "30px 1fr 1fr 90px 110px 40px",
+          gridTemplateColumns: "30px 50px 1fr 1fr 90px 40px",
           alignItems: "center",
           gap: "12px",
           marginBottom: "8px",
@@ -102,6 +153,25 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
         }}
       >
         <div />
+        <div
+          style={{
+            display: "flex",
+            justifySelf: "center",
+            alignItems: "center",
+            gap: "2px",
+          }}
+        >
+          PK{" "}
+          <Tooltip
+            title="Настройка типа ключа (Primary key, Foreign key)"
+            arrow
+            placement="top-start"
+          >
+            <HelpOutlineIcon
+              sx={{ width: "16px", height: "16px", color: "#9c9c9cff" }}
+            />
+          </Tooltip>
+        </div>
         <div>
           Название поля{" "}
           <span style={{ color: "red" }} className={errClass + " error-span"}>
@@ -109,10 +179,7 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
           </span>
         </div>
         <div>Тип поля</div>
-        <div style={{ display: "flex", justifySelf: "center" }}>Уникально</div>
-        <div style={{ display: "flex", justifySelf: "center" }}>
-          Автоинкремент
-        </div>
+        <div style={{ display: "flex", justifySelf: "center" }}>Настройки</div>
         <div />
       </div>
 
@@ -128,7 +195,7 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
                       {...provided.draggableProps}
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "30px 1fr 1fr 90px 110px 40px",
+                        gridTemplateColumns: "30px 50px 1fr 1fr 90px 40px",
                         alignItems: "center",
                         gap: "12px",
                         marginBottom: "8px",
@@ -144,54 +211,46 @@ export const SchemaMaker: React.FC<SchemaMakerProps> = ({
                         />
                       </div>
 
+                      <PkSettings
+                        field={field}
+                        tableId={currentTable.id}
+                        projectId={projectId!}
+                      />
+
+                      {/* Используем локальное значение */}
                       <InputField
-                        name={`field_${idx}_name`}
-                        value={field.name}
+                        name={`${idx}`}
+                        value={localFieldNames[field.id] || field.name}
                         placeholder="Введите название поля"
                         onChange={(e) =>
-                          handleFieldChange(idx, "name", e.target.value)
+                          handleFieldNameChange(field.id, e.target.value)
                         }
+                        onBlur={() => handleFieldNameBlur(field.id)}
                         useFormik={false}
                       />
-
+                      {/* Тип сохраняется сразу при изменении */}
                       <SelectField
-                        value={field.type}
+                        value={localFieldTypes[field.id] || field.type}
                         options={typeOptions}
-                        onChange={(val) =>
-                          handleFieldChange(idx, "type", val as string)
+                        onChange={(val: any) =>
+                          handleFieldTypeChange(field.id, val as string)
                         }
+                        displayLabel={
+                          field.viaFaker
+                            ? getLabelByValue(field.fakerType!) +
+                              " (" +
+                              field.locale +
+                              ")"
+                            : undefined
+                        }
+                        disabled={field.viaFaker}
                       />
-
-                      {/* Checkbox для Unique */}
+                      {/* Настройки */}
                       <div
                         style={{ display: "flex", justifyContent: "center" }}
                       >
-                        <Checkbox
-                          checked={field.unique}
-                          onChange={(e) =>
-                            handleFieldChange(idx, "unique", e.target.checked)
-                          }
-                          sx={{ padding: 0 }}
-                        />
+                        <AdditionalSettings fieldId={field.id} />
                       </div>
-
-                      {/* Checkbox для Auto Increment */}
-                      <div
-                        style={{ display: "flex", justifyContent: "center" }}
-                      >
-                        <Checkbox
-                          checked={field.autoIncrement}
-                          onChange={(e) =>
-                            handleFieldChange(
-                              idx,
-                              "autoIncrement",
-                              e.target.checked
-                            )
-                          }
-                          sx={{ padding: 0 }}
-                        />
-                      </div>
-
                       <IconButton
                         size="small"
                         onClick={() => handleRemoveField(idx)}
