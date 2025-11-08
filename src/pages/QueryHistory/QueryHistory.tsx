@@ -3,7 +3,8 @@ import { QueryButton } from "./components/QueryButton";
 import { useEffect, useState } from "react";
 import { CircularProgress } from "@mui/material";
 import { DatasetDialog } from "./components/DatasetDialog";
-import { API_BASE_URL } from "@services/api";
+const API_BASE_URL = "http://127.0.0.1:8085/api/v1";
+
 
 interface DatasetsDTO {
   requestId: string;
