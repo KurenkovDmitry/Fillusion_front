@@ -281,11 +281,7 @@ export const Generate = (props: GenerateProps) => {
 
       const response = await generateData(dto);
 
-      if (!response.ok) {
-        throw new Error("Ошибка при отправке формы");
-      }
-
-      const data = await response.json();
+      const data = await response;
       setResponseJson(data);
     } catch (err) {
       const message = (err as Error).message;
