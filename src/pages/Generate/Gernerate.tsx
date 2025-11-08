@@ -29,6 +29,7 @@ const SELECT_OUTPUT_OPTIONS = [
 ];
 
 interface GenerateProps {
+  projectId: string;
   open: boolean;
   setOpen: (open: boolean) => void;
 }
@@ -228,7 +229,7 @@ const GenerateFormContent = ({
 };
 
 export const Generate = (props: GenerateProps) => {
-  const { open, setOpen } = props;
+  const { open, setOpen, projectId } = props;
 
   const [snackbar, setSnackbar] = useState({ open: false, message: "" });
   const [responseJson, setResponseJson] = useState<JSON | null>(null);
@@ -271,7 +272,7 @@ export const Generate = (props: GenerateProps) => {
       const settings = getTableSettings(currentTable.id);
 
       const dto = {
-        projectId: import.meta.env.VITE_PROJECT_ID,
+        projectId: projectId,
         query: settings.query.trim(),
         network: settings.selectModelValue,
         totalRecords: String(settings.totalRecords),

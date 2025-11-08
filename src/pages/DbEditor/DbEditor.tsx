@@ -948,7 +948,7 @@ export const DatabaseDiagram: React.FC = () => {
         </ReactFlow>
       </div>
 
-      <Generate open={open} setOpen={setOpen} />
+      <Generate open={open} setOpen={setOpen} projectId={projectId || ""} />
 
       {deleteDialog.tableId && (
         <DeleteDialog
