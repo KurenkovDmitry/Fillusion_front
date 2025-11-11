@@ -15,20 +15,17 @@ const getDefaultBaseUrl = () => {
 
 // Основной API (db-service / gateway)
 export const API_BASE_URL = sanitizeBaseUrl(
-  import.meta.env.VITE_API_BASE_URL ??
-    "http://176.123.165.26/api/v1"
+  import.meta.env.VITE_API_BASE_URL ?? "/api/v1"
 );
 
 // Auth / user-service
 export const API_AUTH_URL = sanitizeBaseUrl(
-  import.meta.env.VITE_API_AUTH_URL ??
-    "http://176.123.165.26/api/users"
+  import.meta.env.VITE_API_AUTH_URL ?? "/api/users"
 );
 
 // Основной backend-сервис
 export const API_SERVICE_URL = sanitizeBaseUrl(
-  import.meta.env.VITE_API_SERVICE_URL ??
-    "http://176.123.165.26/api/v1"
+  import.meta.env.VITE_API_SERVICE_URL ?? "/api/v1"
 );
 
 // === Хранилище токена ===
