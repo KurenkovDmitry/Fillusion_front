@@ -3,6 +3,7 @@ import { apiServiceClient } from "../client";
 import {
   ApiResponse,
   ApiTable,
+  ApiTableInternal,
   ApiTableResponse,
   RelationApi,
   RelationCreate,
@@ -54,7 +55,7 @@ export const SchemaService = {
   async updateTable(
     projectId: string,
     tableId: string,
-    data: ApiTable
+    data: ApiTableInternal
   ): Promise<ApiTable> {
     return apiServiceClient.patch<ApiTable>(
       `/projects/${projectId}/tables/${tableId}`,

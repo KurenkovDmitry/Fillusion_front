@@ -14,6 +14,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
   register: (userData: RegisterRequest) => Promise<void>;
+  refresh: () => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (userData: UpdateProfileRequest) => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -58,6 +59,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setToken(accessToken);
   };
 
+  const refresh = async () => {
+    const { accessToken } = await AuthService.refreshToken();
+    setToken(accessToken);
+  };
+
   const logout = async () => {
     await AuthService.logout();
     setUser(null);
@@ -78,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isLoading,
     login,
     register,
+    refresh,
     logout,
     updateProfile,
     checkAuth,

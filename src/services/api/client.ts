@@ -1,7 +1,8 @@
 const API_AUTH_URL = "http://127.0.0.1:8080/api/users";
 const API_SERVICE_URL = "http://127.0.0.1:8085/api/v1";
-import { useTokenStore } from "../../store/tokenStore";
-
+const API_GENERATOR_V2_URL = "http://127.0.0.1:8085/api/v2";
+import { useTokenStore } from "@store/tokenStore";
+import { AuthService } from "@services/api/AuthService";
 
 class ApiClient {
   private baseURL: string;
@@ -12,7 +13,8 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retry: boolean = false
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
@@ -34,6 +36,17 @@ class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        if (
+          errorData.message === "authentication required" &&
+          endpoint !== "/auth/refresh" &&
+          !retry
+        ) {
+          const response = await AuthService.refreshToken();
+          if (response.accessToken) {
+            useTokenStore.getState().setToken(response.accessToken);
+            this.request(endpoint, options, true);
+          }
+        }
         throw new Error(
           errorData.message || `HTTP error status: ${response.status}`
         );
@@ -93,3 +106,4 @@ class ApiClient {
 
 export const apiAuthClient = new ApiClient(API_AUTH_URL);
 export const apiServiceClient = new ApiClient(API_SERVICE_URL);
+export const apiGeneratorClient = new ApiClient(API_GENERATOR_V2_URL);

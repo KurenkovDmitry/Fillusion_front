@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { Form, Formik } from "formik";
 import * as yup from "yup";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { TextInput } from "../../ui/form";
 import { useAuth } from "@shared/hooks";
 import { useTokenStore } from "../../store/tokenStore";
@@ -60,7 +60,6 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
   const [isChanging, setIsChanging] = useState(false);
 
   const { login, register } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
 
   // Получаем путь для возврата после аутентификации

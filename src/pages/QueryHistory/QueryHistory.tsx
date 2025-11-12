@@ -3,43 +3,33 @@ import { QueryButton } from "./components/QueryButton";
 import { useEffect, useState } from "react";
 import { CircularProgress } from "@mui/material";
 import { DatasetDialog } from "./components/DatasetDialog";
-import { API_BASE_URL } from "@services/api";
-
-interface DatasetsDTO {
-  requestId: string;
-  query: string;
-  network: string;
-  totalRecords: string;
-}
+import { GenerateService } from "@services/api/GenerateService/GenerateService";
+import { useParams } from "react-router-dom";
+import { Dataset } from "@services/api/GenerateService/GenerateService.types";
 
 export const QueryHistory = () => {
-  const [datasets, setDatasets] = useState<DatasetsDTO[]>();
+  const { projectId } = useParams();
+  const [datasets, setDatasets] = useState<Dataset[]>();
   const [loading, setLoading] = useState<boolean>(false);
   const [requsetId, setRequestId] = useState("");
+  const [requsetStatus, setRequsetStatus] = useState("");
 
   const [open, setOpen] = useState(false);
 
-  const handleOpen = (val: any) => {
+  const handleOpen = (val: string, status: string) => {
     setOpen(true);
     setRequestId(val);
+    setRequsetStatus(status);
   };
 
   useEffect(() => {
     const fetchDatasets = async () => {
       setLoading(true);
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/datasets?projectId=${
-            import.meta.env.VITE_PROJECT_ID
-          }`
-        );
-        if (!response.ok) {
-          return new Error("Failed to fetch");
-        }
-        const data = await response.json();
-        setDatasets(data.datasets);
+        const datasets = await GenerateService.getDatasets(projectId!);
+        setDatasets(datasets.datasets);
       } catch (e) {
-        return e;
+        console.error(e);
       } finally {
         setLoading(false);
       }
@@ -49,7 +39,12 @@ export const QueryHistory = () => {
 
   return (
     <LayoutWithHeader noJustify>
-      <DatasetDialog open={open} setOpen={setOpen} requestId={requsetId} />
+      <DatasetDialog
+        open={open}
+        setOpen={setOpen}
+        requestId={requsetId}
+        status={requsetStatus}
+      />
       <div
         style={{
           display: "flex",
@@ -75,12 +70,15 @@ export const QueryHistory = () => {
             datasets.map((val, idx, arr) => (
               <QueryButton
                 key={idx}
+                status={val.status}
                 requsetId={val.requestId}
-                query={val.query}
+                query={
+                  val.tables[0]?.name ?? `Запрос ${val.requestId.slice(6, 10)}`
+                }
                 network={val.network}
-                totalRecords={val.totalRecords}
+                totalRecords={val.tablesCount}
                 last={idx === arr.length - 1}
-                onClick={() => handleOpen(val.requestId)}
+                onClick={() => handleOpen(val.requestId, val.status)}
               />
             ))
           )}

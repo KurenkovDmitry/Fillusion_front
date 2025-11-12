@@ -17,8 +17,8 @@ interface AdditionalSettingsProps {
 }
 
 const lacaleSelectOptions = [
-  { value: "RU_RU", label: "Русский (RU)" },
-  { value: "EN_US", label: "Английский (EN)" },
+  { value: "LOCALE_RU_RU", label: "Русский (RU)" },
+  { value: "LOCALE_EN_US", label: "Английский (EN)" },
 ];
 
 export const AdditionalSettings = (props: AdditionalSettingsProps) => {
@@ -53,8 +53,10 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
     setCheckedAutoincrement(currentField.autoIncrement ?? false);
   }, [currentField]);
 
-  const [locale, setLocale] = useState<"RU_RU" | "EN_US">("RU_RU");
-  const [fakerType, setFakerType] = useState("name");
+  const [locale, setLocale] = useState<"LOCALE_RU_RU" | "LOCALE_EN_US">(
+    "LOCALE_RU_RU"
+  );
+  const [fakerType, setFakerType] = useState("COLUMN_TYPE_FIRST_NAME");
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -145,7 +147,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
         viaFaker: true,
         fakerType: type,
         locale: locale,
-        type: "string",
+        type: "text",
       };
       updateField(currentTableId, props.fieldId, update);
     },
@@ -252,6 +254,8 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                             ? "Работа и финансы"
                             : category === "internet"
                             ? "Интернет"
+                            : category === "basicTypes"
+                            ? "Базовые типы"
                             : category}
                         </h4>
                         <div
@@ -283,7 +287,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                                 }}
                               >
                                 Примеры:{" "}
-                                {locale === "RU_RU"
+                                {locale === "LOCALE_RU_RU"
                                   ? type.examples.join(", ")
                                   : type.examples_en.join(", ")}
                               </p>

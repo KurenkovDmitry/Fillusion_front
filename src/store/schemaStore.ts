@@ -10,7 +10,7 @@ export type SchemaField = {
   autoIncrement?: boolean;
   viaFaker?: boolean;
   fakerType?: string;
-  locale?: "RU_RU" | "EN_US";
+  locale?: "LOCALE_RU_RU" | "LOCALE_EN_US";
 };
 
 export type TableSchema = {
@@ -71,6 +71,8 @@ type ApiRelation = {
   fromField: string;
   toField: string;
   type: string;
+  fromHandle: "left" | "right"; // Какой Handle у исходящей связи
+  toHandle: "left" | "right";
 };
 
 type ApiResponse = {
@@ -149,7 +151,7 @@ const mapApiFieldToSchemaField = (apiField: ApiField): SchemaField => {
   const field: SchemaField = {
     id: apiField.id,
     name: apiField.name,
-    type: apiField.type,
+    type: apiField.type === "string" ? "text" : apiField.type,
     isPrimaryKey: apiField.isPrimaryKey,
     isForeignKey: apiField.isForeignKey,
   };
@@ -162,7 +164,9 @@ const mapApiFieldToSchemaField = (apiField: ApiField): SchemaField => {
       field.fakerType = apiField.generation.fakerType;
     if (apiField.generation.fakerLocale) {
       field.locale =
-        apiField.generation.fakerLocale === "ru_RU" ? "RU_RU" : "EN_US";
+        apiField.generation.fakerLocale === "ru_RU"
+          ? "LOCALE_RU_RU"
+          : "LOCALE_EN_US";
     }
   }
 
@@ -198,8 +202,8 @@ const mapApiResponseToState = (
       fromField: apiRelation.fromField,
       toField: apiRelation.toField,
       type: apiRelation.type as RelationType,
-      fromHandle: "right", //////////////////////////////////////////////////// ЗАМЕНИТЬ ................
-      toHandle: "left",
+      fromHandle: apiRelation.fromHandle,
+      toHandle: apiRelation.toHandle,
     };
   });
 
@@ -429,7 +433,7 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
 
   // Работа со связями
   addRelation: (relation) => {
-    const id = `relation-${Date.now()}-${Math.random()}`;
+    const id = relation.id;
     const newRelation: Relation = { ...relation, id };
 
     set((state) => ({
