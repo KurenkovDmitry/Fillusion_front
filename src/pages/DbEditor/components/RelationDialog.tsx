@@ -5,6 +5,7 @@ import useSchemaStore from "@store/schemaStore";
 import { useState, useEffect } from "react";
 import { SelectField } from "../../Generate/components/SelectField";
 import { SchemaService } from "@services/api";
+import { getTableLayoutPayload } from "../DbEditor";
 
 interface RelationDialogProps {
   relation: Relation | null;
@@ -22,6 +23,9 @@ const selectOptions = [
 export const RelationDialog = (props: RelationDialogProps) => {
   const updateRelation = useSchemaStore((state) => state.updateRelation);
   const removeRelation = useSchemaStore((state) => state.removeRelation);
+  const updateField = useSchemaStore((state) => state.updateField);
+  const getAllTables = useSchemaStore((state) => state.getAllTables);
+  const getAllRelations = useSchemaStore((state) => state.getAllRelations);
 
   const [relationType, setRelationType] = useState<RelationType>("one-to-many");
 
@@ -34,6 +38,14 @@ export const RelationDialog = (props: RelationDialogProps) => {
   const handleSave = () => {
     if (props.relation) {
       updateRelation(props.relation.id, { type: relationType });
+      setTimeout(
+        () =>
+          console.log(
+            relationType,
+            getAllRelations().find((r) => r.id === props.relation?.id)
+          ),
+        1000
+      );
       SchemaService.updateRelation(props.projectId, props.relation.id, {
         ...props.relation,
         type: relationType,
@@ -42,11 +54,31 @@ export const RelationDialog = (props: RelationDialogProps) => {
     }
   };
 
-  const handleDelete = () => {
-    if (props.relation) {
+  const handleDelete = async () => {
+    if (!props.relation || !props.projectId) return;
+
+    try {
+      await SchemaService.deleteRelation(props.projectId, props.relation.id);
+
       removeRelation(props.relation.id);
-      SchemaService.deleteRelation(props.projectId, props.relation.id);
+
+      updateField(props.relation.fromTable, props.relation.fromField, {
+        isForeignKey: false,
+      });
+      const table = getAllTables().find(
+        (t) => t.id === props.relation?.fromTable
+      );
+      if (!table) return;
+
+      await SchemaService.updateTable(
+        props.projectId,
+        props.relation.fromTable,
+        { ...table, layout: getTableLayoutPayload(table) }
+      );
+
       props.onClose();
+    } catch (error) {
+      console.error("Failed to delete relation:", error);
     }
   };
   const tables = useSchemaStore((state) => state.tables);

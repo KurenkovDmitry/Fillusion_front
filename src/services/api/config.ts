@@ -23,6 +23,10 @@ export const API_AUTH_URL = sanitizeBaseUrl(
   import.meta.env.VITE_API_AUTH_URL ?? "/api/users"
 );
 
+export const API_GENERATOR_V2_URL = sanitizeBaseUrl(
+  import.meta.env.VITE_API_GENERATOR_V2_URL ?? "/api/v2"
+);
+
 // Основной backend-сервис
 export const API_SERVICE_URL = sanitizeBaseUrl(
   import.meta.env.VITE_API_SERVICE_URL ?? "/api/v1"

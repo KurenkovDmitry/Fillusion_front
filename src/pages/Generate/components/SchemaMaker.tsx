@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SelectField } from "./SelectField";
 import { InputField } from "./InputField";
 import { IconButton, Button, Tooltip } from "@mui/material";
@@ -9,15 +9,19 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
 import { AdditionalSettings } from "./AdditionalSettings";
-import useSchemaStore from "../../../store/schemaStore";
+import useSchemaStore, { TableSchema } from "../../../store/schemaStore";
 import { getLabelByValue } from "./constants/constants";
 import { PkSettings } from "./PkSettings";
 import { useParams } from "react-router-dom";
+import { SchemaService } from "@services/api";
 
 const typeOptions = [
-  { value: "string", label: "String" },
+  { value: "text", label: "Text" },
   { value: "int", label: "Integer" },
+  { value: "bigint", label: "Big Integer" },
   { value: "float", label: "Float" },
+  { value: "bool", label: "Boolean" },
+  { value: "uuid", label: "UUID" },
 ];
 
 interface Field {
@@ -31,20 +35,51 @@ interface Field {
   locale?: "RU_RU" | "EN_US";
 }
 
+// Утилита debounce для отложенных запросов
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null;
+
+  const debounced = (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+
+  debounced.cancel = () => {
+    if (timeout) clearTimeout(timeout);
+  };
+
+  return debounced;
+}
+
+const getTableLayoutPayload = (currentTable: any) => {
+  return {
+    x: Math.round(currentTable.layout.x),
+    y: Math.round(currentTable.layout.y),
+  };
+};
+
+const getFieldName = (table: TableSchema) =>
+  table.fields.some((f) => f.name === `field_${table.fields.length + 1}`)
+    ? `field_${table.fields.length + 2}`
+    : `field_${table.fields.length + 1}`;
+
 export const SchemaMaker: React.FC = () => {
   const { projectId } = useParams();
   const currentTable = useSchemaStore((s) => s.getCurrentTable());
   const currentTableId = useSchemaStore((s) => s.currentTableId);
 
-  const addField = useSchemaStore((s) => s.addField);
   const updateField = useSchemaStore((s) => s.updateField);
   const removeField = useSchemaStore((s) => s.removeField);
   const reorderFields = useSchemaStore((s) => s.reorderFields);
+  const updateTable = useSchemaStore((s) => s.updateTable);
+  const getCurrentTable = useSchemaStore((s) => s.getCurrentTable);
 
   const [error, setError] = useState<string>("");
   const [errClass, setErrClass] = useState<string>("zero-opacity");
 
-  // Локальные значения для быстрой печати
   const [localFieldNames, setLocalFieldNames] = useState<
     Record<string, string>
   >({});
@@ -54,7 +89,26 @@ export const SchemaMaker: React.FC = () => {
 
   const schema = currentTable?.fields || [];
 
-  // Инициализируем локальные значения когда меняется таблица
+  // Debounced функция для сохранения на сервер
+  const debouncedSaveToServer = useRef(
+    debounce(async (tableId: string) => {
+      if (!projectId) return;
+
+      const table = useSchemaStore.getState().tables[tableId];
+      if (!table) return;
+
+      try {
+        await SchemaService.updateTable(projectId, tableId, {
+          ...table,
+          layout: getTableLayoutPayload(table),
+        });
+        console.log("Table saved to server");
+      } catch (err) {
+        console.error("Failed to save table:", err);
+      }
+    }, 1000)
+  ).current;
+
   useEffect(() => {
     const names: Record<string, string> = {};
     const types: Record<string, string> = {};
@@ -68,7 +122,12 @@ export const SchemaMaker: React.FC = () => {
     setLocalFieldTypes(types);
   }, [currentTableId, schema]);
 
-  // Обновляем локальное значение при печати
+  useEffect(() => {
+    return () => {
+      debouncedSaveToServer.cancel?.();
+    };
+  }, []);
+
   const handleFieldNameChange = (fieldId: string, value: string) => {
     setLocalFieldNames((prev) => ({
       ...prev,
@@ -76,23 +135,32 @@ export const SchemaMaker: React.FC = () => {
     }));
   };
 
-  // Сохраняем в стор при blur
+  // Сохраняем в store и на сервер при blur
   const handleFieldNameBlur = (fieldId: string) => {
     if (!currentTableId) return;
     const newName = localFieldNames[fieldId];
+
+    // Обновляем в store
     updateField(currentTableId, fieldId, { name: newName });
+
+    // Сохраняем на сервер
+    debouncedSaveToServer(currentTableId);
   };
 
-  // Обновляем тип в стор сразу (так как select быстрый)
-  const handleFieldTypeChange = (fieldId: string, value: string) => {
-    if (!currentTableId) return;
+  // Обновляем тип в store и сохраняем на сервер
+  const handleFieldTypeChange = async (fieldId: string, value: string) => {
+    if (!currentTableId || !projectId) return;
 
     setLocalFieldTypes((prev) => ({
       ...prev,
       [fieldId]: value,
     }));
 
+    // Обновляем в store
     updateField(currentTableId, fieldId, { type: value });
+
+    // Сохраняем на сервер
+    debouncedSaveToServer(currentTableId);
   };
 
   const handleSchemaErrorDisplay = () => {
@@ -104,31 +172,68 @@ export const SchemaMaker: React.FC = () => {
     }, 5000);
   };
 
-  const handleAddField = () => {
-    if (!currentTableId) return;
-    addField(currentTableId, {
-      name: `field_${currentTable ? currentTable.fields.length + 1 : "new"}`,
-      type: "string",
+  // Добавление поля с сохранением на сервер
+  const handleAddField = async () => {
+    if (!currentTableId || !projectId) return;
+
+    const currentTable = getCurrentTable();
+    const id = currentTableId;
+    if (!currentTable) return;
+
+    const newField = {
+      name: getFieldName(currentTable),
+      type: "str",
       isPrimaryKey: false,
       isForeignKey: false,
-    });
+    };
+
+    const updatedTable = {
+      ...currentTable,
+      layout: getTableLayoutPayload(currentTable),
+      fields: [...currentTable.fields, newField],
+    };
+
+    if (projectId && updatedTable) {
+      try {
+        const newTable = await SchemaService.updateTable(
+          projectId,
+          id,
+          updatedTable
+        );
+        updateTable(id, newTable.table);
+      } catch (err) {
+        console.error("Failed to add field:", err);
+      }
+    }
   };
 
-  const handleRemoveField = (idx: number) => {
-    if (!currentTableId) return;
+  // Удаление поля с сохранением на сервер
+  const handleRemoveField = async (idx: number) => {
+    if (!currentTableId || !projectId) return;
 
     const id = schema[idx]?.id;
     if (!id) return;
+
+    // Удаляем из store
     removeField(currentTableId, id, handleSchemaErrorDisplay);
+
+    // Сохраняем на сервер
+    debouncedSaveToServer(currentTableId);
   };
 
-  const handleOnDragEnd = (result: DropResult) => {
-    if (!result.destination || !currentTableId) return;
+  // Изменение порядка полей с сохранением на сервер
+  const handleOnDragEnd = async (result: DropResult) => {
+    if (!result.destination || !currentTableId || !projectId) return;
+
+    // Обновляем в store
     reorderFields(
       currentTableId,
       result.source.index,
       result.destination.index
     );
+
+    // Сохраняем на сервер
+    debouncedSaveToServer(currentTableId);
   };
 
   if (!currentTable || !currentTableId) {
@@ -217,7 +322,6 @@ export const SchemaMaker: React.FC = () => {
                         projectId={projectId!}
                       />
 
-                      {/* Используем локальное значение */}
                       <InputField
                         name={`${idx}`}
                         value={localFieldNames[field.id] || field.name}
@@ -228,7 +332,7 @@ export const SchemaMaker: React.FC = () => {
                         onBlur={() => handleFieldNameBlur(field.id)}
                         useFormik={false}
                       />
-                      {/* Тип сохраняется сразу при изменении */}
+
                       <SelectField
                         value={localFieldTypes[field.id] || field.type}
                         options={typeOptions}
@@ -239,18 +343,19 @@ export const SchemaMaker: React.FC = () => {
                           field.viaFaker
                             ? getLabelByValue(field.fakerType!) +
                               " (" +
-                              field.locale +
+                              field.locale?.slice(7) +
                               ")"
                             : undefined
                         }
                         disabled={field.viaFaker}
                       />
-                      {/* Настройки */}
+
                       <div
                         style={{ display: "flex", justifyContent: "center" }}
                       >
                         <AdditionalSettings fieldId={field.id} />
                       </div>
+
                       <IconButton
                         size="small"
                         onClick={() => handleRemoveField(idx)}

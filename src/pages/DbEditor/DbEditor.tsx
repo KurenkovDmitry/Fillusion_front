@@ -1,4 +1,3 @@
-// DatabaseDiagram.tsx - ПОЛНЫЙ КОД
 import React, {
   useCallback,
   useEffect,
@@ -26,11 +25,12 @@ import { LayoutWithHeader } from "@shared/components/LayoutWithHeader";
 import { Button, IconButton, Tooltip } from "@mui/material";
 import { AdditionalSettings } from "../Generate/components/AdditionalSettings";
 import { SchemaService } from "@services/api/SchemaService/SchemaService";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import useSchemaStore, {
   TableSchema,
   SchemaField,
   Relation,
+  RelationType,
 } from "@store/schemaStore";
 import { Generate } from "../Generate";
 import { shallow } from "zustand/shallow";
@@ -38,6 +38,7 @@ import { DeleteDialog } from "./components/DeleteDialog";
 import { RelationDialog } from "./components/RelationDialog";
 import CodeIcon from "@mui/icons-material/Code";
 import { getLabelByValue } from "../Generate/components/constants/constants";
+import { GenerateDialog } from "./components/GenerateDialog";
 
 interface TableNodeData {
   id: string;
@@ -48,12 +49,15 @@ interface TableNodeData {
 export type DatabaseTableNodeType = Node<TableNodeData, "databaseTable">;
 
 const typeOptions = [
-  { value: "string", label: "String" },
+  { value: "text", label: "Text" },
   { value: "int", label: "Integer" },
+  { value: "bigint", label: "Big Integer" },
   { value: "float", label: "Float" },
+  { value: "bool", label: "Boolean" },
+  { value: "uuid", label: "UUID" },
 ];
 
-const getTableLayoutPayload = (currentTable: TableSchema) => {
+export const getTableLayoutPayload = (currentTable: TableSchema) => {
   return {
     x: Math.round(currentTable.layout.x),
     y: Math.round(currentTable.layout.y),
@@ -79,7 +83,7 @@ function debounce<T extends (...args: any[]) => any>(
   return debounced;
 }
 
-// ✅ Парсер Handle ID
+//  Парсер Handle ID
 const parseHandleId = (handleId: string) => {
   if (handleId.endsWith("-left")) {
     return {
@@ -94,6 +98,11 @@ const parseHandleId = (handleId: string) => {
   }
   return { fieldId: handleId, direction: "unknown" as const };
 };
+
+const getFieldName = (table: TableSchema) =>
+  table.fields.some((f) => f.name === `field_${table.fields.length + 1}`)
+    ? `field_${table.fields.length + 2}`
+    : `field_${table.fields.length + 1}`;
 
 const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
   const { projectId } = useParams();
@@ -149,10 +158,8 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
       if (!currentTable || !projectId) return;
 
       const updatedTable = {
-        table: {
-          ...currentTable,
-          layout: getTableLayoutPayload(currentTable),
-        },
+        ...currentTable,
+        layout: getTableLayoutPayload(currentTable),
       };
 
       try {
@@ -203,21 +210,19 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     if (!currentTable) return;
 
     const newField = {
-      name: `field_${(table?.fields.length || 0) + 1}`,
-      type: "string",
+      name: getFieldName(table),
+      type: "str",
       isPrimaryKey: false,
       isForeignKey: false,
     };
 
     const updatedTable = {
-      table: {
-        ...currentTable,
-        layout: getTableLayoutPayload(currentTable),
-        fields: [...currentTable.fields, newField],
-      },
+      ...currentTable,
+      layout: getTableLayoutPayload(currentTable),
+      fields: [...currentTable.fields, newField],
     };
 
-    if (projectId && updatedTable.table) {
+    if (projectId && updatedTable) {
       try {
         const newTable = await SchemaService.updateTable(
           projectId,
@@ -376,7 +381,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
                   field.viaFaker
                     ? getLabelByValue(field.fakerType!) +
                       " (" +
-                      field.locale +
+                      field.locale?.slice(7) +
                       ")"
                     : undefined
                 }
@@ -500,16 +505,22 @@ const nodeTypes = {
   databaseTable: MemoizedDatabaseTableNode,
 };
 
+const getTableName = () => {
+  const tables = Object.values(useSchemaStore.getState().getSchema().tables);
+  return tables.some((t) => t.name === `Table_${tables.length + 1}`)
+    ? `Table_${tables.length + 2}`
+    : `Table_${tables.length + 1}`;
+};
+
 export const DatabaseDiagram: React.FC = () => {
   const { projectId } = useParams();
 
-  const tables: TableSchema[] = useSchemaStore(
+  const tables: Record<string, TableSchema> = useSchemaStore(
     (state) => state.tables,
     shallow
   );
-  const relations: Relation[] = useSchemaStore(
-    (state) => state.relations,
-    shallow
+  const relations: Record<string, Relation> = useSchemaStore(
+    (state) => state.relations
   );
 
   const loadFromApi = useSchemaStore((state) => state.loadFromApi);
@@ -517,8 +528,9 @@ export const DatabaseDiagram: React.FC = () => {
   const updateTablePosition = useSchemaStore(
     (state) => state.updateTablePosition
   );
-  const updateTable = useSchemaStore((state) => state.updateTable);
+  const updateField = useSchemaStore((state) => state.updateField);
   const addRelation = useSchemaStore((state) => state.addRelation);
+  const updateRelation = useSchemaStore((state) => state.updateRelation);
   const removeRelation = useSchemaStore((state) => state.removeRelation);
   const getAllTables = useSchemaStore((state) => state.getAllTables);
   const getAllRelations = useSchemaStore((state) => state.getAllRelations);
@@ -626,9 +638,12 @@ export const DatabaseDiagram: React.FC = () => {
     [isEditingRelations]
   );
 
+  const isUpdatingRelations = useRef(false);
+
   const onConnect = useCallback(
     async (params: Connection) => {
-      if (!isEditingRelations || !projectId) return;
+      if (!isEditingRelations || !projectId || isUpdatingRelations.current)
+        return;
 
       if (
         !params.source ||
@@ -641,31 +656,71 @@ export const DatabaseDiagram: React.FC = () => {
       const source = parseHandleId(params.sourceHandle);
       const target = parseHandleId(params.targetHandle);
 
-      const newRelation = {
-        fromTable: params.source,
-        toTable: params.target,
-        fromField: source.fieldId,
-        toField: target.fieldId,
-        type: "one-to-many",
-      };
+      const fromTable = tables[params.source];
+      const toTable = tables[params.target];
 
-      const createdRelation = await SchemaService.createRelation(
-        projectId,
-        newRelation
-      );
+      const fromField = fromTable?.fields.find((f) => f.id === source.fieldId);
+      const toField = toTable?.fields.find((f) => f.id === target.fieldId);
 
-      addRelation({
-        fromTable: params.source,
-        toTable: params.target,
-        fromField: source.fieldId,
-        toField: target.fieldId,
-        type: "one-to-many",
-        id: createdRelation.relation.id,
-        fromHandle: source.direction as "left" | "right",
-        toHandle: target.direction as "left" | "right",
-      });
+      if (!fromField || !toField) return;
+
+      try {
+        updateField(params.source, source.fieldId, {
+          isPrimaryKey: true,
+        });
+
+        updateField(params.target, target.fieldId, {
+          isPrimaryKey: false,
+          type: fromField.type,
+        });
+
+        const newRelation = {
+          fromTable: params.source,
+          toTable: params.target,
+          fromField: source.fieldId,
+          toField: target.fieldId,
+          type: "one-to-many" as const,
+          fromHandle: source.direction as "left" | "right",
+          toHandle: target.direction as "left" | "right",
+        };
+
+        let createdRelation;
+        isUpdatingRelations.current = true;
+        try {
+          createdRelation = await SchemaService.createRelation(
+            projectId,
+            newRelation
+          );
+          addRelation({ ...newRelation, id: createdRelation.relation.id });
+
+          await SchemaService.updateTable(projectId, params.source, {
+            ...fromTable,
+            fields: fromTable.fields.map((f) =>
+              f.id === source.fieldId ? { ...f, isPrimaryKey: true } : f
+            ),
+            layout: getTableLayoutPayload(fromTable),
+          });
+
+          await SchemaService.updateTable(projectId, params.target, {
+            ...toTable,
+            fields: toTable.fields.map((f) =>
+              f.id === target.fieldId
+                ? { ...f, type: fromField.type, isPrimaryKey: false }
+                : f
+            ),
+            layout: getTableLayoutPayload(toTable),
+          });
+        } catch (e) {
+          removeRelation(createdRelation!.relation.id);
+          return;
+        } finally {
+          isUpdatingRelations.current = false;
+        }
+      } catch (error) {
+        console.error("Failed to create relation:", error);
+      }
     },
-    [addRelation, isEditingRelations]
+    [addRelation, isEditingRelations, projectId, tables, updateField]
   );
 
   const handleNodesChange = useCallback(
@@ -696,7 +751,7 @@ export const DatabaseDiagram: React.FC = () => {
     [onEdgesChange, removeRelation, isEditingRelations]
   );
 
-  // ✅ Обработчик клика на edge
+  //  Обработчик клика на edge
   const onEdgeClick = useCallback(
     (event: React.MouseEvent, edge: Edge) => {
       if (!isEditingRelations) return;
@@ -707,13 +762,13 @@ export const DatabaseDiagram: React.FC = () => {
       setSelectedRelation(edge.id);
       setRelationDialogOpen(true);
     },
-    [isEditingRelations]
+    [isEditingRelations, relations]
   );
 
   const handleAddTable = async () => {
     const allTables = getAllTables();
     const newTable = {
-      name: `Table_${allTables.length + 1}`,
+      name: getTableName(),
       fields: [],
       layout: {
         x: 200 + allTables.length * 50,
@@ -746,6 +801,9 @@ export const DatabaseDiagram: React.FC = () => {
     setIsEditingRelations(!isEditingRelations);
   };
 
+  const [generateConformationOpen, setGenerateConformationOpen] =
+    useState(false);
+  const navigate = useNavigate();
   return (
     <LayoutWithHeader noJustify transparent>
       <div
@@ -826,6 +884,7 @@ export const DatabaseDiagram: React.FC = () => {
               alignItems: "center",
               justifyContent: "space-between",
               gap: 8,
+              marginBottom: "8px",
             }}
           >
             <h3 style={{ margin: 0, fontSize: 16, color: "#fff" }}>Таблицы</h3>
@@ -851,7 +910,6 @@ export const DatabaseDiagram: React.FC = () => {
               display: "flex",
               flexDirection: "column",
               backgroundColor: "rgb(24, 25, 27)",
-              gap: "8px",
               overflowY: "auto",
               scrollbarWidth: "thin",
               scrollbarColor: "#949494ff rgb(24, 25, 27)",
@@ -868,7 +926,7 @@ export const DatabaseDiagram: React.FC = () => {
                   borderRadius: 8,
                   border: "1px solid #929292ff",
                   cursor: "pointer",
-                  marginBottom: 8,
+                  marginBottom: 10,
                   height: "70px",
                   display: "flex",
                   justifyContent: "space-between",
@@ -910,6 +968,51 @@ export const DatabaseDiagram: React.FC = () => {
               </div>
             ))}
           </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              marginTop: "auto",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "10px 0",
+              borderTop: "1px solid rgb(36, 36, 36)",
+            }}
+          >
+            <Button
+              variant="contained"
+              sx={{
+                width: "100%",
+                height: "42px",
+                backgroundColor: "transparent",
+                border: "1px solid white",
+                "&:hover": {
+                  backgroundColor: "rgb(79, 140, 255)",
+                  border: "rgb(79, 140, 255)",
+                },
+              }}
+              onClick={() => setGenerateConformationOpen(true)}
+            >
+              Начать генерацию
+            </Button>
+            <Button
+              variant="contained"
+              sx={{
+                width: "100%",
+                height: "42px",
+                backgroundColor: "transparent",
+                border: "1px solid white",
+                "&:hover": {
+                  backgroundColor: "rgb(79, 140, 255)",
+                  border: "rgb(79, 140, 255)",
+                },
+              }}
+              onClick={() => navigate(`/history/${projectId}`)}
+            >
+              Перейти к истории запросов
+            </Button>
+          </div>
         </aside>
 
         {/* React Flow */}
@@ -948,7 +1051,11 @@ export const DatabaseDiagram: React.FC = () => {
         </ReactFlow>
       </div>
 
-      <Generate open={open} setOpen={setOpen} projectId={projectId || ""} />
+      <Generate open={open} setOpen={setOpen} projectId={projectId!} />
+      <GenerateDialog
+        open={generateConformationOpen}
+        onClose={() => setGenerateConformationOpen(false)}
+      />
 
       {deleteDialog.tableId && (
         <DeleteDialog

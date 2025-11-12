@@ -13,9 +13,10 @@ import { SliderWithInput } from "./components/SliderWithinput";
 import TableIcon from "@assets/table.svg?react";
 import { SelectField } from "./components/SelectField";
 import { SchemaMaker } from "./components/SchemaMaker";
-import { generateData } from "./actions/Generate.actions";
 import useSchemaStore, { type SchemaField } from "@store/schemaStore";
 import useGenerateStore from "@store/generateStore";
+import { SchemaService } from "@services/api";
+import { getTableLayoutPayload } from "../DbEditor/DbEditor";
 
 const SELECT_MODEL_OPTIONS = [
   { value: "deepseek", label: "Deepseek" },
@@ -23,9 +24,9 @@ const SELECT_MODEL_OPTIONS = [
 ];
 
 const SELECT_OUTPUT_OPTIONS = [
-  { value: "json", label: "JSON" },
-  { value: "csv", label: "CSV" },
-  { value: "sql", label: "SQL" },
+  { value: "EXPORT_TYPE_JSON", label: "JSON" },
+  { value: "EXPORT_TYPE_SNAPSHOT", label: "Snapshot" },
+  { value: "EXPORT_TYPE_DIRECT_DB", label: "Прямое подключение" },
 ];
 
 interface GenerateProps {
@@ -36,31 +37,34 @@ interface GenerateProps {
 
 const GenerateFormContent = ({
   tableId,
+  projectId,
   onClose,
   onSubmit,
   loading,
   error,
 }: {
   tableId: string;
+  projectId: string;
   onClose: () => void;
   onSubmit: () => Promise<void>;
   loading: boolean;
   error: string;
 }) => {
-  // Локальные стейты для быстрой печати
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
   const [totalRecords, setTotalRecords] = useState(50);
   const [examples, setExamples] = useState("");
   const [selectModelValue, setSelectModelValue] = useState("deepseek");
-  const [selectOutputValue, setSelectOutputValue] = useState("json");
+  const [selectOutputValue, setSelectOutputValue] =
+    useState("EXPORT_TYPE_JSON");
 
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
   const saveTableSettings = useGenerateStore(
     (state) => state.saveTableSettings
   );
+  const updateTable = useSchemaStore((state) => state.updateTable);
+  const tables = useSchemaStore((state) => state.tables);
 
-  // Загружаем значения из store при открытии
   useEffect(() => {
     const settings = getTableSettings(tableId);
     setName(settings.name);
@@ -71,16 +75,34 @@ const GenerateFormContent = ({
     setSelectOutputValue(settings.selectOutputValue);
   }, [tableId, getTableSettings]);
 
-  // Сохраняем в store при blur (для каждого поля)
-  const handleNameBlur = () => {
-    saveTableSettings(tableId, {
+  // ✅ Сохранение с API запросом при blur имени таблицы
+  const handleNameBlur = async () => {
+    const settings = {
       name,
       query,
       totalRecords,
       examples,
       selectModelValue,
       selectOutputValue,
-    });
+    };
+
+    saveTableSettings(tableId, settings);
+
+    // ✅ Обновляем имя таблицы в schemaStore и на сервере
+    if (name !== tables[tableId]?.name) {
+      updateTable(tableId, { name });
+
+      try {
+        const table = tables[tableId];
+        await SchemaService.updateTable(projectId, tableId, {
+          ...table,
+          name,
+          layout: getTableLayoutPayload(table),
+        });
+      } catch (error) {
+        console.error("Failed to update table name:", error);
+      }
+    }
   };
 
   const handleQueryBlur = () => {
@@ -136,7 +158,6 @@ const GenerateFormContent = ({
         max={100}
         onChange={(value) => {
           setTotalRecords(value);
-          // Сохраняем сразу при изменении slider
           saveTableSettings(tableId, {
             name,
             query,
@@ -181,7 +202,6 @@ const GenerateFormContent = ({
         onChange={(val: string) => {
           const newValue = val;
           setSelectOutputValue(newValue);
-          // Сохраняем сразу при изменении
           saveTableSettings(tableId, {
             name,
             query,
@@ -215,14 +235,14 @@ const GenerateFormContent = ({
         >
           Отмена
         </Button>
-        <Button
+        {/* <Button
           onClick={onSubmit}
           disabled={!isValid || loading}
           variant="contained"
           sx={{ height: "40px" }}
         >
           {loading ? "Загрузка..." : "Начать генерацию"}
-        </Button>
+        </Button> */}
       </Box>
     </div>
   );
@@ -236,7 +256,8 @@ export const Generate = (props: GenerateProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const schema = useSchemaStore((state) => state.tables);
+  const tables = useSchemaStore((state) => state.tables);
+  const relations = useSchemaStore((state) => state.relations);
   const currentTable = useSchemaStore().getCurrentTable();
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
 
@@ -246,17 +267,15 @@ export const Generate = (props: GenerateProps) => {
   };
 
   const handleFormSubmit = async () => {
-    if (!currentTable) return;
+    if (!currentTable || !projectId) return;
 
-    const schemaArray = Object.values(schema).flatMap(
-      (table: any) => table?.fields || []
-    );
-
-    const emptyNameField = (schemaArray as SchemaField[]).find(
+    // ✅ Проверяем что все поля заполнены
+    const emptyNameField = currentTable.fields.find(
       (field) => !field.name.trim()
     );
 
     if (emptyNameField) {
+      setError("Все поля 'Название' должны быть заполнены");
       setSnackbar({
         open: true,
         message: "Все поля 'Название' должны быть заполнены",
@@ -268,22 +287,70 @@ export const Generate = (props: GenerateProps) => {
     setError("");
 
     try {
-      // Берём значения из store
+      // ✅ Берём значения из generateStore
       const settings = getTableSettings(currentTable.id);
 
-      const dto = {
-        projectId: projectId,
-        query: settings.query.trim(),
+      // ✅ Форматируем схему для API
+      const formattedSchema = currentTable.fields.map((field) => {
+        const schemaField: any = {
+          name: field.name,
+          type: field.type,
+          unique: field.unique || false,
+          autoIncrement: field.autoIncrement || false,
+          viaFaker: field.viaFaker || false,
+          isPk: field.isPrimaryKey || false,
+          isFk: false,
+        };
+
+        if (field.viaFaker) {
+          schemaField.fakerType = field.fakerType || "COLUMN_TYPE_UNSPECIFIED";
+          schemaField.locale = field.locale || "LOCALE_UNSPECIFIED";
+        }
+
+        // ✅ Проверяем является ли поле FK через relations
+        const relatedRelation = Object.values(relations).find(
+          (rel) => rel.toTable === currentTable.id && rel.toField === field.id
+        );
+
+        if (relatedRelation) {
+          schemaField.isFk = true;
+          schemaField.fkData = {
+            table: tables[relatedRelation.fromTable]?.name,
+            column: tables[relatedRelation.fromTable]?.fields.find(
+              (f) => f.id === relatedRelation.fromField
+            )?.name,
+            unique: false,
+          };
+        }
+
+        return schemaField;
+      });
+
+      // ✅ Формируем запрос для генерации
+      const generateRequest = {
+        projectId,
         network: settings.selectModelValue,
-        totalRecords: String(settings.totalRecords),
-        schema: schemaArray.map(({ id, ...rest }: SchemaField) => rest),
-        examples: settings.examples.trim() || undefined,
+        tables: [
+          {
+            name: settings.name || currentTable.name,
+            query: settings.query.trim(),
+            totalRecords: String(settings.totalRecords),
+            schema: formattedSchema,
+            examples: settings.examples.trim() || "",
+          },
+        ],
+        exportType: settings.selectOutputValue.toUpperCase(),
       };
 
-      const response = await generateData(dto);
+      console.log("Generate request:", generateRequest);
 
-      const data = await response;
-      setResponseJson(data);
+      // ✅ Отправляем запрос на генерацию (замените на ваш метод API)
+      // const response = await SchemaService.generateData(generateRequest);
+      // const data = await response.json();
+      // setResponseJson(data);
+
+      // Временная заглушка
+      setResponseJson({ success: true } as any);
     } catch (err) {
       const message = (err as Error).message;
       setError(message);
@@ -299,9 +366,11 @@ export const Generate = (props: GenerateProps) => {
   return (
     <>
       <Dialog open={open} maxWidth="lg" fullWidth onClose={handleClose}>
-        <DialogTitle style={{ fontSize: 20 }}>
-          {responseJson ? "Результат генерации" : "Настройка генерации"}
-        </DialogTitle>
+        {!responseJson && (
+          <DialogTitle style={{ fontSize: 20 }}>
+            Настройка генерации
+          </DialogTitle>
+        )}
         <DialogContent
           style={{ scrollbarWidth: "thin", scrollbarColor: "#c0c0c0ff white" }}
         >
@@ -312,9 +381,10 @@ export const Generate = (props: GenerateProps) => {
                 Посмотреть результат можно будет на странице истории запросов
               </h3>
             </>
-          ) : currentTable ? (
+          ) : currentTable && projectId ? (
             <GenerateFormContent
               tableId={currentTable.id}
+              projectId={projectId}
               onClose={handleClose}
               onSubmit={handleFormSubmit}
               loading={loading}

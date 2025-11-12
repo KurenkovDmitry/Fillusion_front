@@ -1,8 +1,6 @@
-import { TableSchema } from "@store/schemaStore";
 import { apiServiceClient } from "../client";
 
 import {
-  ApiField,
   ApiResponse,
   ApiTable,
   ApiTableInternal,
@@ -11,57 +9,6 @@ import {
   RelationCreate,
   TableCreate,
 } from "./SchemaService.types";
-
-type FrontSchemaField = {
-  id: string;
-  name: string;
-  type: string;
-  isPrimaryKey?: boolean | undefined;
-  isForeignKey?: boolean | undefined;
-  unique?: boolean | undefined;
-  autoIncrement?: boolean | undefined;
-  viaFaker?: boolean | undefined;
-  fakerType?: string | undefined;
-  locale?: "RU_RU" | "EN_US" | undefined;
-};
-
-// export type ApiField = {
-//   id: string;
-//   name: string;
-//   type: string;
-//   isPrimaryKey?: boolean;
-//   isForeignKey?: boolean;
-//   visible?: boolean; // хуй знает, если чо подключим
-//   generation?: {
-//     uniqueValues?: boolean;
-//     autoIncrement?: boolean;
-//     viaFaker?: boolean;
-//     fakerType?: string;
-//     fakerLocale?: string;
-//   };
-// };
-
-const mapSchemaToBack = (table: TableSchema): ApiTableInternal => {
-  return {
-    id: table.id,
-    name: table.name,
-    layout: table.layout,
-    fields: table.fields.map((field: FrontSchemaField): ApiField => {
-      return {
-        name: field.name,
-        type: field.type,
-        isPrimaryKey: field.isPrimaryKey,
-        generation: {
-          uniqueValues: field.unique,
-          autoIncrement: field.autoIncrement,
-          viaFaker: field.viaFaker,
-          fakerType: field.fakerType,
-          fakerLocale: field.locale,
-        },
-      };
-    }),
-  };
-};
 
 export const SchemaService = {
   async getSchema(projectId: string): Promise<ApiResponse> {
@@ -108,11 +55,11 @@ export const SchemaService = {
   async updateTable(
     projectId: string,
     tableId: string,
-    data: ApiTable
+    data: ApiTableInternal
   ): Promise<ApiTable> {
     return apiServiceClient.patch<ApiTable>(
       `/projects/${projectId}/tables/${tableId}`,
-      mapSchemaToBack(data.table)
+      data
     );
   },
 

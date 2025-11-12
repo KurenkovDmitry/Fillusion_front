@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import useSchemaStore from "./schemaStore";
 
 export type TableGenerateSettings = {
   name: string;
@@ -19,14 +20,16 @@ export type GenerateState = {
   removeTableSettings: (tableId: string) => void;
 };
 
-const DEFAULT_SETTINGS: TableGenerateSettings = {
-  name: "",
+const DEFAULT_SETTINGS: (tableId: string) => TableGenerateSettings = (
+  tableId: string
+) => ({
+  name: useSchemaStore.getState().tables[tableId].name,
   query: "",
   totalRecords: 50,
   examples: "",
   selectModelValue: "deepseek",
-  selectOutputValue: "json",
-};
+  selectOutputValue: "EXPORT_TYPE_JSON",
+});
 
 const useGenerateStore = create<GenerateState>((set, get) => ({
   tableSettings: {},
@@ -34,7 +37,7 @@ const useGenerateStore = create<GenerateState>((set, get) => ({
   getTableSettings: (tableId: string) => {
     const settings = get().tableSettings[tableId];
     // Если настроек нет - возвращаем дефолты
-    return settings || { ...DEFAULT_SETTINGS };
+    return settings || { ...DEFAULT_SETTINGS(tableId) };
   },
 
   saveTableSettings: (tableId: string, settings: TableGenerateSettings) =>

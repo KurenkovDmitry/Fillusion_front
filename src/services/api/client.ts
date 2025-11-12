@@ -1,4 +1,8 @@
-import { API_AUTH_URL, API_SERVICE_URL } from "@services/api";
+import {
+  API_AUTH_URL,
+  API_SERVICE_URL,
+  API_GENERATOR_V2_URL,
+} from "@services/api";
 import { useTokenStore } from "../../store/tokenStore";
 
 type FailedQueueCallback = (error: Error | null, token: string | null) => void;
@@ -47,7 +51,8 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retry: boolean = false
   ): Promise<T> {
     const makeRequest = async (tokenOverride?: string) => {
       const url = `${this.baseURL}${endpoint}`;
@@ -159,3 +164,4 @@ class ApiClient {
 
 export const apiAuthClient = new ApiClient(API_AUTH_URL);
 export const apiServiceClient = new ApiClient(API_SERVICE_URL);
+export const apiGeneratorClient = new ApiClient(API_GENERATOR_V2_URL);

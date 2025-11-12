@@ -7,6 +7,7 @@ interface QueryButtonProps {
   network: string;
   totalRecords: string;
   last?: boolean;
+  status: string;
   onClick?: () => void;
 }
 
@@ -36,11 +37,19 @@ export const QueryButton = (props: QueryButtonProps) => {
           </h3>
           <div style={{ width: "100%", display: "flex", gap: "12px" }}>
             <Chip
+              label={
+                props.status === "PENDING"
+                  ? "В процессе генерации"
+                  : props.status
+              }
+              style={{ height: "26px", borderRadius: "8px" }}
+            />
+            <Chip
               label={props.network}
               style={{ height: "26px", borderRadius: "8px" }}
             />
             <Chip
-              label={"Количество записей: " + props.totalRecords}
+              label={"Количество таблиц: " + props.totalRecords}
               style={{
                 height: "26px",
                 borderRadius: "8px",

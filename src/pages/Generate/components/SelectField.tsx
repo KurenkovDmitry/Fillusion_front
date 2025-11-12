@@ -15,7 +15,7 @@ interface SelectFieldProps {
   onChange:
     | React.Dispatch<React.SetStateAction<string>>
     | ((value: string) => void)
-    | React.Dispatch<React.SetStateAction<"RU_RU" | "EN_US">>; // Изменено: может быть строка или массив
+    | React.Dispatch<React.SetStateAction<"LOCALE_RU_RU" | "LOCALE_EN_US">>; // Изменено: может быть строка или массив
   labelIcon?: React.ReactNode;
   multiple?: boolean;
   multipleValue?: string[];
