@@ -211,7 +211,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
 
     const newField = {
       name: getFieldName(table),
-      type: "str",
+      type: "text",
       isPrimaryKey: false,
       isForeignKey: false,
     };
