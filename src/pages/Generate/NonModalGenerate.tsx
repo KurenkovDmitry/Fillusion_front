@@ -92,18 +92,6 @@ export const NonModalGenerate = () => {
         </table>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <Button
-            onClick={navigateToHistory}
-            variant="contained"
-            style={{
-              width: "480px",
-              height: "32px",
-              marginTop: "20px",
-              borderRadius: "10px",
-            }}
-          >
-            Перейти к истории запросов
-          </Button>
-          <Button
             onClick={navigateToProjects}
             variant="contained"
             style={{
