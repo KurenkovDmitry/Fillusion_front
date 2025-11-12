@@ -11,11 +11,11 @@ import { useEffect, useState } from "react";
 import { GenerateService } from "@services/api/GenerateService/GenerateService";
 import PendingActionsIcon from "@mui/icons-material/PendingActions";
 
-
 interface DatasetDialogProps {
   open: boolean;
   setOpen: (arg0: boolean) => void;
   requestId: string;
+  projectId: string;
   status: string;
 }
 
@@ -36,7 +36,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
         // Используем GenerateService вместо прямого fetch
         const data = await GenerateService.getDataset(
           props.requestId,
-          import.meta.env.VITE_PROJECT_ID
+          props.projectId
         );
 
         setResponseJson(JSON.stringify(data, null, 2));

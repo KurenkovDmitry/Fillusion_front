@@ -23,7 +23,7 @@ export const GenerateService = {
     projectId: string
   ): Promise<DatasetsRequestResponse> {
     return apiGeneratorClient.get<DatasetsRequestResponse>(
-      `datasets/${requestId}?project_id=${projectId}`
+      `/datasets/${requestId}?project_id=${projectId}`
     );
   },
 

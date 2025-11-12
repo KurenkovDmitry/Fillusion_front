@@ -40,6 +40,7 @@ export const QueryHistory = () => {
   return (
     <LayoutWithHeader noJustify>
       <DatasetDialog
+        projectId={projectId!}
         open={open}
         setOpen={setOpen}
         requestId={requsetId}
