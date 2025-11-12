@@ -182,7 +182,7 @@ export const SchemaMaker: React.FC = () => {
 
     const newField = {
       name: getFieldName(currentTable),
-      type: "str",
+      type: "text",
       isPrimaryKey: false,
       isForeignKey: false,
     };
