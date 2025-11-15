@@ -22,7 +22,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { SelectField } from "../Generate/components/SelectField";
 import { LayoutWithHeader } from "@shared/components/LayoutWithHeader";
-import { Button, IconButton, Tooltip } from "@mui/material";
+import { Button, IconButton, Tooltip, Snackbar } from "@mui/material";
 import { AdditionalSettings } from "../Generate/components/AdditionalSettings";
 import { SchemaService } from "@services/api/SchemaService/SchemaService";
 import { useNavigate, useParams } from "react-router-dom";
@@ -30,10 +30,11 @@ import useSchemaStore, {
   TableSchema,
   SchemaField,
   Relation,
-  RelationType,
+  mapTableToApiPayload,
 } from "@store/schemaStore";
+import useGenerateStore from "@store/generateStore";
 import { Generate } from "../Generate";
-import { shallow } from "zustand/shallow";
+import { shallow, useShallow } from "zustand/shallow";
 import { DeleteDialog } from "./components/DeleteDialog";
 import { RelationDialog } from "./components/RelationDialog";
 import CodeIcon from "@mui/icons-material/Code";
@@ -64,12 +65,12 @@ export const getTableLayoutPayload = (currentTable: TableSchema) => {
   };
 };
 
-// Утилита debounce
+// Типизированная debounce функция с cancel
 function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
 
   const debounced = (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout);
@@ -80,7 +81,9 @@ function debounce<T extends (...args: any[]) => any>(
     if (timeout) clearTimeout(timeout);
   };
 
-  return debounced;
+  return debounced as ((...args: Parameters<T>) => void) & {
+    cancel: () => void;
+  };
 }
 
 //  Парсер Handle ID
@@ -108,15 +111,14 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
   const { projectId } = useParams();
 
   const table: TableSchema = useSchemaStore(
-    (state) => state.tables[props.id],
-    shallow
+    useShallow((state) => state.tables[props.id])
   );
-
   const updateTable = useSchemaStore((state) => state.updateTable);
   const updateField = useSchemaStore((state) => state.updateField);
   const removeField = useSchemaStore((state) => state.removeField);
   const getCurrentTable = useSchemaStore((state) => state.getCurrentTable);
   const setCurrentTable = useSchemaStore((state) => state.setCurrentTable);
+  const allRelations = useSchemaStore((state) => state.getAllRelations);
   const isEditingRelations = useSchemaStore(
     (state) => state.isEditingRelations
   );
@@ -151,22 +153,30 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     )
   ).current;
 
+  const saveTableToServer = async (tableId: string) => {
+    setCurrentTable(tableId);
+    const currentTable = getCurrentTable();
+    if (!currentTable || !projectId) return;
+
+    const updatedTable = {
+      ...currentTable,
+      layout: getTableLayoutPayload(currentTable),
+    };
+
+    try {
+      await SchemaService.updateTable(
+        projectId,
+        tableId,
+        mapTableToApiPayload(updatedTable)
+      );
+    } catch (err) {
+      console.error("Failed to save table:", err);
+    }
+  };
+
   const debouncedSaveToServer = useRef(
     debounce(async (tableId: string) => {
-      setCurrentTable(tableId);
-      const currentTable = getCurrentTable();
-      if (!currentTable || !projectId) return;
-
-      const updatedTable = {
-        ...currentTable,
-        layout: getTableLayoutPayload(currentTable),
-      };
-
-      try {
-        await SchemaService.updateTable(projectId, tableId, updatedTable);
-      } catch (err) {
-        console.error("Failed to save table:", err);
-      }
+      saveTableToServer(tableId);
     }, 1000)
   ).current;
 
@@ -192,9 +202,21 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
   ) => {
     if (key === "name") {
       setLocalFieldValues((prev) => ({ ...prev, [fieldId]: value }));
+    } else {
+      // синхронизация типа с FK, если есть
+      const relations = allRelations().filter((r) => r.fromField === fieldId);
+      if (relations) {
+        relations.forEach((relation) => {
+          updateField(relation.toTable, relation.toField, {
+            type: value,
+          });
+          saveTableToServer(relation.toTable);
+        });
+      }
     }
 
     debouncedUpdateField(id, fieldId, { [key]: value });
+    debouncedSaveToServer(table.id);
   };
 
   const handleFieldBlur = (fieldId: string) => {
@@ -227,7 +249,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
         const newTable = await SchemaService.updateTable(
           projectId,
           id,
-          updatedTable
+          mapTableToApiPayload(updatedTable as TableSchema)
         );
         updateTable(id, newTable.table);
       } catch (err) {
@@ -385,12 +407,12 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
                       ")"
                     : undefined
                 }
-                disabled={field.viaFaker}
+                disabled={field.viaFaker || field.isForeignKey}
               />
             </div>
 
             <div className="nodrag">
-              <AdditionalSettings fieldId={field.id} />
+              <AdditionalSettings fieldId={field.id} projectId={projectId!} />
             </div>
 
             <button
@@ -516,13 +538,15 @@ export const DatabaseDiagram: React.FC = () => {
   const { projectId } = useParams();
 
   const tables: Record<string, TableSchema> = useSchemaStore(
-    (state) => state.tables,
-    shallow
+    useShallow((state) => state.tables)
   );
   const relations: Record<string, Relation> = useSchemaStore(
     (state) => state.relations
   );
 
+  const loadSettingsFromApi = useGenerateStore(
+    (state) => state.loadSettingsFromApi
+  );
   const loadFromApi = useSchemaStore((state) => state.loadFromApi);
   const addTable = useSchemaStore((state) => state.addTable);
   const updateTablePosition = useSchemaStore(
@@ -530,10 +554,8 @@ export const DatabaseDiagram: React.FC = () => {
   );
   const updateField = useSchemaStore((state) => state.updateField);
   const addRelation = useSchemaStore((state) => state.addRelation);
-  const updateRelation = useSchemaStore((state) => state.updateRelation);
   const removeRelation = useSchemaStore((state) => state.removeRelation);
   const getAllTables = useSchemaStore((state) => state.getAllTables);
-  const getAllRelations = useSchemaStore((state) => state.getAllRelations);
   const setCurrentTable = useSchemaStore((state) => state.setCurrentTable);
 
   const isEditingRelations = useSchemaStore(
@@ -547,6 +569,7 @@ export const DatabaseDiagram: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [selectedRelation, setSelectedRelation] = useState<string | null>(null);
   const [relationDialogOpen, setRelationDialogOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: "" });
 
   const nodes = useMemo(() => {
     return Object.values(tables).map((table) => ({
@@ -623,6 +646,7 @@ export const DatabaseDiagram: React.FC = () => {
       try {
         const res = await SchemaService.getSchema(projectId!);
         loadFromApi(res);
+        loadSettingsFromApi(res);
       } catch (e) {
         console.error(e);
       }
@@ -659,20 +683,64 @@ export const DatabaseDiagram: React.FC = () => {
       const fromTable = tables[params.source];
       const toTable = tables[params.target];
 
+      if (fromTable.id === toTable.id) {
+        setSnackbar({
+          open: true,
+          message: "Нельзя провести связь между полями одной таблицы",
+        });
+        return;
+      }
+
       const fromField = fromTable?.fields.find((f) => f.id === source.fieldId);
       const toField = toTable?.fields.find((f) => f.id === target.fieldId);
 
       if (!fromField || !toField) return;
+      if (fromField.isForeignKey) {
+        setSnackbar({
+          open: true,
+          message: "Нельзя провести свзяь от внешнего ключа",
+        });
+        return;
+      }
+
+      if (toField.isPrimaryKey) {
+        setSnackbar({
+          open: true,
+          message: "Нельзя провести свзяь к первичному ключу",
+        });
+        return;
+      }
+
+      if (toField.isForeignKey) {
+        setSnackbar({
+          open: true,
+          message: "Внешний ключ не может ссылаться на несколько полей",
+        });
+        return;
+      }
 
       try {
         updateField(params.source, source.fieldId, {
           isPrimaryKey: true,
+          isForeignKey: false,
         });
 
-        updateField(params.target, target.fieldId, {
-          isPrimaryKey: false,
-          type: fromField.type,
-        });
+        const targetUpdate: Partial<SchemaField> = fromField.viaFaker
+          ? {
+              isPrimaryKey: false,
+              isForeignKey: true,
+              viaFaker: true,
+              fakerType: fromField.fakerType,
+              locale: fromField.locale,
+            }
+          : {
+              isPrimaryKey: false,
+              isForeignKey: true,
+              type: fromField.type,
+              viaFaker: false,
+            };
+
+        updateField(params.target, target.fieldId, targetUpdate);
 
         const newRelation = {
           fromTable: params.source,
@@ -687,29 +755,43 @@ export const DatabaseDiagram: React.FC = () => {
         let createdRelation;
         isUpdatingRelations.current = true;
         try {
+          await SchemaService.updateTable(
+            projectId,
+            params.source,
+            mapTableToApiPayload({
+              ...fromTable,
+              fields: fromTable.fields.map((f) =>
+                f.id === source.fieldId
+                  ? { ...f, isPrimaryKey: true, isForeignKey: false }
+                  : f
+              ),
+              layout: getTableLayoutPayload(fromTable),
+            })
+          );
+
+          await SchemaService.updateTable(
+            projectId,
+            params.target,
+            mapTableToApiPayload({
+              ...toTable,
+              fields: toTable.fields.map((f) =>
+                f.id === target.fieldId
+                  ? {
+                      ...f,
+                      type: fromField.type,
+                      isPrimaryKey: false,
+                      isForeignKey: true,
+                    }
+                  : f
+              ),
+              layout: getTableLayoutPayload(toTable),
+            })
+          );
           createdRelation = await SchemaService.createRelation(
             projectId,
             newRelation
           );
-          addRelation({ ...newRelation, id: createdRelation.relation.id });
-
-          await SchemaService.updateTable(projectId, params.source, {
-            ...fromTable,
-            fields: fromTable.fields.map((f) =>
-              f.id === source.fieldId ? { ...f, isPrimaryKey: true } : f
-            ),
-            layout: getTableLayoutPayload(fromTable),
-          });
-
-          await SchemaService.updateTable(projectId, params.target, {
-            ...toTable,
-            fields: toTable.fields.map((f) =>
-              f.id === target.fieldId
-                ? { ...f, type: fromField.type, isPrimaryKey: false }
-                : f
-            ),
-            layout: getTableLayoutPayload(toTable),
-          });
+          addRelation(createdRelation.relation);
         } catch (e) {
           removeRelation(createdRelation!.relation.id);
           return;
@@ -720,7 +802,14 @@ export const DatabaseDiagram: React.FC = () => {
         console.error("Failed to create relation:", error);
       }
     },
-    [addRelation, isEditingRelations, projectId, tables, updateField]
+    [
+      addRelation,
+      isEditingRelations,
+      projectId,
+      tables,
+      updateField,
+      removeRelation,
+    ]
   );
 
   const handleNodesChange = useCallback(
@@ -762,7 +851,7 @@ export const DatabaseDiagram: React.FC = () => {
       setSelectedRelation(edge.id);
       setRelationDialogOpen(true);
     },
-    [isEditingRelations, relations]
+    [isEditingRelations]
   );
 
   const handleAddTable = async () => {
@@ -843,6 +932,7 @@ export const DatabaseDiagram: React.FC = () => {
               top: 150,
               right: 20,
               zIndex: 10,
+              width: "316px",
               padding: "12px 16px",
               background: "rgba(54, 244, 101, 0.9)",
               color: "white",
@@ -852,6 +942,9 @@ export const DatabaseDiagram: React.FC = () => {
             }}
           >
             🔗 Проведите линию для создания связи
+            <br />
+            Поле, от которого проводится связь станет PK, а поле, к которому
+            идет связь станет FK
             <br />
             💬 Кликните на связь для изменения типа
           </div>
@@ -1079,6 +1172,22 @@ export const DatabaseDiagram: React.FC = () => {
           projectId={projectId!}
         />
       )}
+      <Snackbar
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        open={snackbar.open}
+        message={"× " + snackbar.message}
+        autoHideDuration={6000}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        sx={{
+          "& .MuiSnackbarContent-root": {
+            backgroundColor: "#940d0dff",
+            color: "white",
+            fontSize: "16px",
+            borderRadius: "12px",
+            marginTop: "60px",
+          },
+        }}
+      />
     </LayoutWithHeader>
   );
 };

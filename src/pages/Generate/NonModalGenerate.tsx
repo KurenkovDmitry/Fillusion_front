@@ -7,9 +7,6 @@ import { Generate } from "./Gernerate";
 export const NonModalGenerate = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const navigateToHistory = () => {
-    navigate("/history");
-  };
   const navigateToProjects = () => {
     navigate("/projects");
   };

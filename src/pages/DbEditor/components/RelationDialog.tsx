@@ -62,7 +62,7 @@ export const RelationDialog = (props: RelationDialogProps) => {
 
       removeRelation(props.relation.id);
 
-      updateField(props.relation.fromTable, props.relation.fromField, {
+      updateField(props.relation.toTable, props.relation.toField, {
         isForeignKey: false,
       });
       const table = getAllTables().find(

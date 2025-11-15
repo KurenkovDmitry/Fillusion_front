@@ -1,7 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { SelectField } from "./SelectField";
 import { InputField } from "./InputField";
-import { IconButton, Button, Tooltip } from "@mui/material";
+import { IconButton, Button, Tooltip, tooltipClasses } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
@@ -9,7 +15,11 @@ import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
 import { AdditionalSettings } from "./AdditionalSettings";
-import useSchemaStore, { TableSchema } from "../../../store/schemaStore";
+import useSchemaStore, {
+  mapTableToApiPayload,
+  SchemaField,
+  TableSchema,
+} from "../../../store/schemaStore";
 import { getLabelByValue } from "./constants/constants";
 import { PkSettings } from "./PkSettings";
 import { useParams } from "react-router-dom";
@@ -39,8 +49,8 @@ interface Field {
 function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
 
   const debounced = (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout);
@@ -51,7 +61,9 @@ function debounce<T extends (...args: any[]) => any>(
     if (timeout) clearTimeout(timeout);
   };
 
-  return debounced;
+  return debounced as ((...args: Parameters<T>) => void) & {
+    cancel: () => void;
+  };
 }
 
 const getTableLayoutPayload = (currentTable: any) => {
@@ -76,6 +88,7 @@ export const SchemaMaker: React.FC = () => {
   const reorderFields = useSchemaStore((s) => s.reorderFields);
   const updateTable = useSchemaStore((s) => s.updateTable);
   const getCurrentTable = useSchemaStore((s) => s.getCurrentTable);
+  const getAllRelations = useSchemaStore((s) => s.getAllRelations);
 
   const [error, setError] = useState<string>("");
   const [errClass, setErrClass] = useState<string>("zero-opacity");
@@ -87,25 +100,32 @@ export const SchemaMaker: React.FC = () => {
     Record<string, string>
   >({});
 
-  const schema = currentTable?.fields || [];
+  const schema = useMemo(() => currentTable?.fields || [], [currentTable]);
+
+  const saveTableToServer = async (tableId: string) => {
+    if (!projectId) return;
+
+    const table = useSchemaStore.getState().tables[tableId];
+    if (!table) return;
+
+    try {
+      await SchemaService.updateTable(
+        projectId,
+        tableId,
+        mapTableToApiPayload({
+          ...table,
+          layout: getTableLayoutPayload(table),
+        })
+      );
+    } catch (err) {
+      console.error("Failed to save table:", err);
+    }
+  };
 
   // Debounced функция для сохранения на сервер
   const debouncedSaveToServer = useRef(
     debounce(async (tableId: string) => {
-      if (!projectId) return;
-
-      const table = useSchemaStore.getState().tables[tableId];
-      if (!table) return;
-
-      try {
-        await SchemaService.updateTable(projectId, tableId, {
-          ...table,
-          layout: getTableLayoutPayload(table),
-        });
-        console.log("Table saved to server");
-      } catch (err) {
-        console.error("Failed to save table:", err);
-      }
+      saveTableToServer(tableId);
     }, 1000)
   ).current;
 
@@ -156,7 +176,14 @@ export const SchemaMaker: React.FC = () => {
       [fieldId]: value,
     }));
 
-    // Обновляем в store
+    const relations = getAllRelations().filter((r) => r.fromField === fieldId);
+    if (relations) {
+      relations.forEach((relation) => {
+        updateField(relation.toTable, relation.toField, { type: value });
+
+        saveTableToServer(relation.toTable);
+      });
+    }
     updateField(currentTableId, fieldId, { type: value });
 
     // Сохраняем на сервер
@@ -198,7 +225,7 @@ export const SchemaMaker: React.FC = () => {
         const newTable = await SchemaService.updateTable(
           projectId,
           id,
-          updatedTable
+          mapTableToApiPayload(updatedTable as TableSchema)
         );
         updateTable(id, newTable.table);
       } catch (err) {
@@ -223,7 +250,8 @@ export const SchemaMaker: React.FC = () => {
 
   // Изменение порядка полей с сохранением на сервер
   const handleOnDragEnd = async (result: DropResult) => {
-    if (!result.destination || !currentTableId || !projectId) return;
+    if (!result.destination || !currentTableId || !projectId || !currentTable)
+      return;
 
     // Обновляем в store
     reorderFields(
@@ -232,8 +260,25 @@ export const SchemaMaker: React.FC = () => {
       result.destination.index
     );
 
+    const items = Array.from(currentTable.fields);
+    const [moved] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, moved);
+
+    const reorderedTable: TableSchema = {
+      ...currentTable,
+      fields: items.map((f, idx) => ({ ...f, position: idx })),
+    };
+
     // Сохраняем на сервер
-    debouncedSaveToServer(currentTableId);
+    SchemaService.updateTable(
+      projectId,
+      currentTableId,
+      mapTableToApiPayload(reorderedTable)
+    );
+  };
+
+  const getSelectDisabledState = (field: SchemaField) => {
+    return field.viaFaker || field.isForeignKey;
   };
 
   if (!currentTable || !currentTableId) {
@@ -333,27 +378,53 @@ export const SchemaMaker: React.FC = () => {
                         useFormik={false}
                       />
 
-                      <SelectField
-                        value={localFieldTypes[field.id] || field.type}
-                        options={typeOptions}
-                        onChange={(val: any) =>
-                          handleFieldTypeChange(field.id, val as string)
+                      <Tooltip
+                        title={
+                          field.isForeignKey
+                            ? "Нельзя менять тип внешнего ключа"
+                            : field.viaFaker
+                            ? "Тип фейкера можно поменять только в настройках"
+                            : ""
                         }
-                        displayLabel={
-                          field.viaFaker
-                            ? getLabelByValue(field.fakerType!) +
-                              " (" +
-                              field.locale?.slice(7) +
-                              ")"
-                            : undefined
-                        }
-                        disabled={field.viaFaker}
-                      />
-
+                        enterDelay={500}
+                        arrow
+                        slotProps={{
+                          popper: {
+                            sx: {
+                              [`&.${tooltipClasses.popper}[data-popper-placement*="bottom"] .${tooltipClasses.tooltip}`]:
+                                {
+                                  marginTop: "5px",
+                                },
+                            },
+                          },
+                        }}
+                      >
+                        <div>
+                          <SelectField
+                            value={localFieldTypes[field.id] || field.type}
+                            options={typeOptions}
+                            onChange={(val: any) =>
+                              handleFieldTypeChange(field.id, val as string)
+                            }
+                            displayLabel={
+                              field.viaFaker
+                                ? getLabelByValue(field.fakerType!) +
+                                  " (" +
+                                  field.locale?.slice(7) +
+                                  ")"
+                                : undefined
+                            }
+                            disabled={getSelectDisabledState(field)}
+                          />
+                        </div>
+                      </Tooltip>
                       <div
                         style={{ display: "flex", justifyContent: "center" }}
                       >
-                        <AdditionalSettings fieldId={field.id} />
+                        <AdditionalSettings
+                          fieldId={field.id}
+                          projectId={projectId!}
+                        />
                       </div>
 
                       <IconButton

@@ -13,8 +13,13 @@ import { SliderWithInput } from "./components/SliderWithinput";
 import TableIcon from "@assets/table.svg?react";
 import { SelectField } from "./components/SelectField";
 import { SchemaMaker } from "./components/SchemaMaker";
-import useSchemaStore, { type SchemaField } from "@store/schemaStore";
-import useGenerateStore from "@store/generateStore";
+import useSchemaStore, {
+  mapTableToApiPayload,
+  type SchemaField,
+} from "@store/schemaStore";
+import useGenerateStore, {
+  type TableGenerateSettings,
+} from "@store/generateStore";
 import { SchemaService } from "@services/api";
 import { getTableLayoutPayload } from "../DbEditor/DbEditor";
 
@@ -54,9 +59,10 @@ const GenerateFormContent = ({
   const [query, setQuery] = useState("");
   const [totalRecords, setTotalRecords] = useState(50);
   const [examples, setExamples] = useState("");
-  const [selectModelValue, setSelectModelValue] = useState("deepseek");
+  const [selectModelValue, setSelectModelValue] =
+    useState<TableGenerateSettings["selectModelValue"]>("deepseek");
   const [selectOutputValue, setSelectOutputValue] =
-    useState("EXPORT_TYPE_JSON");
+    useState<TableGenerateSettings["selectOutputValue"]>("EXPORT_TYPE_JSON");
 
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
   const saveTableSettings = useGenerateStore(
@@ -127,6 +133,46 @@ const GenerateFormContent = ({
     });
   };
 
+  const handleTotalRecordsChange = (value: number) => {
+    setTotalRecords(value);
+    saveTableSettings(tableId, {
+      name,
+      query,
+      totalRecords: value,
+      examples,
+      selectModelValue,
+      selectOutputValue,
+    });
+  };
+
+  const handleModelChange = (
+    value: TableGenerateSettings["selectModelValue"]
+  ) => {
+    setSelectModelValue(value);
+    saveTableSettings(tableId, {
+      name,
+      query,
+      totalRecords,
+      examples,
+      selectModelValue: value,
+      selectOutputValue,
+    });
+  };
+
+  const handleOutputChange = (
+    value: TableGenerateSettings["selectOutputValue"]
+  ) => {
+    setSelectOutputValue(value);
+    saveTableSettings(tableId, {
+      name,
+      query,
+      totalRecords,
+      examples,
+      selectModelValue,
+      selectOutputValue: value,
+    });
+  };
+
   const isValid =
     query.trim().length > 0 && totalRecords >= 1 && totalRecords <= 100;
 
@@ -157,15 +203,7 @@ const GenerateFormContent = ({
         min={1}
         max={100}
         onChange={(value) => {
-          setTotalRecords(value);
-          saveTableSettings(tableId, {
-            name,
-            query,
-            totalRecords: value,
-            examples,
-            selectModelValue,
-            selectOutputValue,
-          });
+          handleTotalRecordsChange(value);
         }}
       />
       <InputField
@@ -183,16 +221,7 @@ const GenerateFormContent = ({
         value={selectModelValue}
         options={SELECT_MODEL_OPTIONS}
         onChange={(val: string) => {
-          const newValue = val;
-          setSelectModelValue(newValue);
-          saveTableSettings(tableId, {
-            name,
-            query,
-            totalRecords,
-            examples,
-            selectModelValue: newValue,
-            selectOutputValue,
-          });
+          handleModelChange(val as TableGenerateSettings["selectModelValue"]);
         }}
       />
       <SelectField
@@ -200,16 +229,7 @@ const GenerateFormContent = ({
         value={selectOutputValue}
         options={SELECT_OUTPUT_OPTIONS}
         onChange={(val: string) => {
-          const newValue = val;
-          setSelectOutputValue(newValue);
-          saveTableSettings(tableId, {
-            name,
-            query,
-            totalRecords,
-            examples,
-            selectModelValue,
-            selectOutputValue: newValue,
-          });
+          handleOutputChange(val as TableGenerateSettings["selectOutputValue"]);
         }}
       />
       <SchemaMaker />
@@ -258,12 +278,23 @@ export const Generate = (props: GenerateProps) => {
 
   const tables = useSchemaStore((state) => state.tables);
   const relations = useSchemaStore((state) => state.relations);
-  const currentTable = useSchemaStore().getCurrentTable();
+  const currentTable = useSchemaStore((s) => s.getCurrentTable)();
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
 
   const handleClose = () => {
     setOpen(false);
     setResponseJson(null);
+    if (!currentTable) return;
+    const tableId = currentTable.id;
+    SchemaService.updateTable(
+      projectId,
+      tableId,
+      mapTableToApiPayload({
+        ...currentTable,
+        meta: getTableSettings(tableId),
+        layout: getTableLayoutPayload(currentTable),
+      })
+    );
   };
 
   const handleFormSubmit = async () => {

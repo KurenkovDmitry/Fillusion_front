@@ -8,10 +8,14 @@ import {
   FormControl,
   FormLabel,
 } from "@mui/material";
-import { SchemaField } from "@store/schemaStore";
+import {
+  mapTableToApiPayload,
+  SchemaField,
+  TableSchema,
+} from "@store/schemaStore";
 import { useState, useEffect } from "react";
 import { SelectField } from "./SelectField";
-import useSchemaStore from "../../../store/schemaStore";
+import useSchemaStore, { RelationType } from "../../../store/schemaStore";
 import { SchemaService } from "@services/api";
 
 interface PkSettingsProps {
@@ -21,6 +25,13 @@ interface PkSettingsProps {
 }
 
 type KeyType = "regular" | "primary" | "foreign";
+
+export const getTableLayoutPayload = (currentTable: TableSchema) => {
+  return {
+    x: Math.round(currentTable.layout.x),
+    y: Math.round(currentTable.layout.y),
+  };
+};
 
 export const PkSettings = (props: PkSettingsProps) => {
   const { field, tableId } = props;
@@ -89,14 +100,20 @@ export const PkSettings = (props: PkSettingsProps) => {
 
       updateField(tableId, field.id, {
         isPrimaryKey: true,
+        isForeignKey: false,
       });
 
       const currentTable = getCurrentTable();
       if (!currentTable) return;
 
-      SchemaService.updateTable(props.projectId, currentTable.id, {
-        table: currentTable,
-      });
+      SchemaService.updateTable(
+        props.projectId,
+        currentTable.id,
+        mapTableToApiPayload({
+          ...currentTable,
+          layout: getTableLayoutPayload(currentTable),
+        })
+      );
 
       setReferencedTableId("");
       setReferencedFieldId("");
@@ -114,14 +131,20 @@ export const PkSettings = (props: PkSettingsProps) => {
 
       updateField(tableId, field.id, {
         isPrimaryKey: false,
+        isForeignKey: false,
       });
 
       const currentTable = getCurrentTable();
       if (!currentTable) return;
 
-      SchemaService.updateTable(props.projectId, currentTable.id, {
-        table: currentTable,
-      });
+      SchemaService.updateTable(
+        props.projectId,
+        currentTable.id,
+        mapTableToApiPayload({
+          ...currentTable,
+          layout: getTableLayoutPayload(currentTable),
+        })
+      );
 
       setReferencedTableId("");
       setReferencedFieldId("");
@@ -156,7 +179,9 @@ export const PkSettings = (props: PkSettingsProps) => {
         toTable: tableId,
         fromField: newFieldId,
         toField: field.id,
-        type: "one-to-many",
+        type: "one-to-many" as RelationType,
+        fromHandle: "left" as "left" | "right",
+        toHandle: "right" as "left" | "right",
       };
 
       const createdRelation = await SchemaService.createRelation(
@@ -164,16 +189,7 @@ export const PkSettings = (props: PkSettingsProps) => {
         newRelation
       );
 
-      addRelation({
-        fromTable: referencedTableId,
-        toTable: tableId,
-        fromField: newFieldId,
-        toField: field.id,
-        type: "one-to-many",
-        id: createdRelation.relation.id,
-        fromHandle: "left",
-        toHandle: "right",
-      });
+      addRelation(createdRelation.relation);
     }
   };
 
@@ -253,7 +269,7 @@ export const PkSettings = (props: PkSettingsProps) => {
             component="legend"
             sx={{ marginBottom: "12px", fontSize: "16px", fontWeight: 600 }}
           >
-            Тип поля: {field.name}
+            Тип поля "{field.name}"
           </FormLabel>
           <RadioGroup
             value={keyType}

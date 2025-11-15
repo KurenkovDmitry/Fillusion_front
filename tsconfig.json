@@ -1,6 +1,8 @@
 {
   "files": [],
-  "lib": ["dom"],
+  "compilerOptions": {
+    "lib": ["dom"],
+  },
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }

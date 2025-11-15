@@ -1,23 +1,45 @@
 import { create } from "zustand";
 import useSchemaStore from "./schemaStore";
+import { ApiResponse } from "@services/api/SchemaService/SchemaService.types";
 
 export type TableGenerateSettings = {
   name: string;
   query: string;
   totalRecords: number;
   examples: string;
-  selectModelValue: string;
-  selectOutputValue: string;
+  selectModelValue: "deepseek" | "gemini";
+  selectOutputValue:
+    | "EXPORT_TYPE_JSON"
+    | "EXPORT_TYPE_SNAPSHOT"
+    | "EXPORT_TYPE_DIRECT_DB";
 };
 
 export type GenerateState = {
   // Хранилище настроек для каждой таблицы
   tableSettings: Record<string, TableGenerateSettings>;
 
+  loadSettingsFromApi: (apiResponse: ApiResponse) => void;
   // Методы
   getTableSettings: (tableId: string) => TableGenerateSettings;
   saveTableSettings: (tableId: string, settings: TableGenerateSettings) => void;
   removeTableSettings: (tableId: string) => void;
+};
+
+const mapApiResponseToGenerationState = (apiResponse: ApiResponse) => {
+  const tableSettings: Record<string, TableGenerateSettings> = {};
+
+  apiResponse.schema.tables.forEach((table) => {
+    tableSettings[table.id] = {
+      name: table.name ?? "",
+      query: table.meta?.query ?? "",
+      totalRecords: table.meta?.totalRecords ?? 50,
+      examples: table.meta?.query ?? "",
+      selectModelValue: table.meta?.selectModelValue ?? "deepseek",
+      selectOutputValue: table.meta?.selectOutputValue ?? "EXPORT_TYPE_JSON",
+    };
+  });
+
+  return { tableSettings };
 };
 
 const DEFAULT_SETTINGS: (tableId: string) => TableGenerateSettings = (
@@ -33,6 +55,14 @@ const DEFAULT_SETTINGS: (tableId: string) => TableGenerateSettings = (
 
 const useGenerateStore = create<GenerateState>((set, get) => ({
   tableSettings: {},
+
+  loadSettingsFromApi: (apiResponse) => {
+    const { tableSettings } = mapApiResponseToGenerationState(apiResponse);
+
+    set({
+      tableSettings,
+    });
+  },
 
   getTableSettings: (tableId: string) => {
     const settings = get().tableSettings[tableId];

@@ -6,6 +6,7 @@ export type SchemaField = {
   type: string;
   isPrimaryKey?: boolean;
   isForeignKey?: boolean;
+  position?: number;
   unique?: boolean;
   autoIncrement?: boolean;
   viaFaker?: boolean;
@@ -16,6 +17,7 @@ export type SchemaField = {
 export type TableSchema = {
   id: string;
   name: string;
+  meta?: any;
   layout: {
     x: number;
     y: number;
@@ -209,6 +211,20 @@ const mapApiResponseToState = (
 
   return { tables, relations };
 };
+
+export const mapTableToApiPayload = (table: TableSchema) => ({
+  ...table,
+  fields: table.fields.map((f) => ({
+    ...f,
+    generation: {
+      viaFaker: f.viaFaker,
+      fakerType: f.fakerType,
+      fakerLocale: f.locale,
+      uniqueValues: f.unique,
+      autoIncrement: f.autoIncrement,
+    },
+  })),
+});
 
 const useSchemaStore = create<SchemaState>((set, get) => ({
   isEditingRelations: false,
