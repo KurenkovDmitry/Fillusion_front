@@ -21,8 +21,8 @@ export const AuthService = {
     return apiAuthClient.post<RegisterResponse>("/register", userData);
   },
 
-  async getCurrentUser(): Promise<{ user: User }> {
-    return apiAuthClient.get<{ user: User }>("/auth/me");
+  async getCurrentUser(): Promise<User> {
+    return apiAuthClient.get<User>("/profile/me");
   },
 
   async logout(): Promise<void> {
@@ -34,7 +34,7 @@ export const AuthService = {
   },
 
   async updateProfile(userData: UpdateProfileRequest): Promise<{ user: User }> {
-    return apiAuthClient.put<{ user: User }>("/auth/update", userData);
+    return apiAuthClient.put<{ user: User }>("/profile/update", userData);
   },
 
   async forgotPassword(

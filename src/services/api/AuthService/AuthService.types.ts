@@ -5,6 +5,7 @@ export interface User {
   name: string;
   createdAt: string;
   updatedAt: string;
+  avatarUrl?: string;
 }
 
 export interface LoginRequest {
@@ -31,12 +32,10 @@ export interface AuthResponse {
   accessToken: string;
 }
 
-export interface UpdateProfileRequest {
+export type UpdateProfileRequest = {
   name?: string;
-  email?: string;
-  currentPassword?: string;
-  newPassword?: string;
-}
+  avatar?: ArrayBuffer;
+};
 
 export interface ForgotPasswordRequest {
   email: string;
