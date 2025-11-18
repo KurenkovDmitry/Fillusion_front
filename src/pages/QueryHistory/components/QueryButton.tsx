@@ -40,6 +40,8 @@ export const QueryButton = (props: QueryButtonProps) => {
               label={
                 props.status === "PENDING"
                   ? "В процессе генерации"
+                  : props.status === "SUCCESS"
+                  ? "Генерация завершена"
                   : props.status
               }
               style={{ height: "26px", borderRadius: "8px" }}
