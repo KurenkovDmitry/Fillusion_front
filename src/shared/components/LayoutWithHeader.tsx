@@ -14,13 +14,18 @@ import {
   Button,
   Typography,
   IconButton,
-  Divider,
+  Skeleton,
 } from "@mui/material";
 import { Edit, Logout, Person } from "@mui/icons-material";
 import { useAuth } from "../hooks/useAuth";
-import { Form, Formik } from "formik";
+import { Field, Form, Formik, useFormikContext } from "formik";
 import * as yup from "yup";
 import { Auth } from "@pages";
+
+interface UpdateProfileForm {
+  name: string;
+  avatar?: ArrayBuffer;
+}
 
 // Схема валидации для изменения имени
 const updateNameSchema = yup.object({
@@ -40,10 +45,7 @@ export const LayoutWithHeader = ({
   transparent?: boolean;
 }) => {
   const navigate = useNavigate();
-  const { user, logout, updateProfile } = useAuth();
-  // const user = { name: "124124", email: "3r12141@12414.ru" };
-  // const logout = () => {};
-  // const updateProfile = (name: { name: string }) => {};
+  const { user, isLoading, logout, updateProfile } = useAuth();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -68,9 +70,13 @@ export const LayoutWithHeader = ({
     handleMenuClose();
   };
 
-  const handleUpdateName = async (values: { name: string }) => {
+  const handleUpdateProfile = async (values: UpdateProfileForm) => {
     try {
-      await updateProfile({ name: values.name });
+      // await updateProfile({ user: { name: values.name } });
+      // const formData = new FormData();
+      // formData.append('name', values.name)
+      // await updateProfile(formData);
+      await updateProfile({ name: values.name, avatar: values.avatar });
       setEditDialogOpen(false);
     } catch (error) {
       console.error("Ошибка при обновлении имени:", error);
@@ -147,7 +153,31 @@ export const LayoutWithHeader = ({
           Fillusion
         </h2>
 
-        {user ? (
+        {isLoading && (
+          <Box display="flex" alignItems="center" gap={1}>
+            <Skeleton
+              variant="circular"
+              width={40}
+              height={40}
+              sx={{ bgcolor: "rgba(255, 255, 255, 0.1)" }}
+            />
+            <Box>
+              <Skeleton
+                variant="text"
+                width={100}
+                height={24}
+                sx={{ bgcolor: "rgba(255, 255, 255, 0.1)" }}
+              />
+              <Skeleton
+                variant="text"
+                width={150}
+                height={16}
+                sx={{ bgcolor: "rgba(255, 255, 255, 0.1)" }}
+              />
+            </Box>
+          </Box>
+        )}
+        {!isLoading && user && (
           <Box display="flex" alignItems="center" gap={1}>
             <Typography
               variant="body1"
@@ -169,17 +199,27 @@ export const LayoutWithHeader = ({
                 },
               }}
             >
-              <Avatar
-                sx={{
-                  bgcolor: getAvatarColor(),
-                  width: 40,
-                  height: 40,
-                  fontSize: "14px",
-                  fontWeight: 600,
-                }}
-              >
-                {getUserInitials()}
-              </Avatar>
+              {user.avatarUrl ? (
+                <Avatar
+                  src={user.avatarUrl}
+                  sx={{
+                    width: 40,
+                    height: 40,
+                  }}
+                />
+              ) : (
+                <Avatar
+                  sx={{
+                    bgcolor: getAvatarColor(),
+                    width: 40,
+                    height: 40,
+                    fontSize: "14px",
+                    fontWeight: 600,
+                  }}
+                >
+                  {getUserInitials()}
+                </Avatar>
+              )}
             </IconButton>
 
             <Menu
@@ -198,29 +238,6 @@ export const LayoutWithHeader = ({
               anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
             >
               <MenuItem
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  padding: "12px 16px",
-                  cursor: "default",
-                }}
-                disableRipple
-              >
-                <Person fontSize="small" />
-                <Box>
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    {user.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {user.email}
-                  </Typography>
-                </Box>
-              </MenuItem>
-
-              <Divider />
-
-              <MenuItem
                 onClick={handleEditProfile}
                 sx={{
                   display: "flex",
@@ -230,7 +247,7 @@ export const LayoutWithHeader = ({
                 }}
               >
                 <Edit fontSize="small" />
-                <Typography variant="body2">Изменить имя</Typography>
+                <Typography variant="body2">Изменить профиль</Typography>
               </MenuItem>
 
               <MenuItem
@@ -248,7 +265,8 @@ export const LayoutWithHeader = ({
               </MenuItem>
             </Menu>
           </Box>
-        ) : (
+        )}
+        {!isLoading && !user && (
           <div>
             <Button
               variant="outlined"
@@ -295,13 +313,16 @@ export const LayoutWithHeader = ({
         }}
       >
         <DialogTitle>
-          <Typography fontWeight={600}>Изменить имя</Typography>
+          <Typography fontWeight={600}>Изменить профиль</Typography>
         </DialogTitle>
 
-        <Formik
-          initialValues={{ name: user?.name || "" }}
+        <Formik<UpdateProfileForm>
+          initialValues={{
+            avatar: undefined,
+            name: user?.name || "",
+          }}
           validationSchema={updateNameSchema}
-          onSubmit={handleUpdateName}
+          onSubmit={handleUpdateProfile}
           enableReinitialize
         >
           {({
@@ -314,6 +335,84 @@ export const LayoutWithHeader = ({
           }) => (
             <Form>
               <DialogContent>
+                <MenuItem
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    padding: "12px 16px",
+                    cursor: "default",
+                  }}
+                  disableTouchRipple
+                  disableRipple
+                >
+                  <Avatar
+                    src={values.avatar || user?.avatarUrl}
+                    sx={{
+                      // bgcolor: getAvatarColor(),
+                      width: 40,
+                      height: 40,
+                      fontSize: "14px",
+                      fontWeight: 600,
+                    }}
+                  />
+
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {values.name || user?.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {user?.email}
+                    </Typography>
+                  </Box>
+                  <Box marginLeft="auto">
+                    <Field name="avatar" marginLeft="auto">
+                      {({
+                        field, // { name, value, onChange, onBlur }
+                        form: { touched, errors }, // also values, setXXXX, handleXXXX, dirty, isValid, status, etc.
+                        meta,
+                      }) => {
+                        // eslint-disable-next-line react-hooks/rules-of-hooks
+                        const formikProps = useFormikContext();
+
+                        const handleAvatarChange = (event) => {
+                          let reader = new FileReader();
+                          let file = event.target.files[0];
+                          reader.onloadend = () => {
+                            formikProps.setFieldValue("avatar", reader.result);
+                          };
+                          reader.readAsDataURL(file);
+                        };
+
+                        return (
+                          <div>
+                            <input
+                              type="file"
+                              id="avatar-upload"
+                              accept="image/*"
+                              style={{ display: "none" }}
+                              // {...field}
+                              onChange={handleAvatarChange}
+                            />
+                            <label htmlFor="avatar-upload">
+                              <Button
+                                component="span"
+                                variant="outlined"
+                                size="small"
+                              >
+                                Загрузить аватар
+                              </Button>
+                            </label>
+                            {/* {meta.touched && meta.error && (
+                              <div className="error">{meta.error}</div>
+                            )} */}
+                          </div>
+                        );
+                      }}
+                    </Field>
+                  </Box>
+                </MenuItem>
+
                 <TextField
                   name="name"
                   label="Ваше имя"

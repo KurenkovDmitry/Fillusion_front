@@ -39,19 +39,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const { setToken } = useTokenStore();
 
   const checkAuth = async () => {
-    // try {
-    //   const { user } = await AuthService.getCurrentUser();
-    //   setUser(user);
-    // } catch (error) {
-    //   setUser(null);
-    // } finally {
-    //   setIsLoading(false);
-    // }
+    try {
+      const user = await AuthService.getCurrentUser();
+      setUser(user);
+    } catch {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const login = async (credentials: LoginRequest) => {
     const { accessToken } = await AuthService.login(credentials);
     setToken(accessToken);
+    const user = await AuthService.getCurrentUser();
+    setUser(user);
   };
 
   const register = async (userData: RegisterRequest) => {
@@ -71,13 +73,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const updateProfile = async (userData: UpdateProfileRequest) => {
-    const { user: updatedUser } = await AuthService.updateProfile(userData);
-    setUser(updatedUser);
+    await AuthService.updateProfile(userData);
+    const user = await AuthService.getCurrentUser();
+    setUser(user);
   };
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
 
   const value: AuthContextType = {
     user,
@@ -89,6 +88,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     updateProfile,
     checkAuth,
   };
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
