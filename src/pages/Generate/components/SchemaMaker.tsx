@@ -34,16 +34,10 @@ const typeOptions = [
   { value: "uuid", label: "UUID" },
 ];
 
-interface Field {
-  id: string;
-  name: string;
-  type: string;
-  unique?: boolean;
-  autoIncrement?: boolean;
-  viaFaker?: boolean;
-  fakerType?: string;
-  locale?: "RU_RU" | "EN_US";
-}
+const PKTypeOptions = [
+  { value: "int", label: "Integer" },
+  { value: "uuid", label: "UUID" },
+];
 
 // Утилита debounce для отложенных запросов
 function debounce<T extends (...args: any[]) => any>(
@@ -402,7 +396,9 @@ export const SchemaMaker: React.FC = () => {
                         <div>
                           <SelectField
                             value={localFieldTypes[field.id] || field.type}
-                            options={typeOptions}
+                            options={
+                              field.isPrimaryKey ? PKTypeOptions : typeOptions
+                            }
                             onChange={(val: any) =>
                               handleFieldTypeChange(field.id, val as string)
                             }

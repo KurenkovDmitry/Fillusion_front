@@ -50,7 +50,7 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
         // Форматируем схему полей
         const schema: ColumnSchema[] = table.fields.map((field) => {
           const columnSchema: ColumnSchema = {
-            name: field.name,
+            name: field.name.toLowerCase(),
             type: field.type,
             unique: field.unique || false,
             autoIncrement: field.autoIncrement || false,

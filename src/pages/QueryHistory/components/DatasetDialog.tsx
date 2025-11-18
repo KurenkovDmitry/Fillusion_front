@@ -20,7 +20,7 @@ interface DatasetDialogProps {
 }
 
 export const DatasetDialog = (props: DatasetDialogProps) => {
-  const [responseJson, setResponseJson] = useState<any>("");
+  const [responseJson, setResponseJson] = useState("");
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,37 +58,26 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
     setError(null);
 
     try {
-      // Получаем файл через API
-      const response = await GenerateService.downloadFile(
+      // Используйте исправленный метод
+      const blob = await GenerateService.downloadFile(
         props.requestId,
-        import.meta.env.VITE_PROJECT_ID
+        props.projectId
       );
 
-      // Если ваш API возвращает URL файла
-      if (typeof response === "string" || (response as any).url) {
-        const downloadUrl =
-          typeof response === "string" ? response : (response as any).url;
-
-        // Скачиваем через прямую ссылку
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = `dataset-${props.requestId}.csv`; // или получите имя из response
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        return;
-      }
-
-      // Если ваш API возвращает blob напрямую
-      // (нужно модифицировать apiGeneratorClient для поддержки blob)
-      const blob = response as Blob;
+      // Создаем URL для Blob
       const url = window.URL.createObjectURL(blob);
+
+      // Создаем и кликаем ссылку
       const link = document.createElement("a");
       link.href = url;
-      link.download = `dataset-${props.requestId}.csv`;
+      link.download = JSON.parse(responseJson).fileName ?? "generation"; // Или используйте имя из заголовков
+      link.style.display = "none";
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      // Очищаем память
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Download failed:", err);

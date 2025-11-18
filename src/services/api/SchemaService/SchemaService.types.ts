@@ -86,7 +86,7 @@ export type RelationCreate = Omit<Relation, "id">;
 
 export type FieldCreate = Omit<ApiField, "id">;
 
-type TableCreateInternal = Omit<ApiTableInternal, "id"> & {
+type TableCreateInternal = Omit<Omit<ApiTableInternal, "id">, "fields"> & {
   fields: FieldCreate[];
 };
 

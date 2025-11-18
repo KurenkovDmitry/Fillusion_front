@@ -1,5 +1,7 @@
 import { Chip } from "@mui/material";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import UpdateIcon from "@mui/icons-material/Update";
+import DoneIcon from "@mui/icons-material/Done";
 
 interface QueryButtonProps {
   requsetId: string;
@@ -12,6 +14,18 @@ interface QueryButtonProps {
 }
 
 export const QueryButton = (props: QueryButtonProps) => {
+  const statusLabel =
+    props.status === "PENDING"
+      ? "В процессе генерации"
+      : props.status === "SUCCESS"
+      ? "Генерация завершена"
+      : props.status;
+
+  const sx = { width: "18px" };
+
+  const statusIcon =
+    props.status === "PENDING" ? <UpdateIcon sx={sx} /> : <DoneIcon sx={sx} />;
+
   return (
     <article
       style={{
@@ -37,14 +51,10 @@ export const QueryButton = (props: QueryButtonProps) => {
           </h3>
           <div style={{ width: "100%", display: "flex", gap: "12px" }}>
             <Chip
-              label={
-                props.status === "PENDING"
-                  ? "В процессе генерации"
-                  : props.status === "SUCCESS"
-                  ? "Генерация завершена"
-                  : props.status
-              }
+              label={statusLabel}
               style={{ height: "26px", borderRadius: "8px" }}
+              icon={statusIcon}
+              sx={{ minWidth: "183px" }}
             />
             <Chip
               label={props.network}

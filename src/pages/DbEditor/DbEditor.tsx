@@ -58,6 +58,11 @@ const typeOptions = [
   { value: "uuid", label: "UUID" },
 ];
 
+const PKTypeOptions = [
+  { value: "int", label: "Integer" },
+  { value: "uuid", label: "UUID" },
+];
+
 export const getTableLayoutPayload = (currentTable: TableSchema) => {
   return {
     x: Math.round(currentTable.layout.x),
@@ -394,7 +399,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
 
             <div className="nodrag">
               <SelectField
-                options={typeOptions}
+                options={field.isPrimaryKey ? PKTypeOptions : typeOptions}
                 value={field.type}
                 onChange={(val: string | string[]) =>
                   handleFieldChange(field.id, "type", val as string)
@@ -529,9 +534,9 @@ const nodeTypes = {
 
 const getTableName = () => {
   const tables = Object.values(useSchemaStore.getState().getSchema().tables);
-  return tables.some((t) => t.name === `Table_${tables.length + 1}`)
-    ? `Table_${tables.length + 2}`
-    : `Table_${tables.length + 1}`;
+  return tables.some((t) => t.name === `table_${tables.length + 1}`)
+    ? `table_${tables.length + 2}`
+    : `table_${tables.length + 1}`;
 };
 
 export const DatabaseDiagram: React.FC = () => {
@@ -858,7 +863,13 @@ export const DatabaseDiagram: React.FC = () => {
     const allTables = getAllTables();
     const newTable = {
       name: getTableName(),
-      fields: [],
+      fields: [
+        {
+          name: "id",
+          type: "int",
+          isPrimaryKey: true,
+        },
+      ],
       layout: {
         x: 200 + allTables.length * 50,
         y: 200,
@@ -875,6 +886,30 @@ export const DatabaseDiagram: React.FC = () => {
         console.log("error");
       }
     }
+  };
+
+  const getPluralForm = (
+    count: number,
+    one: string,
+    two: string,
+    five: string
+  ): string => {
+    const lastDigit = count % 10;
+    const lastTwoDigits = count % 100;
+
+    if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+      return five;
+    }
+
+    if (lastDigit === 1) {
+      return one;
+    }
+
+    if (lastDigit >= 2 && lastDigit <= 4) {
+      return two;
+    }
+
+    return five;
   };
 
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -915,7 +950,6 @@ export const DatabaseDiagram: React.FC = () => {
             border: "none",
             borderRadius: "5px",
             cursor: "pointer",
-            fontWeight: "bold",
             boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
             transition: "all 0.3s",
           }}
@@ -990,8 +1024,9 @@ export const DatabaseDiagram: React.FC = () => {
                 color: "white",
                 borderRadius: 6,
                 height: "32px",
+                width: "32px",
                 cursor: "pointer",
-                fontWeight: 700,
+                fontSize: "20px",
               }}
             >
               +
@@ -1036,8 +1071,9 @@ export const DatabaseDiagram: React.FC = () => {
                 >
                   <div style={{ color: "#fff", fontWeight: 500 }}>{t.name}</div>
                   <div style={{ fontSize: 12, color: "#999" }}>
-                    {t.fields.length} полей — x: {Math.round(t.layout.x)}, y:{" "}
-                    {Math.round(t.layout.y)}
+                    {t.fields.length}{" "}
+                    {getPluralForm(t.fields.length, "поле", "поля", "полей")} —
+                    x: {Math.round(t.layout.x)}, y: {Math.round(t.layout.y)}
                   </div>
                 </div>
                 <div

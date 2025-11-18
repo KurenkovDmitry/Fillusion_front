@@ -27,12 +27,7 @@ export const GenerateService = {
     );
   },
 
-  async downloadFile(
-    requestId: string,
-    projectId: string
-  ): Promise<DownloadDatasetFileResponse> {
-    return apiGeneratorClient.get<DownloadDatasetFileResponse>(
-      `/datasets/${requestId}/download?project_id=${projectId}`
-    );
+  async downloadFile(requestId: string, projectId: string): Promise<any> {
+    return apiGeneratorClient.downloadFileAsBlob(requestId, projectId);
   },
 };

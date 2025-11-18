@@ -160,6 +160,28 @@ class ApiClient {
   async delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: "DELETE" });
   }
+
+  async downloadFileAsBlob(
+    requestId: string,
+    projectId: string
+  ): Promise<Blob> {
+    const url = `${this.baseURL}/datasets/${requestId}/download?project_id=${projectId}`;
+    const token = useTokenStore.getState().token;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error status: ${response.status}`);
+    }
+
+    return await response.blob();
+  }
 }
 
 export const apiAuthClient = new ApiClient(API_AUTH_URL);

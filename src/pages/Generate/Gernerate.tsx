@@ -29,9 +29,9 @@ const SELECT_MODEL_OPTIONS = [
 ];
 
 const SELECT_OUTPUT_OPTIONS = [
-  { value: "EXPORT_TYPE_JSON", label: "JSON" },
   { value: "EXPORT_TYPE_SNAPSHOT", label: "Snapshot" },
-  { value: "EXPORT_TYPE_DIRECT_DB", label: "Прямое подключение" },
+  { value: "EXPORT_TYPE_JSON", label: "JSON" },
+  // { value: "EXPORT_TYPE_DIRECT_DB", label: "Прямое подключение" },
 ];
 
 interface GenerateProps {
@@ -61,8 +61,9 @@ const GenerateFormContent = ({
   const [examples, setExamples] = useState("");
   const [selectModelValue, setSelectModelValue] =
     useState<TableGenerateSettings["selectModelValue"]>("deepseek");
-  const [selectOutputValue, setSelectOutputValue] =
-    useState<TableGenerateSettings["selectOutputValue"]>("EXPORT_TYPE_JSON");
+  const [selectOutputValue, setSelectOutputValue] = useState<
+    TableGenerateSettings["selectOutputValue"]
+  >("EXPORT_TYPE_SNAPSHOT");
 
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
   const saveTableSettings = useGenerateStore(
