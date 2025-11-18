@@ -153,7 +153,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
           };
 
       const relations = getAllRelations().filter(
-        (r) => r.fromField === fieldId
+        (r) => r.fromField === fieldId // Это поле - PK
       );
 
       if (isSwitchingToAI) {
@@ -166,13 +166,13 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
 
         if (relations) {
           relations.forEach((relation) => {
+            // toField - это FK
             removeFieldProperties(relation.toTable, relation.toField, [
               "viaFaker",
               "fakerType",
               "locale",
             ]);
             updateField(relation.toTable, relation.toField, updates);
-            setTablesToSaveOnClose((prev) => prev.add(relation.toTable));
           });
         }
       } else {
@@ -184,16 +184,15 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
 
         if (relations) {
           relations.forEach((relation) => {
+            // toField - это FK
             removeFieldProperties(relation.toTable, relation.toField, [
               "unique",
               "autoIncrement",
             ]);
             updateField(relation.toTable, relation.toField, updates);
-            setTablesToSaveOnClose((prev) => prev.add(relation.toTable));
           });
         }
       }
-      setTablesToSaveOnClose((prev) => prev.add(currentTableId));
     },
     [
       currentTableId,

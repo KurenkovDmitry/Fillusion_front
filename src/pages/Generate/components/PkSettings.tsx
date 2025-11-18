@@ -120,6 +120,7 @@ export const PkSettings = (props: PkSettingsProps) => {
     } else if (newKeyType === "foreign") {
       updateField(tableId, field.id, {
         isPrimaryKey: false,
+        isForeignKey: true,
       });
     } else {
       // regular

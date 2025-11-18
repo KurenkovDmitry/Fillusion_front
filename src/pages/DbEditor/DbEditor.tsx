@@ -208,11 +208,12 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     if (key === "name") {
       setLocalFieldValues((prev) => ({ ...prev, [fieldId]: value }));
     } else {
-      // синхронизация типа с FK, если есть
-      const relations = allRelations().filter((r) => r.fromField === fieldId);
+      // Теперь PK поле определяет тип FK полей
+      const relations = allRelations().filter((r) => r.fromField === fieldId); // fromField - это PK
       if (relations) {
         relations.forEach((relation) => {
           updateField(relation.toTable, relation.toField, {
+            // toField - это FK
             type: value,
           });
           saveTableToServer(relation.toTable);
@@ -700,23 +701,27 @@ export const DatabaseDiagram: React.FC = () => {
       const toField = toTable?.fields.find((f) => f.id === target.fieldId);
 
       if (!fromField || !toField) return;
-      if (fromField.isForeignKey) {
+
+      // ✅ Проверяем что fromField не является первичным ключом
+      if (fromField.isPrimaryKey) {
         setSnackbar({
           open: true,
-          message: "Нельзя провести свзяь от внешнего ключа",
+          message: "Нельзя провести связь от первичного ключа",
         });
         return;
       }
 
-      if (toField.isPrimaryKey) {
-        setSnackbar({
-          open: true,
-          message: "Нельзя провести свзяь к первичному ключу",
-        });
-        return;
-      }
-
+      // ✅ Проверяем что toField не является внешним ключом
       if (toField.isForeignKey) {
+        setSnackbar({
+          open: true,
+          message: "Нельзя провести связь к внешнему ключу",
+        });
+        return;
+      }
+
+      // ✅ Проверяем что fromField ещё не FK
+      if (fromField.isForeignKey) {
         setSnackbar({
           open: true,
           message: "Внешний ключ не может ссылаться на несколько полей",
@@ -725,55 +730,45 @@ export const DatabaseDiagram: React.FC = () => {
       }
 
       try {
-        updateField(params.source, source.fieldId, {
+        // ✅ toField (целевое) становится PK
+        updateField(params.target, target.fieldId, {
           isPrimaryKey: true,
           isForeignKey: false,
         });
 
-        const targetUpdate: Partial<SchemaField> = fromField.viaFaker
+        // ✅ fromField (исходное) становится FK и наследует тип от toField
+        const sourceUpdate: Partial<SchemaField> = toField.viaFaker
           ? {
               isPrimaryKey: false,
               isForeignKey: true,
               viaFaker: true,
-              fakerType: fromField.fakerType,
-              locale: fromField.locale,
+              fakerType: toField.fakerType,
+              locale: toField.locale,
+              type: toField.type,
             }
           : {
               isPrimaryKey: false,
               isForeignKey: true,
-              type: fromField.type,
+              type: toField.type,
               viaFaker: false,
             };
 
-        updateField(params.target, target.fieldId, targetUpdate);
+        updateField(params.source, source.fieldId, sourceUpdate);
 
         const newRelation = {
-          fromTable: params.source,
-          toTable: params.target,
-          fromField: source.fieldId,
-          toField: target.fieldId,
+          fromTable: params.target, // ✅ Меняем местами: связь идёт от PK
+          toTable: params.source, // ✅ к FK
+          fromField: target.fieldId,
+          toField: source.fieldId,
           type: "one-to-many" as const,
-          fromHandle: source.direction as "left" | "right",
-          toHandle: target.direction as "left" | "right",
+          fromHandle: target.direction as "left" | "right",
+          toHandle: source.direction as "left" | "right",
         };
 
         let createdRelation;
         isUpdatingRelations.current = true;
         try {
-          await SchemaService.updateTable(
-            projectId,
-            params.source,
-            mapTableToApiPayload({
-              ...fromTable,
-              fields: fromTable.fields.map((f) =>
-                f.id === source.fieldId
-                  ? { ...f, isPrimaryKey: true, isForeignKey: false }
-                  : f
-              ),
-              layout: getTableLayoutPayload(fromTable),
-            })
-          );
-
+          // ✅ Обновляем toTable (теперь содержит PK)
           await SchemaService.updateTable(
             projectId,
             params.target,
@@ -781,30 +776,56 @@ export const DatabaseDiagram: React.FC = () => {
               ...toTable,
               fields: toTable.fields.map((f) =>
                 f.id === target.fieldId
-                  ? {
-                      ...f,
-                      type: fromField.type,
-                      isPrimaryKey: false,
-                      isForeignKey: true,
-                    }
+                  ? { ...f, isPrimaryKey: true, isForeignKey: false }
                   : f
               ),
               layout: getTableLayoutPayload(toTable),
             })
           );
+
+          // ✅ Обновляем fromTable (теперь содержит FK)
+          await SchemaService.updateTable(
+            projectId,
+            params.source,
+            mapTableToApiPayload({
+              ...fromTable,
+              fields: fromTable.fields.map((f) =>
+                f.id === source.fieldId
+                  ? {
+                      ...f,
+                      type: toField.type,
+                      isPrimaryKey: false,
+                      isForeignKey: true,
+                    }
+                  : f
+              ),
+              layout: getTableLayoutPayload(fromTable),
+            })
+          );
+
           createdRelation = await SchemaService.createRelation(
             projectId,
             newRelation
           );
           addRelation(createdRelation.relation);
         } catch (e) {
-          removeRelation(createdRelation!.relation.id);
+          if (createdRelation) {
+            removeRelation(createdRelation.relation.id);
+          }
+          setSnackbar({
+            open: true,
+            message: "Не удалось создать связь",
+          });
           return;
         } finally {
           isUpdatingRelations.current = false;
         }
       } catch (error) {
         console.error("Failed to create relation:", error);
+        setSnackbar({
+          open: true,
+          message: "Произошла ошибка при создании связи",
+        });
       }
     },
     [
@@ -977,8 +998,8 @@ export const DatabaseDiagram: React.FC = () => {
           >
             🔗 Проведите линию для создания связи
             <br />
-            Поле, от которого проводится связь станет PK, а поле, к которому
-            идет связь станет FK
+            Поле, от которого проводится связь станет FK, а поле, к которому
+            идет связь станет PK
             <br />
             💬 Кликните на связь для изменения типа
           </div>

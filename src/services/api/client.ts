@@ -4,43 +4,7 @@ import {
   API_GENERATOR_V2_URL,
 } from "@services/api";
 import { useTokenStore } from "../../store/tokenStore";
-
-type FailedQueueCallback = (error: Error | null, token: string | null) => void;
-
-let isRefreshing = false;
-let failedQueue: FailedQueueCallback[] = [];
-
-const processQueue = (error: Error | null, token: string | null = null) => {
-  failedQueue.forEach((callback) => callback(error, token));
-  failedQueue = [];
-};
-
-const refreshToken = async () => {
-  try {
-    const response = await fetch(`${API_AUTH_URL}/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to refresh token");
-    }
-
-    const tokens = await response.json();
-    const newAccessToken = tokens.accessToken;
-
-    useTokenStore.getState().setToken(newAccessToken);
-    processQueue(null, newAccessToken);
-    return newAccessToken;
-  } catch (error) {
-    processQueue(error as Error, null);
-    useTokenStore.getState().setToken("");
-    console.error("Could not refresh token:", error);
-    throw error;
-  } finally {
-    isRefreshing = false;
-  }
-};
+import { AuthService } from "@services/api";
 
 class ApiClient {
   private baseURL: string;
@@ -54,63 +18,44 @@ class ApiClient {
     options: RequestInit = {},
     retry: boolean = false
   ): Promise<T> {
-    const makeRequest = async (tokenOverride?: string) => {
-      const url = `${this.baseURL}${endpoint}`;
-      const token = tokenOverride || useTokenStore.getState().token;
+    const url = `${this.baseURL}${endpoint}`;
 
-      const config: RequestInit = {
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
-          ...options.headers,
-        },
-        credentials: "include",
-        ...options,
-      };
+    // Получаем актуальный токен при каждом запросе
+    const token = useTokenStore.getState().token;
 
-      return fetch(url, config);
+    const config: RequestInit = {
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...options.headers,
+      },
+      credentials: "include",
+      ...options,
     };
 
     try {
-      let response = await makeRequest();
-
-      if (response.status === 401 && endpoint !== "/users/auth/refresh") {
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedQueue.push((new_token: any) => {
-              makeRequest(new_token).then(resolve).catch(reject);
-            });
-          }).then((res) => (res as Response).json());
-        } else {
-          isRefreshing = true;
-
-          const retryOriginalRequest = new Promise((resolve) => {
-            failedQueue.push((new_token: any) => {
-              resolve(makeRequest(new_token));
-            });
-          });
-
-          refreshToken();
-
-          return ((await retryOriginalRequest) as Response).json();
-        }
-      }
+      const response = await fetch(url, config);
 
       if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: "Failed to parse error JSON" }));
+        const errorData = await response.json().catch(() => ({}));
+        if (
+          (errorData.message === "authentication required" ||
+            errorData.error === "Forbidden") &&
+          endpoint !== "/auth/refresh" &&
+          !retry
+        ) {
+          const response = await AuthService.refreshToken();
+          if (response.accessToken) {
+            useTokenStore.getState().setToken(response.accessToken);
+            return this.request(endpoint, options, true);
+          }
+        }
         throw new Error(
           errorData.message || `HTTP error status: ${response.status}`
         );
       }
 
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        return await response.json();
-      } else {
-        return {} as T;
-      }
+      return await response.json();
     } catch (error) {
       console.error("API request failed:", error);
       throw error;

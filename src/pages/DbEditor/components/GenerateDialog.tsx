@@ -67,13 +67,13 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
 
           // Проверяем является ли поле FK через relations
           const relatedRelation = Object.values(relations).find(
-            (rel) => rel.toTable === table.id && rel.toField === field.id
+            (rel) => rel.fromTable === table.id && rel.fromField === field.id
           );
 
           if (relatedRelation) {
-            const referencedTable = tables[relatedRelation.fromTable];
+            const referencedTable = tables[relatedRelation.toTable];
             const referencedField = referencedTable?.fields.find(
-              (f) => f.id === relatedRelation.fromField
+              (f) => f.id === relatedRelation.toField
             );
 
             columnSchema.isFk = true;

@@ -278,6 +278,33 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
     set((state) => {
       const { [tableId]: removed, ...restTables } = state.tables;
 
+      // Находим все связи, связанные с этой таблицей
+      const relationsToRemove = Object.values(state.relations).filter(
+        (rel) => rel.fromTable === tableId || rel.toTable === tableId
+      );
+
+      // Сбрасываем FK поля в обычные для всех затронутых связей
+      const updatedTables = { ...restTables };
+
+      relationsToRemove.forEach((relation) => {
+        // Если удаляемая таблица содержит PK (fromTable)
+        if (relation.fromTable === tableId && updatedTables[relation.toTable]) {
+          // Сбрасываем FK поле в другой таблице
+          updatedTables[relation.toTable] = {
+            ...updatedTables[relation.toTable],
+            fields: updatedTables[relation.toTable].fields.map((field) =>
+              field.id === relation.toField
+                ? {
+                    ...field,
+                    isForeignKey: false,
+                    isPrimaryKey: false,
+                  }
+                : field
+            ),
+          };
+        }
+      });
+
       // Удаляем все связи, связанные с этой таблицей
       const restRelations = Object.fromEntries(
         Object.entries(state.relations).filter(
@@ -287,11 +314,11 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
 
       const newCurrentId =
         state.currentTableId === tableId
-          ? Object.keys(restTables)[0] || null
+          ? Object.keys(updatedTables)[0] || null
           : state.currentTableId;
 
       return {
-        tables: restTables,
+        tables: updatedTables,
         relations: restRelations,
         currentTableId: newCurrentId,
       };
@@ -382,7 +409,38 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
         return state; // Не удаляем последнее поле
       }
 
-      // Удаляем связи, связанные с этим полем
+      // Находим связи связанные с этим полем
+      const relationsToRemove = Object.values(state.relations).filter(
+        (rel) =>
+          (rel.fromTable === tableId && rel.fromField === fieldId) ||
+          (rel.toTable === tableId && rel.toField === fieldId)
+      );
+
+      // Сбрасываем FK/PK поля в других таблицах
+      const updatedTables = { ...state.tables };
+
+      relationsToRemove.forEach((relation) => {
+        // Если удаляемое поле - PK (fromField)
+        if (relation.fromTable === tableId && relation.fromField === fieldId) {
+          // Сбрасываем FK поле в связанной таблице
+          if (updatedTables[relation.toTable]) {
+            updatedTables[relation.toTable] = {
+              ...updatedTables[relation.toTable],
+              fields: updatedTables[relation.toTable].fields.map((field) =>
+                field.id === relation.toField
+                  ? {
+                      ...field,
+                      isForeignKey: false,
+                      isPrimaryKey: false,
+                    }
+                  : field
+              ),
+            };
+          }
+        }
+      });
+
+      // Удаляем связи
       const restRelations = Object.fromEntries(
         Object.entries(state.relations).filter(
           ([_, rel]) =>
@@ -393,7 +451,7 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
 
       return {
         tables: {
-          ...state.tables,
+          ...updatedTables,
           [tableId]: {
             ...table,
             fields: table.fields.filter((f) => f.id !== fieldId),
@@ -480,8 +538,33 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
 
   removeRelation: (relationId) =>
     set((state) => {
-      const { [relationId]: removed, ...rest } = state.relations;
-      return { relations: rest };
+      const relation = state.relations[relationId];
+      if (!relation) return state;
+
+      const { [relationId]: removed, ...restRelations } = state.relations;
+
+      // ✅ Сбрасываем FK поле в обычное
+      const updatedTables = { ...state.tables };
+
+      if (updatedTables[relation.toTable]) {
+        updatedTables[relation.toTable] = {
+          ...updatedTables[relation.toTable],
+          fields: updatedTables[relation.toTable].fields.map((field) =>
+            field.id === relation.toField
+              ? {
+                  ...field,
+                  isForeignKey: false,
+                  isPrimaryKey: false,
+                }
+              : field
+          ),
+        };
+      }
+
+      return {
+        relations: restRelations,
+        tables: updatedTables,
+      };
     }),
 
   getRelationsByTable: (tableId) => {
