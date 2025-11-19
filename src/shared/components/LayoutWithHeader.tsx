@@ -27,14 +27,6 @@ interface UpdateProfileForm {
   avatar?: File;
 }
 
-// Схема валидации для изменения имени
-const updateNameSchema = yup.object({
-  name: yup
-    .string()
-    .min(2, "Имя должно содержать минимум 2 символа")
-    .required("Введите имя"),
-});
-
 export const LayoutWithHeader = ({
   children,
   noJustify,
@@ -51,6 +43,19 @@ export const LayoutWithHeader = ({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const [open, setOpen] = useState(false);
+
+  // Схема валидации для изменения имени
+  const updateNameSchema = yup.object({
+    name: yup
+      .string()
+      .min(2, "Имя должно содержать не менее 2 символов")
+      .max(50, "Имя не может содержать более 50 символов")
+      .matches(
+        /^[a-zA-Zа-яА-Я0-9_\\-\\s]+$/,
+        "Имя содержит недопустимые символы"
+      )
+      .required("Обязательное поле"),
+  });
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -326,13 +331,17 @@ export const LayoutWithHeader = ({
           }}
           validationSchema={updateNameSchema}
           onSubmit={handleUpdateProfile}
+          // validateOnBlur
+          // validateOnChange
+          // validateOnMount
           enableReinitialize
         >
           {({
             isSubmitting,
             values,
-            errors,
+            dirty,
             touched,
+            isValid,
             handleChange,
             handleBlur,
           }) => {
@@ -366,11 +375,18 @@ export const LayoutWithHeader = ({
                       }}
                     />
 
-                    <Box>
-                      <Typography variant="subtitle1" fontWeight={600}>
+                    <Box
+                      sx={{
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis",
+                        maxWidth: 300,
+                      }}
+                    >
+                      <Typography noWrap variant="subtitle1" fontWeight={600}>
                         {values.name || user?.name}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography noWrap variant="body2" color="text.secondary">
                         {user?.email}
                       </Typography>
                     </Box>
@@ -417,23 +433,44 @@ export const LayoutWithHeader = ({
                       </Field>
                     </Box>
                   </MenuItem>
+                  <Field name="name">
+                    {({
+                      field, // { name, value, onChange, onBlur }
+                      form: { touched, errors }, // also values, setXXXX, handleXXXX, dirty, isValid, status, etc.
+                      meta,
+                    }) => {
+                      // eslint-disable-next-line react-hooks/rules-of-hooks
+                      const formikProps = useFormikContext();
 
-                  <TextField
-                    name="name"
-                    label="Ваше имя"
-                    value={values.name}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    error={touched.name && Boolean(errors.name)}
-                    helperText={touched.name && errors.name}
-                    fullWidth
-                    margin="normal"
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
-                      },
+                      const handleNameInputBlur = (event) => {
+                        if (!values.name) {
+                          formikProps.setFieldValue("name", user?.name);
+                          handleBlur("name");
+                          return;
+                        }
+                        handleBlur(event);
+                      };
+                      return (
+                        <TextField
+                          {...field}
+                          name="name"
+                          label="Ваше имя"
+                          value={values.name}
+                          onChange={handleChange}
+                          onBlur={handleNameInputBlur}
+                          error={touched.name && Boolean(errors.name)}
+                          helperText={touched.name && errors.name}
+                          fullWidth
+                          margin="normal"
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              borderRadius: "8px",
+                            },
+                          }}
+                        />
+                      );
                     }}
-                  />
+                  </Field>
                 </DialogContent>
 
                 <DialogActions sx={{ padding: "16px 24px", gap: 1 }}>
@@ -450,7 +487,7 @@ export const LayoutWithHeader = ({
                   <Button
                     type="submit"
                     variant="contained"
-                    disabled={isSubmitting}
+                    disabled={!isValid || !dirty || isSubmitting}
                     sx={{
                       textTransform: "none",
                       fontWeight: 600,
