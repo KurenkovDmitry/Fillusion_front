@@ -25,12 +25,12 @@ class ApiClient {
 
     const body = options.body;
 
-    if (!headers.has("Content-Type")) {
-      console.log("1");
-
-      if (!(body instanceof FormData) && body != null) {
-        headers.set("Content-Type", "application/json");
-      }
+    if (
+      !headers.has("Content-Type") &&
+      !(body instanceof FormData) &&
+      body != null
+    ) {
+      headers.set("Content-Type", "application/json");
     }
 
     if (token && !headers.has("Authorization")) {
@@ -41,13 +41,6 @@ class ApiClient {
       ...options,
       headers,
       credentials: "include",
-    };
-
-    const makeRequest = async (tokenOverride?: string) => {
-      if (tokenOverride) {
-        headers.set("Authorization", `Bearer ${tokenOverride}`);
-      }
-      return fetch(url, { ...config, headers });
     };
 
     try {
@@ -72,7 +65,11 @@ class ApiClient {
         );
       }
 
-      return await response.json();
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        return await response.json();
+      }
+      return {} as T;
     } catch (error) {
       console.error("API request failed:", error);
       throw error;

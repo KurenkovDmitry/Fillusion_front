@@ -1,4 +1,10 @@
-import React, { useState, useEffect, createContext, useContext } from "react";
+import React, {
+  useState,
+  useEffect,
+  createContext,
+  useContext,
+  useRef,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthService } from "@services/api";
 import type {
@@ -36,7 +42,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { setToken } = useTokenStore();
+  const { token, setToken } = useTokenStore();
+  const tokenRef = useRef(token);
 
   const checkAuth = async () => {
     try {
@@ -68,6 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logout = async () => {
     await AuthService.logout();
+    setToken(null);
     setUser(null);
     navigate("/");
   };
@@ -90,7 +98,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
-    checkAuth();
+    if (tokenRef.current) {
+      checkAuth();
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
