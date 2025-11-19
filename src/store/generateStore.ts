@@ -33,7 +33,7 @@ const mapApiResponseToGenerationState = (apiResponse: ApiResponse) => {
       name: table.name ?? "",
       query: table.meta?.query ?? "",
       totalRecords: table.meta?.totalRecords ?? 50,
-      examples: table.meta?.query ?? "",
+      examples: table.meta?.examples ?? "",
       selectModelValue: table.meta?.selectModelValue ?? "deepseek",
       selectOutputValue: table.meta?.selectOutputValue ?? "EXPORT_TYPE_JSON",
     };
@@ -66,6 +66,7 @@ const useGenerateStore = create<GenerateState>((set, get) => ({
 
   getTableSettings: (tableId: string) => {
     const settings = get().tableSettings[tableId];
+    console.log(get().tableSettings);
     // Если настроек нет - возвращаем дефолты
     return settings || { ...DEFAULT_SETTINGS(tableId) };
   },

@@ -55,17 +55,19 @@ const GenerateFormContent = ({
   loading: boolean;
   error: string;
 }) => {
-  const [name, setName] = useState("");
-  const [query, setQuery] = useState("");
-  const [totalRecords, setTotalRecords] = useState(50);
-  const [examples, setExamples] = useState("");
-  const [selectModelValue, setSelectModelValue] =
-    useState<TableGenerateSettings["selectModelValue"]>("deepseek");
+  const getTableSettings = useGenerateStore((state) => state.getTableSettings);
+  const settings = getTableSettings(tableId);
+  const [name, setName] = useState(settings.name ?? "");
+  const [query, setQuery] = useState(settings.query ?? "");
+  const [totalRecords, setTotalRecords] = useState(settings.totalRecords ?? 50);
+  const [examples, setExamples] = useState(settings.examples ?? "");
+  const [selectModelValue, setSelectModelValue] = useState<
+    TableGenerateSettings["selectModelValue"]
+  >(settings.selectModelValue ?? "deepseek");
   const [selectOutputValue, setSelectOutputValue] = useState<
     TableGenerateSettings["selectOutputValue"]
-  >("EXPORT_TYPE_SNAPSHOT");
+  >(settings.selectOutputValue ?? "EXPORT_TYPE_SNAPSHOT");
 
-  const getTableSettings = useGenerateStore((state) => state.getTableSettings);
   const saveTableSettings = useGenerateStore(
     (state) => state.saveTableSettings
   );
@@ -82,7 +84,7 @@ const GenerateFormContent = ({
     setSelectOutputValue(settings.selectOutputValue);
   }, [tableId, getTableSettings]);
 
-  // ✅ Сохранение с API запросом при blur имени таблицы
+  // Сохранение с API запросом при blur имени таблицы
   const handleNameBlur = async () => {
     const settings = {
       name,
@@ -95,7 +97,7 @@ const GenerateFormContent = ({
 
     saveTableSettings(tableId, settings);
 
-    // ✅ Обновляем имя таблицы в schemaStore и на сервере
+    // Обновляем имя таблицы в schemaStore и на сервере
     if (name !== tables[tableId]?.name) {
       updateTable(tableId, { name });
 
@@ -301,7 +303,7 @@ export const Generate = (props: GenerateProps) => {
   const handleFormSubmit = async () => {
     if (!currentTable || !projectId) return;
 
-    // ✅ Проверяем что все поля заполнены
+    // Проверяем что все поля заполнены
     const emptyNameField = currentTable.fields.find(
       (field) => !field.name.trim()
     );
@@ -319,10 +321,10 @@ export const Generate = (props: GenerateProps) => {
     setError("");
 
     try {
-      // ✅ Берём значения из generateStore
+      // Берём значения из generateStore
       const settings = getTableSettings(currentTable.id);
 
-      // ✅ Форматируем схему для API
+      // Форматируем схему для API
       const formattedSchema = currentTable.fields.map((field) => {
         const schemaField: any = {
           name: field.name,
@@ -339,7 +341,7 @@ export const Generate = (props: GenerateProps) => {
           schemaField.locale = field.locale || "LOCALE_UNSPECIFIED";
         }
 
-        // ✅ Проверяем является ли поле FK через relations
+        // Проверяем является ли поле FK через relations
         const relatedRelation = Object.values(relations).find(
           (rel) => rel.toTable === currentTable.id && rel.toField === field.id
         );
@@ -358,7 +360,7 @@ export const Generate = (props: GenerateProps) => {
         return schemaField;
       });
 
-      // ✅ Формируем запрос для генерации
+      // Формируем запрос для генерации
       const generateRequest = {
         projectId,
         network: settings.selectModelValue,
@@ -376,7 +378,7 @@ export const Generate = (props: GenerateProps) => {
 
       console.log("Generate request:", generateRequest);
 
-      // ✅ Отправляем запрос на генерацию (замените на ваш метод API)
+      // Отправляем запрос на генерацию (замените на ваш метод API)
       // const response = await SchemaService.generateData(generateRequest);
       // const data = await response.json();
       // setResponseJson(data);

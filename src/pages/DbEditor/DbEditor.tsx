@@ -650,7 +650,8 @@ export const DatabaseDiagram: React.FC = () => {
   useEffect(() => {
     const fetchSchema = async () => {
       try {
-        const res = await SchemaService.getSchema(projectId!);
+        if (!projectId) return;
+        const res = await SchemaService.getSchema(projectId);
         loadFromApi(res);
         loadSettingsFromApi(res);
       } catch (e) {
@@ -702,7 +703,7 @@ export const DatabaseDiagram: React.FC = () => {
 
       if (!fromField || !toField) return;
 
-      // ✅ Проверяем что fromField не является первичным ключом
+      // Проверяем что fromField не является первичным ключом
       if (fromField.isPrimaryKey) {
         setSnackbar({
           open: true,
@@ -711,7 +712,7 @@ export const DatabaseDiagram: React.FC = () => {
         return;
       }
 
-      // ✅ Проверяем что toField не является внешним ключом
+      // Проверяем что toField не является внешним ключом
       if (toField.isForeignKey) {
         setSnackbar({
           open: true,
@@ -720,7 +721,7 @@ export const DatabaseDiagram: React.FC = () => {
         return;
       }
 
-      // ✅ Проверяем что fromField ещё не FK
+      // Проверяем что fromField ещё не FK
       if (fromField.isForeignKey) {
         setSnackbar({
           open: true,
@@ -730,13 +731,13 @@ export const DatabaseDiagram: React.FC = () => {
       }
 
       try {
-        // ✅ toField (целевое) становится PK
+        // toField (целевое) становится PK
         updateField(params.target, target.fieldId, {
           isPrimaryKey: true,
           isForeignKey: false,
         });
 
-        // ✅ fromField (исходное) становится FK и наследует тип от toField
+        // fromField (исходное) становится FK и наследует тип от toField
         const sourceUpdate: Partial<SchemaField> = toField.viaFaker
           ? {
               isPrimaryKey: false,
@@ -756,8 +757,8 @@ export const DatabaseDiagram: React.FC = () => {
         updateField(params.source, source.fieldId, sourceUpdate);
 
         const newRelation = {
-          fromTable: params.target, // ✅ Меняем местами: связь идёт от PK
-          toTable: params.source, // ✅ к FK
+          fromTable: params.target, // Меняем местами: связь идёт от PK
+          toTable: params.source, // к FK
           fromField: target.fieldId,
           toField: source.fieldId,
           type: "one-to-many" as const,
@@ -768,7 +769,7 @@ export const DatabaseDiagram: React.FC = () => {
         let createdRelation;
         isUpdatingRelations.current = true;
         try {
-          // ✅ Обновляем toTable (теперь содержит PK)
+          // Обновляем toTable (теперь содержит PK)
           await SchemaService.updateTable(
             projectId,
             params.target,
@@ -783,7 +784,7 @@ export const DatabaseDiagram: React.FC = () => {
             })
           );
 
-          // ✅ Обновляем fromTable (теперь содержит FK)
+          // Обновляем fromTable (теперь содержит FK)
           await SchemaService.updateTable(
             projectId,
             params.source,
@@ -1082,6 +1083,10 @@ export const DatabaseDiagram: React.FC = () => {
                   alignItems: "center",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
                 }}
+                onClick={() => {
+                  setCurrentTable(t.id);
+                  setOpen(true);
+                }}
               >
                 <div
                   style={{
@@ -1109,6 +1114,7 @@ export const DatabaseDiagram: React.FC = () => {
                       setCurrentTable(t.id);
                       setOpen(true);
                     }}
+                    // sx={{ border: "1px solid white" }}
                   >
                     <Tooltip title="Настройки генерации таблицы" arrow>
                       <CodeIcon sx={{ color: "#fff" }} />

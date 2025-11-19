@@ -175,14 +175,17 @@ export const PkSettings = (props: PkSettingsProps) => {
         removeRelation(existingRelation.id);
       }
 
+      const onRight =
+        tables[tableId].layout.x > tables[referencedTableId].layout.x;
+
       const newRelation = {
         fromTable: referencedTableId,
         toTable: tableId,
         fromField: newFieldId,
         toField: field.id,
         type: "one-to-many" as RelationType,
-        fromHandle: "left" as "left" | "right",
-        toHandle: "right" as "left" | "right",
+        fromHandle: (!onRight ? "left" : "right") as "left" | "right",
+        toHandle: (onRight ? "left" : "right") as "left" | "right",
       };
 
       const createdRelation = await SchemaService.createRelation(

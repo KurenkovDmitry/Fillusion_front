@@ -25,7 +25,6 @@ export const RelationDialog = (props: RelationDialogProps) => {
   const removeRelation = useSchemaStore((state) => state.removeRelation);
   const updateField = useSchemaStore((state) => state.updateField);
   const getAllTables = useSchemaStore((state) => state.getAllTables);
-  const getAllRelations = useSchemaStore((state) => state.getAllRelations);
 
   const [relationType, setRelationType] = useState<RelationType>("one-to-many");
 
@@ -38,14 +37,6 @@ export const RelationDialog = (props: RelationDialogProps) => {
   const handleSave = () => {
     if (props.relation) {
       updateRelation(props.relation.id, { type: relationType });
-      setTimeout(
-        () =>
-          console.log(
-            relationType,
-            getAllRelations().find((r) => r.id === props.relation?.id)
-          ),
-        1000
-      );
       SchemaService.updateRelation(props.projectId, props.relation.id, {
         ...props.relation,
         type: relationType,
@@ -62,19 +53,18 @@ export const RelationDialog = (props: RelationDialogProps) => {
 
       removeRelation(props.relation.id);
 
-      updateField(props.relation.toTable, props.relation.toField, {
+      updateField(props.relation.fromTable, props.relation.fromField, {
         isForeignKey: false,
       });
       const table = getAllTables().find(
-        (t) => t.id === props.relation?.fromTable
+        (t) => t.id === props.relation?.toTable
       );
       if (!table) return;
 
-      await SchemaService.updateTable(
-        props.projectId,
-        props.relation.fromTable,
-        { ...table, layout: getTableLayoutPayload(table) }
-      );
+      await SchemaService.updateTable(props.projectId, props.relation.toTable, {
+        ...table,
+        layout: getTableLayoutPayload(table),
+      });
 
       props.onClose();
     } catch (error) {
