@@ -19,22 +19,32 @@ class ApiClient {
     retry: boolean = false
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-
-    // Получаем актуальный токен при каждом запросе
     const token = useTokenStore.getState().token;
 
+    let headers = new Headers(options.headers || {});
+
+    const body = options.body;
+
+    if (
+      !headers.has("Content-Type") &&
+      !(body instanceof FormData) &&
+      body != null
+    ) {
+      headers.set("Content-Type", "application/json");
+    }
+
+    if (token && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+
     const config: RequestInit = {
-      headers: {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
-      },
-      credentials: "include",
       ...options,
+      headers,
+      credentials: "include",
     };
 
     try {
-      const response = await fetch(url, config);
+      const response = await fetch(url, { ...config, headers });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -55,7 +65,11 @@ class ApiClient {
         );
       }
 
-      return await response.json();
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        return await response.json();
+      }
+      return {} as T;
     } catch (error) {
       console.error("API request failed:", error);
       throw error;
@@ -86,7 +100,7 @@ class ApiClient {
     return this.request<T>(endpoint, {
       ...options,
       method: "PUT",
-      body: data ? JSON.stringify(data) : undefined,
+      body: data,
     });
   }
 

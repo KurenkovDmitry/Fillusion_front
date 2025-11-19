@@ -33,8 +33,11 @@ export interface AuthResponse {
 }
 
 export type UpdateProfileRequest = {
-  name?: string;
-  avatar?: ArrayBuffer;
+  user?: {
+    name?: string;
+    password?: string;
+  };
+  avatar?: File;
 };
 
 export interface ForgotPasswordRequest {

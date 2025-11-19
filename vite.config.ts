@@ -29,6 +29,10 @@ export default defineConfig({
         target: "http://176.123.165.26",
         changeOrigin: true,
       },
+      "/avatars": {
+        target: "http://176.123.165.26",
+        changeOrigin: true,
+      },
     },
   },
 });

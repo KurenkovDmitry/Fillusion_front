@@ -24,16 +24,14 @@ import { Auth } from "@pages";
 
 interface UpdateProfileForm {
   name: string;
-  avatar?: ArrayBuffer;
+  avatar?: File;
 }
 
-// Схема валидации для изменения имени
-const updateNameSchema = yup.object({
-  name: yup
-    .string()
-    .min(2, "Имя должно содержать минимум 2 символа")
-    .required("Введите имя"),
-});
+interface ChangePasswordForm {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
 
 export const LayoutWithHeader = ({
   children,
@@ -49,8 +47,51 @@ export const LayoutWithHeader = ({
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [changePasswordDialogOpen, setChangePasswordDialogOpen] =
+    useState(false);
 
   const [open, setOpen] = useState(false);
+
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Схема валидации для изменения имени
+  const updateNameSchema = yup.object({
+    name: yup
+      .string()
+      .min(2, "Имя должно содержать не менее 2 символов")
+      .max(50, "Имя не может содержать более 50 символов")
+      .matches(
+        /^[a-zA-Zа-яА-Я0-9_\\-\\s]+$/,
+        "Имя содержит недопустимые символы"
+      )
+      .required("Обязательное поле"),
+  });
+
+  const changePasswordSchema = yup.object({
+    currentPassword: yup.string().required("Обязательное поле"),
+    newPassword: yup
+      .string()
+      .min(8, "Пароль должен содержать минимум 8 символов")
+      .max(100, "Пароль не может содержать более 100 символов")
+      .matches(
+        /.*[A-ZА-Я].*/,
+        "Пароль должен содержать хотя бы одну заглавную букву"
+      )
+      .matches(/.*[0-9].*/, "Пароль должен содержать хотя бы одну цифру")
+      .matches(
+        /.*[a-z].*/,
+        "Пароль должен содержать хотя бы одну строчную букву"
+      )
+      .notOneOf(
+        [yup.ref("currentPassword")],
+        "Новый пароль должен отличаться от текущего"
+      )
+      .required("Обязательное поле"),
+    confirmNewPassword: yup
+      .string()
+      .oneOf([yup.ref("newPassword")], "Пароли не совпадают новый пароль")
+      .required("Обязательное поле"),
+  });
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -65,6 +106,20 @@ export const LayoutWithHeader = ({
     handleMenuClose();
   };
 
+  const handleChangePassword = async (values: ChangePasswordForm) => {
+    setPasswordError(null);
+    try {
+      await updateProfile({
+        user: { password: values.newPassword },
+      });
+      setChangePasswordDialogOpen(false);
+    } catch (error: any) {
+      const msg = error?.message || "Ошибка смены пароля";
+      setPasswordError(msg);
+      console.error(msg);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     handleMenuClose();
@@ -76,7 +131,10 @@ export const LayoutWithHeader = ({
       // const formData = new FormData();
       // formData.append('name', values.name)
       // await updateProfile(formData);
-      await updateProfile({ name: values.name, avatar: values.avatar });
+      await updateProfile({
+        user: { name: values.name },
+        avatar: values.avatar,
+      });
       setEditDialogOpen(false);
     } catch (error) {
       console.error("Ошибка при обновлении имени:", error);
@@ -249,6 +307,21 @@ export const LayoutWithHeader = ({
                 <Edit fontSize="small" />
                 <Typography variant="body2">Изменить профиль</Typography>
               </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setChangePasswordDialogOpen(true);
+                  handleMenuClose();
+                }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  padding: "8px 16px",
+                }}
+              >
+                <Person fontSize="small" />
+                <Typography variant="body2">Изменить пароль</Typography>
+              </MenuItem>
 
               <MenuItem
                 onClick={handleLogout}
@@ -323,117 +396,262 @@ export const LayoutWithHeader = ({
           }}
           validationSchema={updateNameSchema}
           onSubmit={handleUpdateProfile}
+          // validateOnBlur
+          // validateOnChange
+          // validateOnMount
           enableReinitialize
         >
           {({
             isSubmitting,
             values,
-            errors,
+            dirty,
             touched,
+            isValid,
             handleChange,
             handleBlur,
+          }) => {
+            const avatarSrc = values.avatar
+              ? values.avatar instanceof File
+                ? URL.createObjectURL(values.avatar)
+                : values.avatar
+              : user?.avatarUrl;
+            return (
+              <Form>
+                <DialogContent>
+                  <MenuItem
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      padding: "12px 16px",
+                      cursor: "default",
+                    }}
+                    disableTouchRipple
+                    disableRipple
+                  >
+                    <Avatar
+                      src={avatarSrc}
+                      sx={{
+                        // bgcolor: getAvatarColor(),
+                        width: 40,
+                        height: 40,
+                        fontSize: "14px",
+                        fontWeight: 600,
+                      }}
+                    />
+
+                    <Box
+                      sx={{
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis",
+                        maxWidth: 300,
+                      }}
+                    >
+                      <Typography noWrap variant="subtitle1" fontWeight={600}>
+                        {values.name || user?.name}
+                      </Typography>
+                      <Typography noWrap variant="body2" color="text.secondary">
+                        {user?.email}
+                      </Typography>
+                    </Box>
+                    <Box marginLeft="auto">
+                      <Field name="avatar" marginLeft="auto">
+                        {({
+                          field, // { name, value, onChange, onBlur }
+                          form: { touched, errors }, // also values, setXXXX, handleXXXX, dirty, isValid, status, etc.
+                          meta,
+                        }) => {
+                          // eslint-disable-next-line react-hooks/rules-of-hooks
+                          const formikProps = useFormikContext();
+
+                          const handleAvatarChange = (event) => {
+                            const file = event.target.files[0];
+                            if (file) formikProps.setFieldValue("avatar", file);
+                          };
+
+                          return (
+                            <div>
+                              <input
+                                type="file"
+                                id="avatar-upload"
+                                accept="image/*"
+                                style={{ display: "none" }}
+                                // {...field}
+                                onChange={handleAvatarChange}
+                              />
+                              <label htmlFor="avatar-upload">
+                                <Button
+                                  component="span"
+                                  variant="outlined"
+                                  size="small"
+                                >
+                                  Загрузить аватар
+                                </Button>
+                              </label>
+                              {/* {meta.touched && meta.error && (
+                              <div className="error">{meta.error}</div>
+                            )} */}
+                            </div>
+                          );
+                        }}
+                      </Field>
+                    </Box>
+                  </MenuItem>
+                  <Field name="name">
+                    {({
+                      field, // { name, value, onChange, onBlur }
+                      form: { touched, errors }, // also values, setXXXX, handleXXXX, dirty, isValid, status, etc.
+                      meta,
+                    }) => {
+                      // eslint-disable-next-line react-hooks/rules-of-hooks
+                      const formikProps = useFormikContext();
+
+                      const handleNameInputBlur = (event) => {
+                        if (!values.name) {
+                          formikProps.setFieldValue("name", user?.name);
+                          handleBlur("name");
+                          return;
+                        }
+                        handleBlur(event);
+                      };
+                      return (
+                        <TextField
+                          {...field}
+                          name="name"
+                          label="Ваше имя"
+                          value={values.name}
+                          onChange={handleChange}
+                          onBlur={handleNameInputBlur}
+                          error={touched.name && Boolean(errors.name)}
+                          helperText={touched.name && errors.name}
+                          fullWidth
+                          margin="normal"
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              borderRadius: "8px",
+                            },
+                          }}
+                        />
+                      );
+                    }}
+                  </Field>
+                </DialogContent>
+
+                <DialogActions sx={{ padding: "16px 24px", gap: 1 }}>
+                  <Button
+                    onClick={() => setEditDialogOpen(false)}
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: 600,
+                      borderRadius: "8px",
+                    }}
+                  >
+                    Отмена
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={!isValid || !dirty || isSubmitting}
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: 600,
+                      borderRadius: "8px",
+                      background: "#4f8cff",
+                      "&:hover": { background: "#3a6fd8" },
+                    }}
+                  >
+                    {isSubmitting ? "Сохранение..." : "Сохранить"}
+                  </Button>
+                </DialogActions>
+              </Form>
+            );
+          }}
+        </Formik>
+      </Dialog>
+      <Dialog
+        open={changePasswordDialogOpen}
+        onClose={() => setChangePasswordDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: "12px" } }}
+      >
+        <DialogTitle>
+          <Typography fontWeight={600}>Изменить пароль</Typography>
+        </DialogTitle>
+        <Formik<ChangePasswordForm>
+          initialValues={{
+            currentPassword: "",
+            newPassword: "",
+            confirmNewPassword: "",
+          }}
+          validationSchema={changePasswordSchema}
+          onSubmit={handleChangePassword}
+        >
+          {({
+            isSubmitting,
+            values,
+            handleChange,
+            handleBlur,
+            touched,
+            errors,
+            dirty,
+            isValid,
           }) => (
             <Form>
               <DialogContent>
-                <MenuItem
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    padding: "12px 16px",
-                    cursor: "default",
-                  }}
-                  disableTouchRipple
-                  disableRipple
-                >
-                  <Avatar
-                    src={values.avatar || user?.avatarUrl}
-                    sx={{
-                      // bgcolor: getAvatarColor(),
-                      width: 40,
-                      height: 40,
-                      fontSize: "14px",
-                      fontWeight: 600,
-                    }}
-                  />
-
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      {values.name || user?.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {user?.email}
-                    </Typography>
-                  </Box>
-                  <Box marginLeft="auto">
-                    <Field name="avatar" marginLeft="auto">
-                      {({
-                        field, // { name, value, onChange, onBlur }
-                        form: { touched, errors }, // also values, setXXXX, handleXXXX, dirty, isValid, status, etc.
-                        meta,
-                      }) => {
-                        // eslint-disable-next-line react-hooks/rules-of-hooks
-                        const formikProps = useFormikContext();
-
-                        const handleAvatarChange = (event) => {
-                          let reader = new FileReader();
-                          let file = event.target.files[0];
-                          reader.onloadend = () => {
-                            formikProps.setFieldValue("avatar", reader.result);
-                          };
-                          reader.readAsDataURL(file);
-                        };
-
-                        return (
-                          <div>
-                            <input
-                              type="file"
-                              id="avatar-upload"
-                              accept="image/*"
-                              style={{ display: "none" }}
-                              // {...field}
-                              onChange={handleAvatarChange}
-                            />
-                            <label htmlFor="avatar-upload">
-                              <Button
-                                component="span"
-                                variant="outlined"
-                                size="small"
-                              >
-                                Загрузить аватар
-                              </Button>
-                            </label>
-                            {/* {meta.touched && meta.error && (
-                              <div className="error">{meta.error}</div>
-                            )} */}
-                          </div>
-                        );
-                      }}
-                    </Field>
-                  </Box>
-                </MenuItem>
-
                 <TextField
-                  name="name"
-                  label="Ваше имя"
-                  value={values.name}
+                  name="currentPassword"
+                  label="Текущий пароль"
+                  type="password"
+                  value={values.currentPassword}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  error={touched.name && Boolean(errors.name)}
-                  helperText={touched.name && errors.name}
+                  error={
+                    touched.currentPassword && Boolean(errors.currentPassword)
+                  }
+                  helperText={touched.currentPassword && errors.currentPassword}
                   fullWidth
                   margin="normal"
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: "8px",
-                    },
-                  }}
                 />
+                <TextField
+                  name="newPassword"
+                  label="Новый пароль"
+                  type="password"
+                  value={values.newPassword}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.newPassword && Boolean(errors.newPassword)}
+                  helperText={touched.newPassword && errors.newPassword}
+                  fullWidth
+                  margin="normal"
+                />
+                <TextField
+                  name="confirmNewPassword"
+                  label="Подтвердите новый пароль"
+                  type="password"
+                  value={values.confirmNewPassword}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={
+                    touched.confirmNewPassword &&
+                    Boolean(errors.confirmNewPassword)
+                  }
+                  helperText={
+                    touched.confirmNewPassword && errors.confirmNewPassword
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+                {passwordError && (
+                  <Typography color="error" sx={{ mb: 2, textAlign: "center" }}>
+                    {passwordError}
+                  </Typography>
+                )}
               </DialogContent>
-
               <DialogActions sx={{ padding: "16px 24px", gap: 1 }}>
                 <Button
-                  onClick={() => setEditDialogOpen(false)}
+                  onClick={() => setChangePasswordDialogOpen(false)}
                   sx={{
                     textTransform: "none",
                     fontWeight: 600,
@@ -445,7 +663,7 @@ export const LayoutWithHeader = ({
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !dirty || !isValid}
                   sx={{
                     textTransform: "none",
                     fontWeight: 600,
@@ -454,7 +672,7 @@ export const LayoutWithHeader = ({
                     "&:hover": { background: "#3a6fd8" },
                   }}
                 >
-                  {isSubmitting ? "Сохранение..." : "Сохранить"}
+                  {isSubmitting ? "Смена пароля..." : "Сменить пароль"}
                 </Button>
               </DialogActions>
             </Form>
