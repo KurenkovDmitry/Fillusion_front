@@ -27,6 +27,12 @@ interface UpdateProfileForm {
   avatar?: File;
 }
 
+interface ChangePasswordForm {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
 export const LayoutWithHeader = ({
   children,
   noJustify,
@@ -41,8 +47,12 @@ export const LayoutWithHeader = ({
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [changePasswordDialogOpen, setChangePasswordDialogOpen] =
+    useState(false);
 
   const [open, setOpen] = useState(false);
+
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // Схема валидации для изменения имени
   const updateNameSchema = yup.object({
@@ -57,6 +67,32 @@ export const LayoutWithHeader = ({
       .required("Обязательное поле"),
   });
 
+  const changePasswordSchema = yup.object({
+    currentPassword: yup.string().required("Обязательное поле"),
+    newPassword: yup
+      .string()
+      .min(8, "Пароль должен содержать минимум 8 символов")
+      .max(100, "Пароль не может содержать более 100 символов")
+      .matches(
+        /.*[A-ZА-Я].*/,
+        "Пароль должен содержать хотя бы одну заглавную букву"
+      )
+      .matches(/.*[0-9].*/, "Пароль должен содержать хотя бы одну цифру")
+      .matches(
+        /.*[a-z].*/,
+        "Пароль должен содержать хотя бы одну строчную букву"
+      )
+      .notOneOf(
+        [yup.ref("currentPassword")],
+        "Новый пароль должен отличаться от текущего"
+      )
+      .required("Обязательное поле"),
+    confirmNewPassword: yup
+      .string()
+      .oneOf([yup.ref("newPassword")], "Пароли не совпадают новый пароль")
+      .required("Обязательное поле"),
+  });
+
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -68,6 +104,20 @@ export const LayoutWithHeader = ({
   const handleEditProfile = () => {
     setEditDialogOpen(true);
     handleMenuClose();
+  };
+
+  const handleChangePassword = async (values: ChangePasswordForm) => {
+    setPasswordError(null);
+    try {
+      await updateProfile({
+        user: { password: values.newPassword },
+      });
+      setChangePasswordDialogOpen(false);
+    } catch (error: any) {
+      const msg = error?.message || "Ошибка смены пароля";
+      setPasswordError(msg);
+      console.error(msg);
+    }
   };
 
   const handleLogout = async () => {
@@ -256,6 +306,21 @@ export const LayoutWithHeader = ({
               >
                 <Edit fontSize="small" />
                 <Typography variant="body2">Изменить профиль</Typography>
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setChangePasswordDialogOpen(true);
+                  handleMenuClose();
+                }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  padding: "8px 16px",
+                }}
+              >
+                <Person fontSize="small" />
+                <Typography variant="body2">Изменить пароль</Typography>
               </MenuItem>
 
               <MenuItem
@@ -502,6 +567,116 @@ export const LayoutWithHeader = ({
               </Form>
             );
           }}
+        </Formik>
+      </Dialog>
+      <Dialog
+        open={changePasswordDialogOpen}
+        onClose={() => setChangePasswordDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: "12px" } }}
+      >
+        <DialogTitle>
+          <Typography fontWeight={600}>Изменить пароль</Typography>
+        </DialogTitle>
+        <Formik<ChangePasswordForm>
+          initialValues={{
+            currentPassword: "",
+            newPassword: "",
+            confirmNewPassword: "",
+          }}
+          validationSchema={changePasswordSchema}
+          onSubmit={handleChangePassword}
+        >
+          {({
+            isSubmitting,
+            values,
+            handleChange,
+            handleBlur,
+            touched,
+            errors,
+            dirty,
+            isValid,
+          }) => (
+            <Form>
+              <DialogContent>
+                <TextField
+                  name="currentPassword"
+                  label="Текущий пароль"
+                  type="password"
+                  value={values.currentPassword}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={
+                    touched.currentPassword && Boolean(errors.currentPassword)
+                  }
+                  helperText={touched.currentPassword && errors.currentPassword}
+                  fullWidth
+                  margin="normal"
+                />
+                <TextField
+                  name="newPassword"
+                  label="Новый пароль"
+                  type="password"
+                  value={values.newPassword}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.newPassword && Boolean(errors.newPassword)}
+                  helperText={touched.newPassword && errors.newPassword}
+                  fullWidth
+                  margin="normal"
+                />
+                <TextField
+                  name="confirmNewPassword"
+                  label="Подтвердите новый пароль"
+                  type="password"
+                  value={values.confirmNewPassword}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={
+                    touched.confirmNewPassword &&
+                    Boolean(errors.confirmNewPassword)
+                  }
+                  helperText={
+                    touched.confirmNewPassword && errors.confirmNewPassword
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+                {passwordError && (
+                  <Typography color="error" sx={{ mb: 2, textAlign: "center" }}>
+                    {passwordError}
+                  </Typography>
+                )}
+              </DialogContent>
+              <DialogActions sx={{ padding: "16px 24px", gap: 1 }}>
+                <Button
+                  onClick={() => setChangePasswordDialogOpen(false)}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 600,
+                    borderRadius: "8px",
+                  }}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={isSubmitting || !dirty || !isValid}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 600,
+                    borderRadius: "8px",
+                    background: "#4f8cff",
+                    "&:hover": { background: "#3a6fd8" },
+                  }}
+                >
+                  {isSubmitting ? "Смена пароля..." : "Сменить пароль"}
+                </Button>
+              </DialogActions>
+            </Form>
+          )}
         </Formik>
       </Dialog>
     </div>

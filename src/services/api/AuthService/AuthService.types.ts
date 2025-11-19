@@ -35,6 +35,7 @@ export interface AuthResponse {
 export type UpdateProfileRequest = {
   user?: {
     name?: string;
+    password?: string;
   };
   avatar?: File;
 };
