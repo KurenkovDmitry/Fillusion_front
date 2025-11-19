@@ -24,7 +24,7 @@ import { Auth } from "@pages";
 
 interface UpdateProfileForm {
   name: string;
-  avatar?: ArrayBuffer;
+  avatar?: File;
 }
 
 // Схема валидации для изменения имени
@@ -76,7 +76,10 @@ export const LayoutWithHeader = ({
       // const formData = new FormData();
       // formData.append('name', values.name)
       // await updateProfile(formData);
-      await updateProfile({ name: values.name, avatar: values.avatar });
+      await updateProfile({
+        user: { name: values.name },
+        avatar: values.avatar,
+      });
       setEditDialogOpen(false);
     } catch (error) {
       console.error("Ошибка при обновлении имени:", error);
@@ -332,133 +335,136 @@ export const LayoutWithHeader = ({
             touched,
             handleChange,
             handleBlur,
-          }) => (
-            <Form>
-              <DialogContent>
-                <MenuItem
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    padding: "12px 16px",
-                    cursor: "default",
-                  }}
-                  disableTouchRipple
-                  disableRipple
-                >
-                  <Avatar
-                    src={values.avatar || user?.avatarUrl}
+          }) => {
+            const avatarSrc = values.avatar
+              ? values.avatar instanceof File
+                ? URL.createObjectURL(values.avatar)
+                : values.avatar
+              : user?.avatarUrl;
+            return (
+              <Form>
+                <DialogContent>
+                  <MenuItem
                     sx={{
-                      // bgcolor: getAvatarColor(),
-                      width: 40,
-                      height: 40,
-                      fontSize: "14px",
-                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      padding: "12px 16px",
+                      cursor: "default",
                     }}
-                  />
+                    disableTouchRipple
+                    disableRipple
+                  >
+                    <Avatar
+                      src={avatarSrc}
+                      sx={{
+                        // bgcolor: getAvatarColor(),
+                        width: 40,
+                        height: 40,
+                        fontSize: "14px",
+                        fontWeight: 600,
+                      }}
+                    />
 
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      {values.name || user?.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {user?.email}
-                    </Typography>
-                  </Box>
-                  <Box marginLeft="auto">
-                    <Field name="avatar" marginLeft="auto">
-                      {({
-                        field, // { name, value, onChange, onBlur }
-                        form: { touched, errors }, // also values, setXXXX, handleXXXX, dirty, isValid, status, etc.
-                        meta,
-                      }) => {
-                        // eslint-disable-next-line react-hooks/rules-of-hooks
-                        const formikProps = useFormikContext();
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        {values.name || user?.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {user?.email}
+                      </Typography>
+                    </Box>
+                    <Box marginLeft="auto">
+                      <Field name="avatar" marginLeft="auto">
+                        {({
+                          field, // { name, value, onChange, onBlur }
+                          form: { touched, errors }, // also values, setXXXX, handleXXXX, dirty, isValid, status, etc.
+                          meta,
+                        }) => {
+                          // eslint-disable-next-line react-hooks/rules-of-hooks
+                          const formikProps = useFormikContext();
 
-                        const handleAvatarChange = (event) => {
-                          let reader = new FileReader();
-                          let file = event.target.files[0];
-                          reader.onloadend = () => {
-                            formikProps.setFieldValue("avatar", reader.result);
+                          const handleAvatarChange = (event) => {
+                            const file = event.target.files[0];
+                            if (file) formikProps.setFieldValue("avatar", file);
                           };
-                          reader.readAsDataURL(file);
-                        };
 
-                        return (
-                          <div>
-                            <input
-                              type="file"
-                              id="avatar-upload"
-                              accept="image/*"
-                              style={{ display: "none" }}
-                              // {...field}
-                              onChange={handleAvatarChange}
-                            />
-                            <label htmlFor="avatar-upload">
-                              <Button
-                                component="span"
-                                variant="outlined"
-                                size="small"
-                              >
-                                Загрузить аватар
-                              </Button>
-                            </label>
-                            {/* {meta.touched && meta.error && (
+                          return (
+                            <div>
+                              <input
+                                type="file"
+                                id="avatar-upload"
+                                accept="image/*"
+                                style={{ display: "none" }}
+                                // {...field}
+                                onChange={handleAvatarChange}
+                              />
+                              <label htmlFor="avatar-upload">
+                                <Button
+                                  component="span"
+                                  variant="outlined"
+                                  size="small"
+                                >
+                                  Загрузить аватар
+                                </Button>
+                              </label>
+                              {/* {meta.touched && meta.error && (
                               <div className="error">{meta.error}</div>
                             )} */}
-                          </div>
-                        );
-                      }}
-                    </Field>
-                  </Box>
-                </MenuItem>
+                            </div>
+                          );
+                        }}
+                      </Field>
+                    </Box>
+                  </MenuItem>
 
-                <TextField
-                  name="name"
-                  label="Ваше имя"
-                  value={values.name}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={touched.name && Boolean(errors.name)}
-                  helperText={touched.name && errors.name}
-                  fullWidth
-                  margin="normal"
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
+                  <TextField
+                    name="name"
+                    label="Ваше имя"
+                    value={values.name}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.name && Boolean(errors.name)}
+                    helperText={touched.name && errors.name}
+                    fullWidth
+                    margin="normal"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "8px",
+                      },
+                    }}
+                  />
+                </DialogContent>
+
+                <DialogActions sx={{ padding: "16px 24px", gap: 1 }}>
+                  <Button
+                    onClick={() => setEditDialogOpen(false)}
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: 600,
                       borderRadius: "8px",
-                    },
-                  }}
-                />
-              </DialogContent>
-
-              <DialogActions sx={{ padding: "16px 24px", gap: 1 }}>
-                <Button
-                  onClick={() => setEditDialogOpen(false)}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 600,
-                    borderRadius: "8px",
-                  }}
-                >
-                  Отмена
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={isSubmitting}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 600,
-                    borderRadius: "8px",
-                    background: "#4f8cff",
-                    "&:hover": { background: "#3a6fd8" },
-                  }}
-                >
-                  {isSubmitting ? "Сохранение..." : "Сохранить"}
-                </Button>
-              </DialogActions>
-            </Form>
-          )}
+                    }}
+                  >
+                    Отмена
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isSubmitting}
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: 600,
+                      borderRadius: "8px",
+                      background: "#4f8cff",
+                      "&:hover": { background: "#3a6fd8" },
+                    }}
+                  >
+                    {isSubmitting ? "Сохранение..." : "Сохранить"}
+                  </Button>
+                </DialogActions>
+              </Form>
+            );
+          }}
         </Formik>
       </Dialog>
     </div>

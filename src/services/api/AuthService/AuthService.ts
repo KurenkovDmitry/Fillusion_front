@@ -34,7 +34,18 @@ export const AuthService = {
   },
 
   async updateProfile(userData: UpdateProfileRequest): Promise<{ user: User }> {
-    return apiAuthClient.put<{ user: User }>("/profile/update", userData);
+    const formData = new FormData();
+
+    const { user, avatar } = userData;
+
+    if (user)
+      formData.append(
+        "user",
+        new Blob([JSON.stringify(user)], { type: "application/json" })
+      );
+    if (avatar) formData.append("avatar", avatar);
+
+    return apiAuthClient.put<{ user: User }>("/profile/update", formData);
   },
 
   async forgotPassword(
