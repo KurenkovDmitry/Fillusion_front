@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { CircularProgress } from "@mui/material";
 import { DatasetDialog } from "./components/DatasetDialog";
 import { GenerateService } from "@services/api/GenerateService/GenerateService";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Dataset } from "@services/api/GenerateService/GenerateService.types";
+import EmptyIcon from "@assets/emptyIcon.svg?react";
 
 export const QueryHistory = () => {
   const { projectId } = useParams();
@@ -13,6 +14,7 @@ export const QueryHistory = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [requsetId, setRequestId] = useState("");
   const [requsetStatus, setRequsetStatus] = useState("");
+  const navigate = useNavigate();
 
   const [open, setOpen] = useState(false);
 
@@ -20,6 +22,10 @@ export const QueryHistory = () => {
     setOpen(true);
     setRequestId(val);
     setRequsetStatus(status);
+  };
+
+  const handleEditorClick = () => {
+    navigate(`/projects/${projectId}`);
   };
 
   useEffect(() => {
@@ -66,8 +72,7 @@ export const QueryHistory = () => {
         >
           {loading ? (
             <CircularProgress />
-          ) : (
-            datasets &&
+          ) : datasets?.length ? (
             datasets.map((val, idx, arr) => (
               <QueryButton
                 key={idx}
@@ -82,6 +87,26 @@ export const QueryHistory = () => {
                 onClick={() => handleOpen(val.requestId, val.status)}
               />
             ))
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <EmptyIcon
+                style={{ width: "90px", height: "90px", marginBottom: "10px" }}
+              />
+              <span>
+                Пока здесь пусто...{" "}
+                <a style={{ cursor: "pointer" }} onClick={handleEditorClick}>
+                  Перейти к редактору
+                </a>
+              </span>
+            </div>
           )}
         </section>
       </div>

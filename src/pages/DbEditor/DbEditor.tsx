@@ -18,6 +18,7 @@ import {
   Connection,
   BackgroundVariant,
   ReactFlowInstance,
+  ConnectionMode,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { SelectField } from "../Generate/components/SelectField";
@@ -34,12 +35,13 @@ import useSchemaStore, {
 } from "@store/schemaStore";
 import useGenerateStore from "@store/generateStore";
 import { Generate } from "../Generate";
-import { shallow, useShallow } from "zustand/shallow";
+import { useShallow } from "zustand/shallow";
 import { DeleteDialog } from "./components/DeleteDialog";
 import { RelationDialog } from "./components/RelationDialog";
 import CodeIcon from "@mui/icons-material/Code";
 import { getLabelByValue } from "../Generate/components/constants/constants";
 import { GenerateDialog } from "./components/GenerateDialog";
+import { PkSettings } from "../Generate/components/PkSettings";
 
 interface TableNodeData {
   id: string;
@@ -219,10 +221,9 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
           saveTableToServer(relation.toTable);
         });
       }
+      debouncedUpdateField(id, fieldId, { [key]: value });
+      debouncedSaveToServer(table.id);
     }
-
-    debouncedUpdateField(id, fieldId, { [key]: value });
-    debouncedSaveToServer(table.id);
   };
 
   const handleFieldBlur = (fieldId: string) => {
@@ -257,7 +258,25 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
           id,
           mapTableToApiPayload(updatedTable as TableSchema)
         );
-        updateTable(id, newTable.table);
+        const mappedApiTable: TableSchema = {
+          ...newTable.table,
+          fields: newTable.table.fields.map((f) => ({
+            id: f.id,
+            name: f.name,
+            type: f.type,
+            unique: f.generation?.uniqueValues,
+            autoIncrement: f.generation?.autoIncrement,
+            isPrimaryKey: f.isPrimaryKey,
+            isForeignKey: f.isForeignKey,
+            viaFaker: f.generation?.viaFaker,
+            fakerType: f.generation?.fakerType,
+            locale: f.generation?.fakerLocale as
+              | "LOCALE_RU_RU"
+              | "LOCALE_EN_US"
+              | undefined,
+          })),
+        };
+        updateTable(id, mappedApiTable);
       } catch (err) {
         console.error("Failed to add field:", err);
       }
@@ -352,7 +371,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
               borderBottom:
                 index < table.fields.length - 1 ? "1px solid #E0E0E0" : "none",
               display: "grid",
-              gridTemplateColumns: "1fr 135px 30px 30px",
+              gridTemplateColumns: "30px 1fr 135px 30px 30px",
               alignItems: "center",
               gap: "8px",
               position: "relative",
@@ -378,6 +397,12 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
                 opacity: isEditingRelations ? 1 : 0,
                 transition: "opacity 0.2s",
               }}
+            />
+
+            <PkSettings
+              field={field}
+              tableId={table.id}
+              projectId={projectId!}
             />
 
             <input
@@ -731,28 +756,26 @@ export const DatabaseDiagram: React.FC = () => {
       }
 
       try {
-        // toField (целевое) становится PK
-        updateField(params.target, target.fieldId, {
+        const toFieldNewType =
+          toField.type === "int" || toField.type === "uuid"
+            ? toField.type
+            : "int";
+        const toFieldUpdates = {
           isPrimaryKey: true,
           isForeignKey: false,
-        });
+          viaFaker: false, // убираем фейкер
+          type: toFieldNewType, // выставляем правильный тип
+        };
+        // toField (целевое) становится PK
+        updateField(params.target, target.fieldId, toFieldUpdates);
 
         // fromField (исходное) становится FK и наследует тип от toField
-        const sourceUpdate: Partial<SchemaField> = toField.viaFaker
-          ? {
-              isPrimaryKey: false,
-              isForeignKey: true,
-              viaFaker: true,
-              fakerType: toField.fakerType,
-              locale: toField.locale,
-              type: toField.type,
-            }
-          : {
-              isPrimaryKey: false,
-              isForeignKey: true,
-              type: toField.type,
-              viaFaker: false,
-            };
+        const sourceUpdate: Partial<SchemaField> = {
+          isPrimaryKey: false,
+          isForeignKey: true,
+          type: toFieldNewType,
+          viaFaker: false,
+        };
 
         updateField(params.source, source.fieldId, sourceUpdate);
 
@@ -776,9 +799,7 @@ export const DatabaseDiagram: React.FC = () => {
             mapTableToApiPayload({
               ...toTable,
               fields: toTable.fields.map((f) =>
-                f.id === target.fieldId
-                  ? { ...f, isPrimaryKey: true, isForeignKey: false }
-                  : f
+                f.id === target.fieldId ? { ...f, ...toFieldUpdates } : f
               ),
               layout: getTableLayoutPayload(toTable),
             })
@@ -794,7 +815,7 @@ export const DatabaseDiagram: React.FC = () => {
                 f.id === source.fieldId
                   ? {
                       ...f,
-                      type: toField.type,
+                      type: toFieldNewType,
                       isPrimaryKey: false,
                       isForeignKey: true,
                     }
@@ -1183,7 +1204,7 @@ export const DatabaseDiagram: React.FC = () => {
           nodeTypes={nodeTypes}
           fitView
           isConnectable={isConnectable}
-          connectionMode="loose"
+          connectionMode={ConnectionMode["Loose"]}
           connectOnClick={isEditingRelations}
           connectionLineStyle={{
             stroke: isEditingRelations ? "#f44336" : "#666",

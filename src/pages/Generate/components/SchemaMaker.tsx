@@ -260,6 +260,7 @@ export const SchemaMaker: React.FC = () => {
 
     const reorderedTable: TableSchema = {
       ...currentTable,
+      layout: getTableLayoutPayload(currentTable),
       fields: items.map((f, idx) => ({ ...f, position: idx })),
     };
 

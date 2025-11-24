@@ -13,7 +13,7 @@ import {
   SchemaField,
   TableSchema,
 } from "@store/schemaStore";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { SelectField } from "./SelectField";
 import useSchemaStore, { RelationType } from "../../../store/schemaStore";
 import { SchemaService } from "@services/api";
@@ -48,6 +48,7 @@ export const PkSettings = (props: PkSettingsProps) => {
   const removeRelation = useSchemaStore((state) => state.removeRelation);
   const addRelation = useSchemaStore((state) => state.addRelation);
   const getCurrentTable = useSchemaStore((state) => state.getCurrentTable);
+  const getAllTables = useSchemaStore((state) => state.getAllTables);
 
   // Определяем тип ключа на основе relations
   const currentKeyType = getFieldKeyType(tableId, field.id);
@@ -66,9 +67,11 @@ export const PkSettings = (props: PkSettingsProps) => {
     const newKeyType = getFieldKeyType(tableId, field.id);
     const newRefInfo = getReferencedInfo(tableId, field.id);
 
-    setKeyType(newKeyType);
-    setReferencedTableId(newRefInfo?.referencedTableId || "");
-    setReferencedFieldId(newRefInfo?.referencedFieldId || "");
+    if (!anchorEl) {
+      setKeyType(newKeyType);
+      setReferencedTableId(newRefInfo?.referencedTableId || "");
+      setReferencedFieldId(newRefInfo?.referencedFieldId || "");
+    }
   }, [field.id, tableId, getFieldKeyType, getReferencedInfo, relations]);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -80,9 +83,11 @@ export const PkSettings = (props: PkSettingsProps) => {
   };
 
   // Найти relation для текущего поля
-  const findRelationForField = () => {
-    return Object.values(relations).find(
-      (rel) => rel.toTable === tableId && rel.toField === field.id
+  const findRelationsForField = () => {
+    return Object.values(relations).filter(
+      (rel) =>
+        (rel.toTable === tableId && rel.toField === field.id) ||
+        (rel.fromTable === tableId && rel.fromField === field.id)
     );
   };
 
@@ -90,14 +95,15 @@ export const PkSettings = (props: PkSettingsProps) => {
     const newKeyType = value as KeyType;
     setKeyType(newKeyType);
 
-    if (newKeyType === "primary") {
-      // Удаляем relation если было FK
-      const existingRelation = findRelationForField();
-      if (existingRelation) {
+    const existingRelations = findRelationsForField();
+    if (existingRelations) {
+      existingRelations.forEach((existingRelation) => {
         SchemaService.deleteRelation(props.projectId, existingRelation.id);
         removeRelation(existingRelation.id);
-      }
+      });
+    }
 
+    if (newKeyType === "primary") {
       updateField(tableId, field.id, {
         isPrimaryKey: true,
         isForeignKey: false,
@@ -123,13 +129,6 @@ export const PkSettings = (props: PkSettingsProps) => {
         isForeignKey: true,
       });
     } else {
-      // regular
-      const existingRelation = findRelationForField();
-      if (existingRelation) {
-        SchemaService.deleteRelation(props.projectId, existingRelation.id);
-        removeRelation(existingRelation.id);
-      }
-
       updateField(tableId, field.id, {
         isPrimaryKey: false,
         isForeignKey: false,
@@ -158,10 +157,12 @@ export const PkSettings = (props: PkSettingsProps) => {
     setReferencedFieldId("");
 
     // Удаляем старую relation если была
-    const existingRelation = findRelationForField();
-    if (existingRelation) {
-      await SchemaService.deleteRelation(props.projectId, existingRelation.id);
-      removeRelation(existingRelation.id);
+    const existingRelations = findRelationsForField();
+    if (existingRelations) {
+      existingRelations.forEach((existingRelation) => {
+        SchemaService.deleteRelation(props.projectId, existingRelation.id);
+        removeRelation(existingRelation.id);
+      });
     }
   };
 
@@ -170,10 +171,74 @@ export const PkSettings = (props: PkSettingsProps) => {
     setReferencedFieldId(newFieldId);
 
     if (referencedTableId && newFieldId) {
-      const existingRelation = findRelationForField();
-      if (existingRelation) {
-        removeRelation(existingRelation.id);
+      const existingRelations = findRelationsForField();
+      if (existingRelations) {
+        existingRelations.forEach(async (existingRelation) => {
+          await SchemaService.deleteRelation(
+            props.projectId,
+            existingRelation.id
+          );
+          removeRelation(existingRelation.id);
+        });
       }
+
+      const referencedField = getAllTables()
+        .find((t) => t.id === referencedTableId)
+        ?.fields.find((f) => f.id === newFieldId);
+
+      console.log(referencedField);
+
+      if (!referencedField) return;
+
+      const sourceUpdate: Partial<SchemaField> = referencedField.viaFaker
+        ? {
+            isPrimaryKey: false,
+            isForeignKey: true,
+            viaFaker: true,
+            fakerType: referencedField.fakerType,
+            locale: referencedField.locale,
+            type: referencedField.type,
+          }
+        : {
+            isPrimaryKey: false,
+            isForeignKey: true,
+            type: referencedField.type,
+            viaFaker: false,
+          };
+      updateField(tableId, field.id, sourceUpdate);
+      const currentTable = tables[tableId];
+      if (!currentTable) return;
+      const updatedTable = {
+        ...currentTable,
+        layout: getTableLayoutPayload(currentTable),
+        fields: currentTable.fields.map((f) =>
+          f.id === field.id ? { ...f, ...sourceUpdate } : f
+        ),
+      };
+      await SchemaService.updateTable(
+        props.projectId,
+        tableId,
+        mapTableToApiPayload(updatedTable)
+      );
+
+      const refUpdates = {
+        isForeignKey: false,
+        isPrimaryKey: true,
+      };
+      updateField(referencedTableId, referencedField.id, refUpdates);
+      const refTable = tables[referencedTableId];
+      const updatedRefTable = {
+        ...refTable,
+        layout: getTableLayoutPayload(refTable),
+        fields: refTable.fields.map((f) =>
+          f.id === referencedField.id ? { ...f, ...refUpdates } : f
+        ),
+      };
+      await SchemaService.updateTable(
+        props.projectId,
+        updatedRefTable.id,
+        mapTableToApiPayload(updatedRefTable)
+      );
 
       const onRight =
         tables[tableId].layout.x > tables[referencedTableId].layout.x;
@@ -212,12 +277,15 @@ export const PkSettings = (props: PkSettingsProps) => {
       }))
     : [];
 
-  const iconColor =
-    keyType === "primary"
-      ? "oklch(0.681 0.162 75.834)"
-      : keyType === "foreign"
-      ? "oklch(0.546 0.245 262.881)"
-      : "black";
+  const iconColor = useMemo(
+    () =>
+      field.isPrimaryKey
+        ? "oklch(0.681 0.162 75.834)"
+        : field.isForeignKey
+        ? "oklch(0.546 0.245 262.881)"
+        : "black",
+    [field]
+  );
 
   return (
     <>

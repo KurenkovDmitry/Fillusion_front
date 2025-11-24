@@ -11,35 +11,73 @@ interface SliderWithInputProps {
 
 export const SliderWithInput = (props: SliderWithInputProps) => {
   const [value, setValue] = useState(props.value);
+  const [inputValue, setInputValue] = useState(String(props.value)); // ✅ Отдельное состояние для input
 
   const handleSliderChange = (event: Event, newValue: number | number[]) => {
-    setValue(newValue as number);
+    const numValue = newValue as number;
+    setValue(numValue);
+    setInputValue(String(numValue)); // ✅ Синхронизируем input
     if (props.onChange) {
-      props.onChange(newValue as number);
+      props.onChange(numValue);
     }
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = event.target.value === "" ? 0 : Number(event.target.value);
-    setValue(newValue);
-    if (props.onChange) {
-      props.onChange(newValue);
+    const rawValue = event.target.value;
+
+    // ✅ Разрешаем пустую строку для возможности очистки
+    if (rawValue === "") {
+      setInputValue("");
+      return;
+    }
+
+    // ✅ Проверяем что это валидное число
+    const numValue = Number(rawValue);
+    if (!isNaN(numValue)) {
+      setInputValue(rawValue); // ✅ Сохраняем строку как есть
+      setValue(numValue);
+      if (props.onChange) {
+        props.onChange(numValue);
+      }
     }
   };
 
   const handleBlur = () => {
-    if (value < props.min) {
+    // ✅ Если поле пустое, устанавливаем минимальное значение
+    if (inputValue === "" || isNaN(Number(inputValue))) {
       setValue(props.min);
+      setInputValue(String(props.min));
       if (props.onChange) {
         props.onChange(props.min);
       }
-    } else if (value > props.max) {
+      return;
+    }
+
+    const numValue = Number(inputValue);
+
+    if (numValue < props.min) {
+      setValue(props.min);
+      setInputValue(String(props.min));
+      if (props.onChange) {
+        props.onChange(props.min);
+      }
+    } else if (numValue > props.max) {
       setValue(props.max);
+      setInputValue(String(props.max));
       if (props.onChange) {
         props.onChange(props.max);
       }
+    } else {
+      // ✅ Нормализуем значение (убираем лидирующие нули)
+      setInputValue(String(numValue));
     }
   };
+
+  // ✅ Синхронизируем с props.value
+  useState(() => {
+    setValue(props.value);
+    setInputValue(String(props.value));
+  });
 
   return (
     <div
@@ -72,7 +110,7 @@ export const SliderWithInput = (props: SliderWithInputProps) => {
       >
         <input
           type="number"
-          value={value}
+          value={inputValue} // ✅ Используем inputValue
           onChange={handleInputChange}
           onBlur={handleBlur}
           style={{
@@ -110,16 +148,12 @@ export const SliderWithInput = (props: SliderWithInputProps) => {
             cursor: "pointer",
             border: "1px solid #ccc",
             background: `linear-gradient(
-                        to right,
-                        #4f8cff 0%,
-                        #4f8cff ${
-                          (100 * (value - props.min)) / (props.max - props.min)
-                        }%,
-                        #F3F3F5 ${
-                          (100 * (value - props.min)) / (props.max - props.min)
-                        }%,
-                        #F3F3F5 100%
-                    )`,
+              to right,
+              #4f8cff 0%,
+              #4f8cff ${(100 * (value - props.min)) / (props.max - props.min)}%,
+              #F3F3F5 ${(100 * (value - props.min)) / (props.max - props.min)}%,
+              #F3F3F5 100%
+            )`,
           }}
         />
       </div>

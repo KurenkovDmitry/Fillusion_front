@@ -67,27 +67,13 @@ export const SelectField = (props: SelectFieldProps) => {
         }}
       >
         <Select
-          value={props.multiple ? props.multipleValue || [] : props.value}
+          value={props.value}
           onChange={(e) => props.onChange(e.target.value)}
           displayEmpty
           disabled={props.disabled}
-          multiple={props.multiple}
           name="select"
           renderValue={
-            props.multiple
-              ? (selected) => {
-                  const selectedArray = selected as string[];
-                  if (selectedArray.length === 0) {
-                    return <em>Выберите опции</em>;
-                  }
-                  return selectedArray
-                    .map(
-                      (val) =>
-                        props.options.find((opt) => opt.value === val)?.label
-                    )
-                    .join(", ");
-                }
-              : props.displayLabel // Используем displayLabel если он есть
+            props.displayLabel // Используем displayLabel если он есть
               ? () => props.displayLabel
               : (value) =>
                   props.options.find((opt) => opt.value === value)?.label ||

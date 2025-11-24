@@ -50,7 +50,7 @@ const DEFAULT_SETTINGS: (tableId: string) => TableGenerateSettings = (
   totalRecords: 50,
   examples: "",
   selectModelValue: "deepseek",
-  selectOutputValue: "EXPORT_TYPE_JSON",
+  selectOutputValue: "EXPORT_TYPE_SNAPSHOT",
 });
 
 const useGenerateStore = create<GenerateState>((set, get) => ({
@@ -66,7 +66,6 @@ const useGenerateStore = create<GenerateState>((set, get) => ({
 
   getTableSettings: (tableId: string) => {
     const settings = get().tableSettings[tableId];
-    console.log(get().tableSettings);
     // Если настроек нет - возвращаем дефолты
     return settings || { ...DEFAULT_SETTINGS(tableId) };
   },
