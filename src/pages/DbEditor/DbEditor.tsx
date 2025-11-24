@@ -45,11 +45,22 @@ import { PkSettings } from "../Generate/components/PkSettings";
 
 interface TableNodeData {
   id: string;
-  name: string;
-  fields: SchemaField[];
+  [key: string]: string;
 }
 
 export type DatabaseTableNodeType = Node<TableNodeData, "databaseTable">;
+
+interface StoreNode {
+  id: string;
+  type: string;
+  position: {
+    x: number;
+    y: number;
+  };
+  data: {
+    id: string;
+  };
+}
 
 const typeOptions = [
   { value: "text", label: "Text" },
@@ -140,16 +151,53 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     Record<string, string>
   >({});
 
+  // Отслеживаем активные input элементы
+  const activeInputs = useRef<Set<string>>(new Set());
+  // Предыдущие значения полей для сравнения
+  const previousFieldValues = useRef<Record<string, string>>({});
+
+  // Инициализация при монтировании
   useEffect(() => {
     if (table) {
-      setTableName(table.name);
       const values: Record<string, string> = {};
       table.fields.forEach((field) => {
         values[field.id] = field.name;
       });
       setLocalFieldValues(values);
+      previousFieldValues.current = values;
     }
-  }, [table]);
+  }, [table.id]); // Только при смене таблицы
+
+  // Синхронизация только новых полей или изменений извне
+  useEffect(() => {
+    if (!table) return;
+
+    setTableName(table.name);
+
+    const values: Record<string, string> = {};
+    let hasChanges = false;
+
+    table.fields.forEach((field) => {
+      // Если input активен - используем локальное значение
+      if (activeInputs.current.has(field.id)) {
+        values[field.id] = localFieldValues[field.id] ?? field.name;
+      } else {
+        // Обновляем только если значение изменилось в store
+        const previousValue = previousFieldValues.current[field.id];
+        if (previousValue !== field.name) {
+          values[field.id] = field.name;
+          hasChanges = true;
+        } else {
+          values[field.id] = localFieldValues[field.id] ?? field.name;
+        }
+      }
+    });
+
+    if (hasChanges) {
+      setLocalFieldValues(values);
+      previousFieldValues.current = values;
+    }
+  }, [table?.fields]); // Реагируем на изменения полей
 
   const debouncedUpdateField = useRef(
     debounce(
@@ -196,8 +244,16 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
 
   const handleTableNameBlur = () => {
     setIsEditingName(false);
-    if (tableName !== table?.name) {
-      updateTable(id, { name: tableName });
+    const trimmedName = tableName.trim();
+
+    if (!trimmedName) {
+      // Восстанавливаем если пустое
+      setTableName(table?.name || "");
+      return;
+    }
+
+    if (trimmedName !== table?.name) {
+      updateTable(id, { name: trimmedName });
       debouncedSaveToServer(id);
     }
   };
@@ -208,14 +264,14 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     value: string
   ) => {
     if (key === "name") {
+      // Отмечаем что input активен
+      activeInputs.current.add(fieldId);
       setLocalFieldValues((prev) => ({ ...prev, [fieldId]: value }));
     } else {
-      // Теперь PK поле определяет тип FK полей
-      const relations = allRelations().filter((r) => r.fromField === fieldId); // fromField - это PK
+      const relations = allRelations().filter((r) => r.fromField === fieldId);
       if (relations) {
         relations.forEach((relation) => {
           updateField(relation.toTable, relation.toField, {
-            // toField - это FK
             type: value,
           });
           saveTableToServer(relation.toTable);
@@ -227,10 +283,37 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
   };
 
   const handleFieldBlur = (fieldId: string) => {
+    // Убираем из активных сразу
+    activeInputs.current.delete(fieldId);
+
     debouncedUpdateField.cancel?.();
-    const currentValue = localFieldValues[fieldId];
-    updateField(id, fieldId, { name: currentValue });
-    debouncedSaveToServer(id);
+    const currentValue = localFieldValues[fieldId]?.trim();
+
+    // Если значение пустое - восстанавливаем
+    if (!currentValue) {
+      const field = table.fields.find((f) => f.id === fieldId);
+      if (field) {
+        setLocalFieldValues((prev) => ({
+          ...prev,
+          [fieldId]: field.name,
+        }));
+        previousFieldValues.current[fieldId] = field.name;
+      }
+      return;
+    }
+
+    // Обновляем только если значение изменилось
+    const field = table.fields.find((f) => f.id === fieldId);
+    if (field && currentValue !== field.name) {
+      updateField(id, fieldId, { name: currentValue });
+      previousFieldValues.current[fieldId] = currentValue;
+      debouncedSaveToServer(id);
+    }
+  };
+
+  // Обработчик фокуса
+  const handleFieldFocus = (fieldId: string) => {
+    activeInputs.current.add(fieldId);
   };
 
   const handleAddField = async () => {
@@ -285,6 +368,9 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
 
   const handleDeleteField = (fieldId: string) => {
     if (table?.fields.length && table.fields.length > 1) {
+      // Убираем из активных
+      activeInputs.current.delete(fieldId);
+      delete previousFieldValues.current[fieldId];
       removeField(id, fieldId);
       debouncedSaveToServer(id);
     }
@@ -406,10 +492,11 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
             />
 
             <input
-              value={localFieldValues[field.id] || field.name}
+              value={localFieldValues[field.id] ?? field.name}
               onChange={(e) =>
                 handleFieldChange(field.id, "name", e.target.value)
               }
+              onFocus={() => handleFieldFocus(field.id)}
               onDoubleClick={(e) => e.currentTarget.select()}
               onBlur={() => handleFieldBlur(field.id)}
               style={{
@@ -545,12 +632,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
 const MemoizedDatabaseTableNode = React.memo(
   DatabaseTableNode,
   (prev, next) => {
-    return (
-      prev.id === next.id &&
-      prev.data.name === next.data.name &&
-      prev.data.fields.length === next.data.fields.length &&
-      prev.selected === next.selected
-    );
+    return prev.id === next.id && prev.data.name === next.data.name;
   }
 );
 
@@ -589,6 +671,15 @@ export const DatabaseDiagram: React.FC = () => {
   const getAllTables = useSchemaStore((state) => state.getAllTables);
   const setCurrentTable = useSchemaStore((state) => state.setCurrentTable);
 
+  const tableLayoutsJson = useSchemaStore((state) =>
+    JSON.stringify(
+      Object.values(state.tables).map((t) => ({
+        id: t.id,
+        x: Math.round(t.layout.x),
+        y: Math.round(t.layout.y),
+      }))
+    )
+  );
   const isEditingRelations = useSchemaStore(
     (state) => state.isEditingRelations
   );
@@ -602,18 +693,19 @@ export const DatabaseDiagram: React.FC = () => {
   const [relationDialogOpen, setRelationDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "" });
 
-  const nodes = useMemo(() => {
-    return Object.values(tables).map((table) => ({
-      id: table.id,
+  const tableLayouts = useMemo(
+    () => JSON.parse(tableLayoutsJson),
+    [tableLayoutsJson]
+  );
+
+  const storeNodesData: StoreNode[] = useMemo(() => {
+    return tableLayouts.map((t: any) => ({
+      id: t.id,
       type: "databaseTable",
-      position: { x: table.layout.x, y: table.layout.y },
-      data: {
-        id: table.id,
-        name: table.name,
-        fields: table.fields,
-      },
+      position: { x: t.x, y: t.y },
+      data: { id: t.id },
     }));
-  }, [tables]);
+  }, [tableLayouts]);
 
   const edges = useMemo(() => {
     return Object.values(relations).map((relation) => {
@@ -660,13 +752,31 @@ export const DatabaseDiagram: React.FC = () => {
   }, [relations]);
 
   const [reactFlowNodes, setReactFlowNodes, onNodesChange] =
-    useNodesState<Node<TableNodeData>>(nodes);
+    useNodesState<Node<TableNodeData>>(storeNodesData);
   const [reactFlowEdges, setReactFlowEdges, onEdgesChange] =
     useEdgesState(edges);
 
   useEffect(() => {
-    setReactFlowNodes(nodes);
-  }, [nodes, setReactFlowNodes]);
+    setReactFlowNodes((currentNodes) => {
+      const currentIds = new Set(currentNodes.map((n) => n.id));
+      if (
+        currentNodes.length === storeNodesData.length &&
+        storeNodesData.every((n) => currentIds.has(n.id))
+      ) {
+        return currentNodes;
+      }
+
+      return storeNodesData.map((storeNode) => {
+        const existingNode = currentNodes.find((n) => n.id === storeNode.id);
+        if (existingNode) {
+          // Если нода уже была, оставляем её текущую позицию (чтобы не сбивать драг)
+          return existingNode;
+        }
+        // Если новая - берем из стора
+        return storeNode;
+      });
+    });
+  }, [storeNodesData, setReactFlowNodes]);
 
   useEffect(() => {
     setReactFlowEdges(edges);
@@ -686,13 +796,13 @@ export const DatabaseDiagram: React.FC = () => {
     fetchSchema();
   }, [projectId, loadFromApi]);
 
-  const isConnectable = useCallback(
-    (connection: Connection) => {
-      if (!isEditingRelations) return false;
-      return !!connection.source && !!connection.target;
-    },
-    [isEditingRelations]
-  );
+  // const isConnectable = useCallback(
+  //   (connection: Connection) => {
+  //     if (!isEditingRelations) return false;
+  //     return !!connection.source && !!connection.target;
+  //   },
+  //   [isEditingRelations]
+  // );
 
   const isUpdatingRelations = useRef(false);
 
@@ -863,14 +973,15 @@ export const DatabaseDiagram: React.FC = () => {
   const handleNodesChange = useCallback(
     (changes: any) => {
       onNodesChange(changes);
-
-      changes.forEach((change: any) => {
-        if (change.type === "position" && change.position && !change.dragging) {
-          updateTablePosition(change.id, change.position.x, change.position.y);
-        }
-      });
     },
-    [onNodesChange, updateTablePosition]
+    [onNodesChange]
+  );
+
+  const onNodeDragStop = useCallback(
+    (event: React.MouseEvent, node: Node, nodes: Node[]) => {
+      updateTablePosition(node.id, node.position.x, node.position.y);
+    },
+    [updateTablePosition]
   );
 
   const handleEdgesChange = useCallback(
@@ -1198,12 +1309,12 @@ export const DatabaseDiagram: React.FC = () => {
           edges={reactFlowEdges}
           onNodesChange={handleNodesChange}
           onEdgesChange={handleEdgesChange}
+          onNodeDragStop={onNodeDragStop}
           onConnect={onConnect}
           onEdgeClick={onEdgeClick}
           onInit={setRfInstance}
           nodeTypes={nodeTypes}
           fitView
-          isConnectable={isConnectable}
           connectionMode={ConnectionMode["Loose"]}
           connectOnClick={isEditingRelations}
           connectionLineStyle={{
@@ -1211,7 +1322,6 @@ export const DatabaseDiagram: React.FC = () => {
             strokeWidth: isEditingRelations ? 3 : 2,
           }}
           edgesFocusable={isEditingRelations}
-          edgesUpdatable={isEditingRelations}
           nodesDraggable={!isEditingRelations}
           nodesConnectable={isEditingRelations}
           defaultEdgeOptions={{
