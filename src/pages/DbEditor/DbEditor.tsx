@@ -166,7 +166,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
       setLocalFieldValues(values);
       previousFieldValues.current = values;
     }
-  }, [table.id]); // Только при смене таблицы
+  }, [table]); // Только при смене таблицы
 
   // Синхронизация только новых полей или изменений извне
   useEffect(() => {
