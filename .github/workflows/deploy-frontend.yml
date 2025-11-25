@@ -48,9 +48,8 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "dist/*"
-          target: "${{ env.RELEASES_DIR }}/${{ env.RELEASE_NAME }}"
-          strip_components: 1
+          source: "dist/**"
+          target: "${{ env.RELEASES_DIR }}/${{ env.RELEASE_NAME }}/dist"
           
       - name: Finalize release on server (symlink + cleanup)
         uses: appleboy/ssh-action@v1.0.3
@@ -63,18 +62,21 @@ jobs:
             set -euo pipefail
 
             RELEASE_PATH="${RELEASES_DIR}/${RELEASE_NAME}"
+            PUBLIC_PATH="${RELEASE_PATH}/dist"
+
             echo "Using release at ${RELEASE_PATH}"
+            echo "Public path (dist) ${PUBLIC_PATH}"
 
             mkdir -p "${RELEASES_DIR}" "${SHARED_DIR}"
 
             # Подхватываем .env, если нужен
             if [ -f "${SHARED_DIR}/.env" ]; then
-              cp -f "${SHARED_DIR}/.env" "${RELEASE_PATH}/.env"
+              cp -f "${SHARED_DIR}/.env" "${PUBLIC_PATH}/.env"
             fi
 
-            # Переключение current
-            ln -sfn "${RELEASE_PATH}" "${CURRENT_LINK}"
-            echo "Current release set → ${RELEASE_PATH}"
+            # Переключаем current на dist
+            ln -sfn "${PUBLIC_PATH}" "${CURRENT_LINK}"
+            echo "Current release set → ${PUBLIC_PATH}"
 
             # Чистка старых релизов, оставляем N штук
             cd "${RELEASES_DIR}"
@@ -87,7 +89,8 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            echo "=== Current directory ==="
+            echo "=== Current symlink ==="
+            ls -ld ${{ env.CURRENT_LINK }}
+            echo "=== Current contents ==="
             ls -la ${{ env.CURRENT_LINK }}
-            echo "=== Dist contents ==="
-            ls -la ${{ env.CURRENT_LINK }}
+            
