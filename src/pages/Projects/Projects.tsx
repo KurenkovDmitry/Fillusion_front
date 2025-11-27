@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { ProjectCard } from "./components/ProjectCard";
 import { LayoutWithHeader } from "@shared/components/LayoutWithHeader";
-import { Button } from "@mui/material";
+import { Button, CircularProgress } from "@mui/material";
 import { ProjectDialog } from "./components/ProjectDialog";
 import AssignmentLateIcon from "@mui/icons-material/AssignmentLate";
 import { ProjectService } from "@services/api/ProjectService/ProjectService";
 import type { Project } from "@services/api/ProjectService/ProjectService.types";
+import { motion } from "framer-motion";
 
 export interface DialogState {
   open: boolean;
@@ -32,17 +33,22 @@ export const Projects = () => {
     dialogState.initiator === "page"
   );
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     setNewProject(dialogState.initiator === "page");
   }, [dialogState.initiator]);
 
   const fetchProjects = async () => {
+    setLoading(true);
     try {
       const data = await ProjectService.getProjects();
       const { projects } = data;
       setProjects(projects);
     } catch (error) {
       console.error("Не удалось загрузить проекты:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,7 +81,19 @@ export const Projects = () => {
             Создать новый проект
           </Button>
         </div>
-        {projects.length ? (
+        {loading ? (
+          <div
+            style={{
+              width: "100%",
+              height: "100px",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <CircularProgress />
+          </div>
+        ) : projects.length ? (
           <div
             style={{
               display: "grid",
@@ -84,14 +102,20 @@ export const Projects = () => {
             }}
           >
             {projects.map((val, idx) => (
-              <ProjectCard
-                setOpenFromCard={setOpenFromCard}
-                key={idx}
-                id={val.id}
-                title={val.name}
-                description={val.description}
-                updatedAt={val.updatedAt}
-              />
+              <motion.div
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ delay: 0.01 * idx, duration: 0.3 }}
+              >
+                <ProjectCard
+                  setOpenFromCard={setOpenFromCard}
+                  key={val.id}
+                  id={val.id}
+                  title={val.name}
+                  description={val.description}
+                  updatedAt={val.updatedAt}
+                />
+              </motion.div>
             ))}
           </div>
         ) : (

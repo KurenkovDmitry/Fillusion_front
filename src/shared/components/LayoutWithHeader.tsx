@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
   Avatar,
@@ -37,20 +37,36 @@ export const LayoutWithHeader = ({
   children,
   noJustify,
   transparent,
+  activeLogin,
+  setActiveLogin,
 }: {
   children: ReactNode;
   noJustify?: boolean;
   transparent?: boolean;
+  activeLogin?: boolean;
+  setActiveLogin?: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   const navigate = useNavigate();
   const { user, isLoading, logout, updateProfile } = useAuth();
+  const [parmas, setParams] = useSearchParams();
+  const isLoginFormOpen = parmas.get("withLogin") && !user;
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [changePasswordDialogOpen, setChangePasswordDialogOpen] =
     useState(false);
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(isLoginFormOpen || activeLogin);
+
+  useEffect(() => {
+    setOpen(activeLogin);
+  }, [activeLogin]);
+
+  useEffect(() => {
+    if (open === false) {
+      setActiveLogin?.(open);
+    }
+  }, [open, setActiveLogin]);
 
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
@@ -179,8 +195,8 @@ export const LayoutWithHeader = ({
         style={{
           position: transparent ? "absolute" : "initial",
           top: "0px",
-          width: "100dvw",
           backgroundColor: "#18191b",
+          minWidth: transparent ? "100dvw" : "unset",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -354,7 +370,7 @@ export const LayoutWithHeader = ({
             >
               Войти
             </Button>
-            <Auth open={open} onClose={() => setOpen(false)} />
+            <Auth open={!!open} onClose={() => setOpen(false)} />
           </div>
         )}
       </header>
@@ -379,10 +395,8 @@ export const LayoutWithHeader = ({
         onClose={() => setEditDialogOpen(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: "12px",
-          },
+        sx={{
+          borderRadius: "12px",
         }}
       >
         <DialogTitle>

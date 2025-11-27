@@ -12,9 +12,32 @@ export const App = () => {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<NonModalGenerate />} />
-          <Route path="/history/:projectId" element={<QueryHistory />} />
-          <Route path="/projects/:projectId" element={<DatabaseDiagram />} />
-          <Route path="/projects" element={<Projects />} />
+
+          <Route
+            path="/history/:projectId"
+            element={
+              <ProtectedRoute>
+                <QueryHistory />{" "}
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/projects/:projectId"
+            element={
+              <ProtectedRoute>
+                <DatabaseDiagram />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute>
+                <Projects />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </AuthProvider>
     </Router>

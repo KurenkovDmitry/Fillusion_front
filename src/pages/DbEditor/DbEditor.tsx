@@ -796,14 +796,6 @@ export const DatabaseDiagram: React.FC = () => {
     fetchSchema();
   }, [projectId, loadFromApi]);
 
-  // const isConnectable = useCallback(
-  //   (connection: Connection) => {
-  //     if (!isEditingRelations) return false;
-  //     return !!connection.source && !!connection.target;
-  //   },
-  //   [isEditingRelations]
-  // );
-
   const isUpdatingRelations = useRef(false);
 
   const onConnect = useCallback(

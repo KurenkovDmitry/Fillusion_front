@@ -26,11 +26,11 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://176.123.165.26",
+        target: "https://fillusion.ru",
         changeOrigin: true,
       },
       "/avatars": {
-        target: "http://176.123.165.26",
+        target: "https://fillusion.ru",
         changeOrigin: true,
       },
     },

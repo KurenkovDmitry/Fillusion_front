@@ -67,13 +67,13 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
 
           // Проверяем является ли поле FK через relations
           const relatedRelation = Object.values(relations).find(
-            (rel) => rel.fromTable === table.id && rel.fromField === field.id
+            (rel) => rel.toTable === table.id && rel.toField === field.id
           );
 
           if (relatedRelation) {
-            const referencedTable = tables[relatedRelation.toTable];
+            const referencedTable = tables[relatedRelation.fromTable];
             const referencedField = referencedTable?.fields.find(
-              (f) => f.id === relatedRelation.toField
+              (f) => f.id === relatedRelation.fromField
             );
 
             columnSchema.isFk = true;
@@ -114,12 +114,8 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
           firstTableSettings.selectOutputValue?.toUpperCase() || "JSON",
       };
 
-      console.log("Generate payload:", generatePayload);
-
       // Отправляем запрос на генерацию
-      const response = await GenerateService.generateData(generatePayload);
-
-      console.log("Generation started:", response);
+      await GenerateService.generateData(generatePayload);
 
       // Закрываем диалог после успешного запуска
       props.onClose();
