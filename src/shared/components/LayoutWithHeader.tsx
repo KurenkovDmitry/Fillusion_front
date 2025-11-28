@@ -1,16 +1,10 @@
-import type { ReactNode } from "react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
   Avatar,
   Menu,
   MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   Button,
   Typography,
   IconButton,
@@ -18,215 +12,81 @@ import {
 } from "@mui/material";
 import { Edit, Logout, Person } from "@mui/icons-material";
 import { useAuth } from "../hooks/useAuth";
-import { Field, Form, Formik, useFormikContext } from "formik";
-import * as yup from "yup";
 import { Auth } from "@pages";
 
-interface UpdateProfileForm {
-  name: string;
-  avatar?: File;
-}
+// Импортируем наши новые части
+import { useStyles } from "./LayoutWithHeader.styles";
+import { EditProfileDialog } from "./EditProfileDialog";
+import { ChangePasswordDialog } from "./ChangePasswordDialog";
 
-interface ChangePasswordForm {
-  currentPassword: string;
-  newPassword: string;
-  confirmNewPassword: string;
-}
-
-export const LayoutWithHeader = ({
-  children,
-  noJustify,
-  transparent,
-  activeLogin,
-  setActiveLogin,
-}: {
+interface LayoutProps {
   children: ReactNode;
   noJustify?: boolean;
   transparent?: boolean;
   activeLogin?: boolean;
   setActiveLogin?: React.Dispatch<React.SetStateAction<boolean>>;
-}) => {
-  const navigate = useNavigate();
-  const { user, isLoading, logout, updateProfile } = useAuth();
-  const [parmas, setParams] = useSearchParams();
-  const isLoginFormOpen = parmas.get("withLogin") && !user;
+}
 
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [changePasswordDialogOpen, setChangePasswordDialogOpen] =
-    useState(false);
+// Утилиты для аватара (можно вынести в utils)
+const getAvatarColor = (name: string = "") => {
+  const colors = ["#4f8cff", "#7f53ff", "#ff6a88", "#ffa726", "#66bb6a"];
+  return colors[name.length % colors.length] || "#4f8cff";
+};
 
-  const [open, setOpen] = useState(isLoginFormOpen || activeLogin);
-
-  useEffect(() => {
-    setOpen(activeLogin);
-  }, [activeLogin]);
-
-  useEffect(() => {
-    if (open === false) {
-      setActiveLogin?.(open);
-    }
-  }, [open, setActiveLogin]);
-
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-
-  // Схема валидации для изменения имени
-  const updateNameSchema = yup.object({
-    name: yup
-      .string()
-      .min(2, "Имя должно содержать не менее 2 символов")
-      .max(50, "Имя не может содержать более 50 символов")
-      .matches(
-        /^[a-zA-Zа-яА-Я0-9_\\-\\s]+$/,
-        "Имя содержит недопустимые символы"
-      )
-      .required("Обязательное поле"),
-  });
-
-  const changePasswordSchema = yup.object({
-    currentPassword: yup.string().required("Обязательное поле"),
-    newPassword: yup
-      .string()
-      .min(8, "Пароль должен содержать минимум 8 символов")
-      .max(100, "Пароль не может содержать более 100 символов")
-      .matches(
-        /.*[A-ZА-Я].*/,
-        "Пароль должен содержать хотя бы одну заглавную букву"
-      )
-      .matches(/.*[0-9].*/, "Пароль должен содержать хотя бы одну цифру")
-      .matches(
-        /.*[a-z].*/,
-        "Пароль должен содержать хотя бы одну строчную букву"
-      )
-      .notOneOf(
-        [yup.ref("currentPassword")],
-        "Новый пароль должен отличаться от текущего"
-      )
-      .required("Обязательное поле"),
-    confirmNewPassword: yup
-      .string()
-      .oneOf([yup.ref("newPassword")], "Пароли не совпадают новый пароль")
-      .required("Обязательное поле"),
-  });
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleEditProfile = () => {
-    setEditDialogOpen(true);
-    handleMenuClose();
-  };
-
-  const handleChangePassword = async (values: ChangePasswordForm) => {
-    setPasswordError(null);
-    try {
-      await updateProfile({
-        user: { password: values.newPassword },
-      });
-      setChangePasswordDialogOpen(false);
-    } catch (error: any) {
-      const msg = error?.message || "Ошибка смены пароля";
-      setPasswordError(msg);
-      console.error(msg);
-    }
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    handleMenuClose();
-  };
-
-  const handleUpdateProfile = async (values: UpdateProfileForm) => {
-    try {
-      // await updateProfile({ user: { name: values.name } });
-      // const formData = new FormData();
-      // formData.append('name', values.name)
-      // await updateProfile(formData);
-      await updateProfile({
-        user: { name: values.name },
-        avatar: values.avatar,
-      });
-      setEditDialogOpen(false);
-    } catch (error) {
-      console.error("Ошибка при обновлении имени:", error);
-    }
-  };
-
-  // Генерация инициалов для аватара
-  const getUserInitials = () => {
-    if (!user?.name) return "U";
-    return user.name
+const getUserInitials = (name: string = "") => {
+  return (
+    name
       .split(" ")
-      .map((word) => word[0])
+      .map((w) => w[0])
       .join("")
       .toUpperCase()
-      .slice(0, 2);
-  };
+      .slice(0, 2) || "U"
+  );
+};
 
-  // Генерация цвета для аватара на основе имени
-  const getAvatarColor = () => {
-    if (!user?.name) return "#4f8cff";
+export const LayoutWithHeader: React.FC<LayoutProps> = ({
+  children,
+  noJustify,
+  transparent,
+  activeLogin,
+  setActiveLogin,
+}) => {
+  const { classes, cx } = useStyles();
+  const navigate = useNavigate();
+  const { user, isLoading, logout, updateProfile } = useAuth();
 
-    const colors = [
-      "#4f8cff",
-      "#7f53ff",
-      "#ff6a88",
-      "#ffa726",
-      "#66bb6a",
-      "#ef5350",
-      "#ab47bc",
-      "#26c6da",
-      "#d4e157",
-      "#ff7043",
-    ];
+  const [params] = useSearchParams();
+  const isLoginUrlParam = params.get("withLogin") === "true";
 
-    const index = user.name.length % colors.length;
-    return colors[index];
+  // Состояние меню и диалогов
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isPassOpen, setIsPassOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+  // Синхронизация открытия логина
+  useEffect(() => {
+    const shouldBeOpen = (activeLogin || isLoginUrlParam) && !user;
+    if (shouldBeOpen) {
+      setIsAuthOpen(true);
+    }
+  }, [activeLogin, isLoginUrlParam, user]);
+
+  const handleLogout = async () => {
+    setAnchorEl(null);
+    await logout();
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       <header
-        style={{
-          position: transparent ? "absolute" : "initial",
-          top: "0px",
-          backgroundColor: "#18191b",
-          minWidth: transparent ? "100dvw" : "unset",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "0 16px",
-          boxSizing: "border-box",
-          zIndex: transparent ? "2" : "auto",
-        }}
+        className={cx(classes.header, transparent && classes.headerTransparent)}
       >
-        <h2
-          style={{
-            margin: "16px 0",
-            color: "white",
-            background:
-              /*transparent
-                ? "linear-gradient(90deg, #000b69ff 0%, #000a44ff 50%, #000000ff 100%)"
-                : */ "linear-gradient(90deg, #2d3383ff 0%, #7f53ff 50%, #d6002bff 100%)",
-            width: "fit-content",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-            fontWeight: 800,
-            fontSize: "2rem",
-            letterSpacing: "2px",
-            cursor: "pointer",
-          }}
-          onClick={() => navigate("/")}
-        >
+        <h2 className={classes.logo} onClick={() => navigate("/")}>
           Fillusion
         </h2>
 
+        {/* Скелетон загрузки */}
         {isLoading && (
           <Box display="flex" alignItems="center" gap={1}>
             <Skeleton
@@ -242,15 +102,11 @@ export const LayoutWithHeader = ({
                 height={24}
                 sx={{ bgcolor: "rgba(255, 255, 255, 0.1)" }}
               />
-              <Skeleton
-                variant="text"
-                width={150}
-                height={16}
-                sx={{ bgcolor: "rgba(255, 255, 255, 0.1)" }}
-              />
             </Box>
           </Box>
         )}
+
+        {/* Пользователь авторизован */}
         {!isLoading && user && (
           <Box display="flex" alignItems="center" gap={1}>
             <Typography
@@ -265,434 +121,113 @@ export const LayoutWithHeader = ({
             </Typography>
 
             <IconButton
-              onClick={handleMenuOpen}
+              onClick={(e) => setAnchorEl(e.currentTarget)}
               sx={{
                 padding: "4px",
-                "&:hover": {
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                },
+                "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.1)" },
               }}
             >
               {user.avatarUrl ? (
-                <Avatar
-                  src={user.avatarUrl}
-                  sx={{
-                    width: 40,
-                    height: 40,
-                  }}
-                />
+                <Avatar src={user.avatarUrl} sx={{ width: 40, height: 40 }} />
               ) : (
                 <Avatar
                   sx={{
-                    bgcolor: getAvatarColor(),
+                    bgcolor: getAvatarColor(user.name),
                     width: 40,
                     height: 40,
-                    fontSize: "14px",
+                    fontSize: 14,
                     fontWeight: 600,
                   }}
                 >
-                  {getUserInitials()}
+                  {getUserInitials(user.name)}
                 </Avatar>
               )}
             </IconButton>
 
             <Menu
+              disableScrollLock
               anchorEl={anchorEl}
               open={Boolean(anchorEl)}
-              onClose={handleMenuClose}
-              PaperProps={{
-                sx: {
-                  mt: 1,
-                  minWidth: 200,
-                  borderRadius: "12px",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                },
-              }}
+              onClose={() => setAnchorEl(null)}
               transformOrigin={{ horizontal: "right", vertical: "top" }}
               anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
             >
               <MenuItem
-                onClick={handleEditProfile}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  padding: "8px 16px",
+                onClick={() => {
+                  setIsEditOpen(true);
+                  setAnchorEl(null);
                 }}
+                sx={{ gap: 1 }}
               >
-                <Edit fontSize="small" />
-                <Typography variant="body2">Изменить профиль</Typography>
+                <Edit fontSize="small" /> Изменить профиль
               </MenuItem>
               <MenuItem
                 onClick={() => {
-                  setChangePasswordDialogOpen(true);
-                  handleMenuClose();
+                  setIsPassOpen(true);
+                  setAnchorEl(null);
                 }}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  padding: "8px 16px",
-                }}
+                sx={{ gap: 1 }}
               >
-                <Person fontSize="small" />
-                <Typography variant="body2">Изменить пароль</Typography>
+                <Person fontSize="small" /> Изменить пароль
               </MenuItem>
-
               <MenuItem
                 onClick={handleLogout}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  padding: "8px 16px",
-                  color: "error.main",
-                }}
+                sx={{ gap: 1, color: "error.main" }}
               >
-                <Logout fontSize="small" />
-                <Typography variant="body2">Выйти</Typography>
+                <Logout fontSize="small" /> Выйти
               </MenuItem>
             </Menu>
           </Box>
         )}
+
+        {/* Кнопка войти */}
         {!isLoading && !user && (
           <div>
             <Button
               variant="outlined"
-              onClick={() => setOpen(true)}
+              onClick={() => setIsAuthOpen(true)}
               sx={{
                 color: "white",
                 borderColor: "white",
-                "&:hover": {
-                  backgroundColor: "#2b2b2bff",
-                },
+                "&:hover": { backgroundColor: "#2b2b2bff" },
               }}
             >
               Войти
             </Button>
-            <Auth open={!!open} onClose={() => setOpen(false)} />
+            <Auth
+              open={isAuthOpen}
+              onClose={() => {
+                setIsAuthOpen(false);
+                setActiveLogin?.(false); // Уведомляем родителя, если нужно
+              }}
+            />
           </div>
         )}
       </header>
 
+      {/* Основной контент */}
       <div
-        style={{
-          width: "100%",
-          display: "flex",
-          minHeight: "calc(100dvh - 80px)",
-          flexDirection: "column",
-          justifyContent: noJustify ? "" : "center",
-          alignItems: "center",
-          background: "#F3F3F5",
-        }}
+        className={cx(
+          classes.mainContent,
+          !noJustify && classes.mainContentCentered
+        )}
       >
         {children}
       </div>
 
-      {/* Диалог изменения имени */}
-      <Dialog
-        open={editDialogOpen}
-        onClose={() => setEditDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        sx={{
-          borderRadius: "12px",
-        }}
-      >
-        <DialogTitle>
-          <Typography fontWeight={600}>Изменить профиль</Typography>
-        </DialogTitle>
+      {/* Подключенные диалоги */}
+      <EditProfileDialog
+        open={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        user={user}
+        updateProfile={updateProfile}
+      />
 
-        <Formik<UpdateProfileForm>
-          initialValues={{
-            avatar: undefined,
-            name: user?.name || "",
-          }}
-          validationSchema={updateNameSchema}
-          onSubmit={handleUpdateProfile}
-          // validateOnBlur
-          // validateOnChange
-          // validateOnMount
-          enableReinitialize
-        >
-          {({
-            isSubmitting,
-            values,
-            dirty,
-            touched,
-            isValid,
-            handleChange,
-            handleBlur,
-          }) => {
-            const avatarSrc = values.avatar
-              ? values.avatar instanceof File
-                ? URL.createObjectURL(values.avatar)
-                : values.avatar
-              : user?.avatarUrl;
-            return (
-              <Form>
-                <DialogContent>
-                  <MenuItem
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      padding: "12px 16px",
-                      cursor: "default",
-                    }}
-                    disableTouchRipple
-                    disableRipple
-                  >
-                    <Avatar
-                      src={avatarSrc}
-                      sx={{
-                        // bgcolor: getAvatarColor(),
-                        width: 40,
-                        height: 40,
-                        fontSize: "14px",
-                        fontWeight: 600,
-                      }}
-                    />
-
-                    <Box
-                      sx={{
-                        overflow: "hidden",
-                        whiteSpace: "nowrap",
-                        textOverflow: "ellipsis",
-                        maxWidth: 300,
-                      }}
-                    >
-                      <Typography noWrap variant="subtitle1" fontWeight={600}>
-                        {values.name || user?.name}
-                      </Typography>
-                      <Typography noWrap variant="body2" color="text.secondary">
-                        {user?.email}
-                      </Typography>
-                    </Box>
-                    <Box marginLeft="auto">
-                      <Field name="avatar" marginLeft="auto">
-                        {({
-                          field, // { name, value, onChange, onBlur }
-                          form: { touched, errors }, // also values, setXXXX, handleXXXX, dirty, isValid, status, etc.
-                          meta,
-                        }) => {
-                          // eslint-disable-next-line react-hooks/rules-of-hooks
-                          const formikProps = useFormikContext();
-
-                          const handleAvatarChange = (event) => {
-                            const file = event.target.files[0];
-                            if (file) formikProps.setFieldValue("avatar", file);
-                          };
-
-                          return (
-                            <div>
-                              <input
-                                type="file"
-                                id="avatar-upload"
-                                accept="image/*"
-                                style={{ display: "none" }}
-                                // {...field}
-                                onChange={handleAvatarChange}
-                              />
-                              <label htmlFor="avatar-upload">
-                                <Button
-                                  component="span"
-                                  variant="outlined"
-                                  size="small"
-                                >
-                                  Загрузить аватар
-                                </Button>
-                              </label>
-                              {/* {meta.touched && meta.error && (
-                              <div className="error">{meta.error}</div>
-                            )} */}
-                            </div>
-                          );
-                        }}
-                      </Field>
-                    </Box>
-                  </MenuItem>
-                  <Field name="name">
-                    {({
-                      field, // { name, value, onChange, onBlur }
-                      form: { touched, errors }, // also values, setXXXX, handleXXXX, dirty, isValid, status, etc.
-                      meta,
-                    }) => {
-                      // eslint-disable-next-line react-hooks/rules-of-hooks
-                      const formikProps = useFormikContext();
-
-                      const handleNameInputBlur = (event) => {
-                        if (!values.name) {
-                          formikProps.setFieldValue("name", user?.name);
-                          handleBlur("name");
-                          return;
-                        }
-                        handleBlur(event);
-                      };
-                      return (
-                        <TextField
-                          {...field}
-                          name="name"
-                          label="Ваше имя"
-                          value={values.name}
-                          onChange={handleChange}
-                          onBlur={handleNameInputBlur}
-                          error={touched.name && Boolean(errors.name)}
-                          helperText={touched.name && errors.name}
-                          fullWidth
-                          margin="normal"
-                          sx={{
-                            "& .MuiOutlinedInput-root": {
-                              borderRadius: "8px",
-                            },
-                          }}
-                        />
-                      );
-                    }}
-                  </Field>
-                </DialogContent>
-
-                <DialogActions sx={{ padding: "16px 24px", gap: 1 }}>
-                  <Button
-                    onClick={() => setEditDialogOpen(false)}
-                    sx={{
-                      textTransform: "none",
-                      fontWeight: 600,
-                      borderRadius: "8px",
-                    }}
-                  >
-                    Отмена
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={!isValid || !dirty || isSubmitting}
-                    sx={{
-                      textTransform: "none",
-                      fontWeight: 600,
-                      borderRadius: "8px",
-                      background: "#4f8cff",
-                      "&:hover": { background: "#3a6fd8" },
-                    }}
-                  >
-                    {isSubmitting ? "Сохранение..." : "Сохранить"}
-                  </Button>
-                </DialogActions>
-              </Form>
-            );
-          }}
-        </Formik>
-      </Dialog>
-      <Dialog
-        open={changePasswordDialogOpen}
-        onClose={() => setChangePasswordDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: "12px" } }}
-      >
-        <DialogTitle>
-          <Typography fontWeight={600}>Изменить пароль</Typography>
-        </DialogTitle>
-        <Formik<ChangePasswordForm>
-          initialValues={{
-            currentPassword: "",
-            newPassword: "",
-            confirmNewPassword: "",
-          }}
-          validationSchema={changePasswordSchema}
-          onSubmit={handleChangePassword}
-        >
-          {({
-            isSubmitting,
-            values,
-            handleChange,
-            handleBlur,
-            touched,
-            errors,
-            dirty,
-            isValid,
-          }) => (
-            <Form>
-              <DialogContent>
-                <TextField
-                  name="currentPassword"
-                  label="Текущий пароль"
-                  type="password"
-                  value={values.currentPassword}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={
-                    touched.currentPassword && Boolean(errors.currentPassword)
-                  }
-                  helperText={touched.currentPassword && errors.currentPassword}
-                  fullWidth
-                  margin="normal"
-                />
-                <TextField
-                  name="newPassword"
-                  label="Новый пароль"
-                  type="password"
-                  value={values.newPassword}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={touched.newPassword && Boolean(errors.newPassword)}
-                  helperText={touched.newPassword && errors.newPassword}
-                  fullWidth
-                  margin="normal"
-                />
-                <TextField
-                  name="confirmNewPassword"
-                  label="Подтвердите новый пароль"
-                  type="password"
-                  value={values.confirmNewPassword}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  error={
-                    touched.confirmNewPassword &&
-                    Boolean(errors.confirmNewPassword)
-                  }
-                  helperText={
-                    touched.confirmNewPassword && errors.confirmNewPassword
-                  }
-                  fullWidth
-                  margin="normal"
-                />
-                {passwordError && (
-                  <Typography color="error" sx={{ mb: 2, textAlign: "center" }}>
-                    {passwordError}
-                  </Typography>
-                )}
-              </DialogContent>
-              <DialogActions sx={{ padding: "16px 24px", gap: 1 }}>
-                <Button
-                  onClick={() => setChangePasswordDialogOpen(false)}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 600,
-                    borderRadius: "8px",
-                  }}
-                >
-                  Отмена
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={isSubmitting || !dirty || !isValid}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 600,
-                    borderRadius: "8px",
-                    background: "#4f8cff",
-                    "&:hover": { background: "#3a6fd8" },
-                  }}
-                >
-                  {isSubmitting ? "Смена пароля..." : "Сменить пароль"}
-                </Button>
-              </DialogActions>
-            </Form>
-          )}
-        </Formik>
-      </Dialog>
+      <ChangePasswordDialog
+        open={isPassOpen}
+        onClose={() => setIsPassOpen(false)}
+        updateProfile={updateProfile}
+      />
     </div>
   );
 };

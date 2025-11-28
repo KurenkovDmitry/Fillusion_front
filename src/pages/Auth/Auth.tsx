@@ -115,7 +115,7 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
   };
 
   return (
-    <Dialog open={props.open} onClose={props.onClose}>
+    <Dialog open={props.open} onClose={props.onClose} disableScrollLock={true}>
       <Box
         sx={{
           width: activeTab === "confirm" ? "600px" : "416px",

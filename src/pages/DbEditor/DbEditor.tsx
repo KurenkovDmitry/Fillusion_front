@@ -42,6 +42,7 @@ import CodeIcon from "@mui/icons-material/Code";
 import { getLabelByValue } from "../Generate/components/constants/constants";
 import { GenerateDialog } from "./components/GenerateDialog";
 import { PkSettings } from "../Generate/components/PkSettings";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface TableNodeData {
   id: string;
@@ -449,136 +450,144 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
       </div>
 
       <div style={{ overflow: "visible" }}>
-        {table.fields.map((field, index) => (
-          <div
-            key={field.id}
-            style={{
-              padding: "8px 12px",
-              borderBottom:
-                index < table.fields.length - 1 ? "1px solid #E0E0E0" : "none",
-              display: "grid",
-              gridTemplateColumns: "30px 1fr 135px 30px 30px",
-              alignItems: "center",
-              gap: "8px",
-              position: "relative",
-              userSelect: isEditingRelations ? "none" : "auto",
-              overflow: "visible",
-            }}
-          >
-            <Handle
-              type="source"
-              position={Position.Left}
-              id={`${field.id}-left`}
+        <AnimatePresence>
+          {table.fields.map((field, index) => (
+            <motion.div
+              key={field.id}
               style={{
-                left: -14,
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "#fff",
-                width: 10,
-                height: 10,
-                border: "2px solid black",
-                borderRadius: "50%",
-                cursor: "crosshair",
-                zIndex: 10000,
-                opacity: isEditingRelations ? 1 : 0,
-                transition: "opacity 0.2s",
-              }}
-            />
-
-            <PkSettings
-              field={field}
-              tableId={table.id}
-              projectId={projectId!}
-            />
-
-            <input
-              value={localFieldValues[field.id] ?? field.name}
-              onChange={(e) =>
-                handleFieldChange(field.id, "name", e.target.value)
-              }
-              onFocus={() => handleFieldFocus(field.id)}
-              onDoubleClick={(e) => e.currentTarget.select()}
-              onBlur={() => handleFieldBlur(field.id)}
-              style={{
-                border: "none",
-                background: "transparent",
-                fontSize: "16px",
-                outline: "none",
-                cursor: "text",
-                color: "#000",
-              }}
-              className="nodrag"
-            />
-
-            <div className="nodrag">
-              <SelectField
-                options={field.isPrimaryKey ? PKTypeOptions : typeOptions}
-                value={field.type}
-                onChange={(val: string | string[]) =>
-                  handleFieldChange(field.id, "type", val as string)
-                }
-                displayLabel={
-                  field.viaFaker
-                    ? getLabelByValue(field.fakerType!) +
-                      " (" +
-                      field.locale?.slice(7) +
-                      ")"
-                    : undefined
-                }
-                disabled={field.viaFaker || field.isForeignKey}
-              />
-            </div>
-
-            <div className="nodrag">
-              <AdditionalSettings fieldId={field.id} projectId={projectId!} />
-            </div>
-
-            <button
-              onClick={() => handleDeleteField(field.id)}
-              className="nodrag"
-              disabled={table.fields.length <= 1}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: table.fields.length <= 1 ? "#ddd" : "#999",
-                cursor: table.fields.length <= 1 ? "not-allowed" : "pointer",
-                fontSize: "18px",
-                padding: "4px",
-                lineHeight: 1,
-                display: "flex",
+                padding: "8px 12px",
+                borderBottom:
+                  index < table.fields.length - 1
+                    ? "1px solid #E0E0E0"
+                    : "none",
+                display: "grid",
+                gridTemplateColumns: "30px 1fr 135px 30px 30px",
                 alignItems: "center",
-                justifyContent: "center",
+                gap: "8px",
+                position: "relative",
+                userSelect: isEditingRelations ? "none" : "auto",
+                overflow: "visible",
               }}
-              title={
-                table.fields.length <= 1
-                  ? "Нельзя удалить последнее поле"
-                  : "Удалить поле"
-              }
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              viewport={{ once: true }}
             >
-              ×
-            </button>
+              <Handle
+                type="source"
+                position={Position.Left}
+                id={`${field.id}-left`}
+                style={{
+                  left: -14,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "#fff",
+                  width: 10,
+                  height: 10,
+                  border: "2px solid black",
+                  borderRadius: "50%",
+                  cursor: "crosshair",
+                  zIndex: 10000,
+                  opacity: isEditingRelations ? 1 : 0,
+                  transition: "opacity 0.2s",
+                }}
+              />
 
-            <Handle
-              type="source"
-              position={Position.Right}
-              id={`${field.id}-right`}
-              style={{
-                right: -14,
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "#fff",
-                width: 10,
-                height: 10,
-                border: "2px solid black",
-                borderRadius: "50%",
-                cursor: "crosshair",
-                zIndex: 10000,
-                opacity: isEditingRelations ? 1 : 0,
-                transition: "opacity 0.2s",
-              }}
-            />
-          </div>
-        ))}
+              <PkSettings
+                field={field}
+                tableId={table.id}
+                projectId={projectId!}
+              />
+
+              <input
+                value={localFieldValues[field.id] ?? field.name}
+                onChange={(e) =>
+                  handleFieldChange(field.id, "name", e.target.value)
+                }
+                onFocus={() => handleFieldFocus(field.id)}
+                onDoubleClick={(e) => e.currentTarget.select()}
+                onBlur={() => handleFieldBlur(field.id)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  fontSize: "16px",
+                  outline: "none",
+                  cursor: "text",
+                  color: "#000",
+                }}
+                className="nodrag"
+              />
+
+              <div className="nodrag">
+                <SelectField
+                  options={field.isPrimaryKey ? PKTypeOptions : typeOptions}
+                  value={field.type}
+                  onChange={(val: string | string[]) =>
+                    handleFieldChange(field.id, "type", val as string)
+                  }
+                  displayLabel={
+                    field.viaFaker
+                      ? getLabelByValue(field.fakerType!) +
+                        " (" +
+                        field.locale?.slice(7) +
+                        ")"
+                      : undefined
+                  }
+                  disabled={field.viaFaker || field.isForeignKey}
+                />
+              </div>
+
+              <div className="nodrag">
+                <AdditionalSettings fieldId={field.id} projectId={projectId!} />
+              </div>
+
+              <button
+                onClick={() => handleDeleteField(field.id)}
+                className="nodrag"
+                disabled={table.fields.length <= 1}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: table.fields.length <= 1 ? "#ddd" : "#999",
+                  cursor: table.fields.length <= 1 ? "not-allowed" : "pointer",
+                  fontSize: "18px",
+                  padding: "4px",
+                  lineHeight: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                title={
+                  table.fields.length <= 1
+                    ? "Нельзя удалить последнее поле"
+                    : "Удалить поле"
+                }
+              >
+                ×
+              </button>
+
+              <Handle
+                type="source"
+                position={Position.Right}
+                id={`${field.id}-right`}
+                style={{
+                  right: -14,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "#fff",
+                  width: 10,
+                  height: 10,
+                  border: "2px solid black",
+                  borderRadius: "50%",
+                  cursor: "crosshair",
+                  zIndex: 10000,
+                  opacity: isEditingRelations ? 1 : 0,
+                  transition: "opacity 0.2s",
+                }}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
 
       <div

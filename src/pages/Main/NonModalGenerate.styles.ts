@@ -63,7 +63,7 @@ export const useStyles = makeStyles()((_theme) => ({
   // Элемент button
   main__button: {
     width: "280px",
-    height: "42px",
+    height: "50px",
     marginTop: "20px",
     borderRadius: "16px",
     backgroundColor: "black",
