@@ -105,7 +105,7 @@ function debounce<T extends (...args: any[]) => any>(
   };
 }
 
-//  Парсер Handle ID
+// Парсер Handle ID
 const parseHandleId = (handleId: string) => {
   if (handleId.endsWith("-left")) {
     return {
@@ -198,7 +198,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
       setLocalFieldValues(values);
       previousFieldValues.current = values;
     }
-  }, [table?.fields]); // Реагируем на изменения полей
+  }, [table?.fields, table?.name]); // Реагируем на изменения полей и имени
 
   const debouncedUpdateField = useRef(
     debounce(

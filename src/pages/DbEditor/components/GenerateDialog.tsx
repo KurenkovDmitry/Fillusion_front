@@ -4,21 +4,45 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Tooltip,
 } from "@mui/material";
 import { useParams } from "react-router-dom";
 import useSchemaStore from "@store/schemaStore";
 import useGenerateStore from "@store/generateStore";
 import { GenerateService } from "@services/api/GenerateService/GenerateService";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   GenerateRequest,
   ColumnSchema,
 } from "@services/api/GenerateService/GenerateService.types";
+import { SliderWithInput } from "../../Generate/components/SliderWithinput";
+import { SelectField } from "../../Generate/components/SelectField";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface GenerateDialogProps {
   open: boolean;
   onClose: () => void;
 }
+
+type SelectModelType = "deepseek" | "gemini";
+type SelectOutputType =
+  | "EXPORT_TYPE_SNAPSHOT"
+  | "EXPORT_TYPE_JSON"
+  | "EXPORT_TYPE_EXCEL"
+  | "EXPORT_TYPE_DIRECT_DB";
+
+const SELECT_MODEL_OPTIONS = [
+  { value: "deepseek", label: "Deepseek" },
+  { value: "gemini", label: "Gemini" },
+];
+
+const SELECT_OUTPUT_OPTIONS = [
+  { value: "EXPORT_TYPE_SNAPSHOT", label: "Snapshot" },
+  { value: "EXPORT_TYPE_JSON", label: "JSON" },
+  { value: "EXPORT_TYPE_EXCEL", label: "Excel" },
+  { value: "EXPORT_TYPE_DIRECT_DB", label: "Прямое подключение" },
+];
 
 export const GenerateDialog = (props: GenerateDialogProps) => {
   const { projectId } = useParams();
@@ -26,11 +50,34 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [selectModelValue, setSelectModelValue] =
+    useState<SelectModelType>("deepseek");
+  const [selectOutputValue, setSelectOutputValue] = useState<SelectOutputType>(
+    "EXPORT_TYPE_SNAPSHOT"
+  );
   // Получаем данные из stores
   const tables = useSchemaStore((state) => state.tables);
   const relations = useSchemaStore((state) => state.relations);
   const getAllTables = useSchemaStore((state) => state.getAllTables);
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
+  // 1. Подписываемся сразу на результат вычисления (boolean)
+  const isFakerOnly = useSchemaStore((state) =>
+    state.isEveryFieldGeneratedWithFaker()
+  );
+
+  // 2. Убираем лишний стейт restriction, он нам не нужен, так как isFakerOnly и так реактивный
+  const [totalRecords, setTotalRecords] = useState(isFakerOnly ? 50 : 10);
+
+  // 3. useEffect нужен только для "сброса" значения, если условия изменились
+  useEffect(() => {
+    // Если переключились на AI (isFakerOnly === false) и записей больше 10 -> сбрасываем
+    if (!isFakerOnly && totalRecords > 10) {
+      setTotalRecords(10);
+    }
+    // Если переключились на Faker (isFakerOnly === true), можно автоматически не менять,
+    // или выставить 50, если хотите:
+    // if (isFakerOnly && totalRecords < 50) setTotalRecords(50);
+  }, [isFakerOnly, totalRecords]);
 
   const handleGenerate = async () => {
     if (!projectId) return;
@@ -90,20 +137,17 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
         return {
           name: settings.name || table.name,
           query: settings.query || "",
-          totalRecords: String(settings.totalRecords || 50),
+          totalRecords: String(totalRecords),
           schema,
           examples: settings.examples || "",
         };
       });
 
       // Получаем общие настройки (берем из первой таблицы или дефолты)
-      const firstTableSettings =
-        allTables.length > 0
-          ? getTableSettings(allTables[0].id)
-          : {
-              selectModelValue: "deepseek",
-              selectOutputValue: "EXPORT_TYPE_JSON",
-            };
+      const firstTableSettings = {
+        selectModelValue: selectModelValue,
+        selectOutputValue: selectOutputValue,
+      };
 
       // Формируем финальный payload
       const generatePayload: GenerateRequest = {
@@ -142,22 +186,19 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
   };
 
   return (
-    <Dialog open={props.open} onClose={handleCancel} maxWidth="sm" fullWidth>
-      <div style={{ padding: "5px" }}>
+    <Dialog open={props.open} onClose={handleCancel} maxWidth="md" fullWidth>
+      <div style={{ paddingBottom: "0px" }}>
         <DialogTitle
           sx={{
             fontSize: "20px",
             fontWeight: 600,
+            paddingBottom: "0px",
           }}
         >
           Начать генерацию
         </DialogTitle>
 
-        <DialogContent>
-          <div style={{ marginBottom: "16px" }}>
-            Вы уверены, что хотите начать генерацию данных для всех таблиц?
-          </div>
-
+        <DialogContent sx={{ paddingBottom: 0 }}>
           {error && (
             <div
               style={{
@@ -174,11 +215,98 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
           )}
         </DialogContent>
 
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            padding: "20px 24px",
+          }}
+        >
+          <p style={{ margin: 0, fontSize: "14px" }}>
+            Завершите настройку и начните генерацию
+          </p>
+          <SliderWithInput
+            label="Количество строк"
+            value={totalRecords}
+            min={1}
+            max={!isFakerOnly ? 10 : 100}
+            onChange={(value) => {
+              setTotalRecords(value);
+            }}
+          />
+          {!isFakerOnly && (
+            <SelectField
+              label="Модель для генерации"
+              value={selectModelValue}
+              options={SELECT_MODEL_OPTIONS}
+              onChange={(val: string) => {
+                setSelectModelValue(val as SelectModelType);
+              }}
+            />
+          )}
+          <SelectField
+            label="Тип выходных данных"
+            value={selectOutputValue}
+            options={SELECT_OUTPUT_OPTIONS}
+            onChange={(val: string) => {
+              setSelectOutputValue(val as SelectOutputType);
+            }}
+          />
+          <AnimatePresence mode="wait">
+            {selectOutputValue === "EXPORT_TYPE_DIRECT_DB" && (
+              <motion.div
+                key="warning-box"
+                initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                animate={{
+                  height: "auto",
+                  opacity: 1,
+                  marginTop: 8,
+                  transition: {
+                    height: { duration: 0.3, ease: "easeOut" },
+                    marginTop: { duration: 0.3, ease: "easeOut" },
+                    opacity: { delay: 0.3, duration: 0.2 },
+                  },
+                }}
+                exit={{
+                  height: 0,
+                  opacity: 0,
+                  marginTop: 0,
+                  transition: {
+                    opacity: { duration: 0.2 },
+                    height: { delay: 0.2, duration: 0.3, ease: "easeInOut" },
+                    marginTop: { delay: 0.2, duration: 0.3 },
+                  },
+                }}
+                style={{ overflow: "hidden" }}
+                viewport={{ once: true }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    padding: "20px",
+                    border: "1px solid black",
+                    borderRadius: "12px",
+                    gap: "12px",
+                    fontSize: "16px",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <ErrorOutlineIcon />
+                  При выборе прямого подключения вам нужно будет скачать агент
+                  Fillusion в истории запросов
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         <DialogActions
           sx={{
             padding: "0 24px 16px 24px",
             gap: "12px",
-            justifyContent: "flex-start",
+            justifyContent: "flex-end",
           }}
         >
           <Button

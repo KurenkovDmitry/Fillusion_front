@@ -60,3 +60,5 @@ export type DownloadDatasetFileResponse = {
   data: string;
   extensions: any[];
 };
+
+export type DownloadAgentOS = "windows" | "linux";

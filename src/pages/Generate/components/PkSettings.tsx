@@ -107,6 +107,8 @@ export const PkSettings = (props: PkSettingsProps) => {
       updateField(tableId, field.id, {
         isPrimaryKey: true,
         isForeignKey: false,
+        viaFaker: false,
+        type: "int",
       });
 
       const currentTable = getCurrentTable();

@@ -103,9 +103,9 @@ export const Projects = () => {
           >
             {projects.map((val, idx) => (
               <motion.div
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                transition={{ delay: 0.01 * idx, duration: 0.3 }}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 * idx, duration: 0.3 }}
               >
                 <ProjectCard
                   setOpenFromCard={setOpenFromCard}

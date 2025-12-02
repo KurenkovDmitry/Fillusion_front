@@ -1,3 +1,4 @@
+import { ConnectionOptions } from "../../../pages/QueryHistory/components/DatasetDialog";
 import { apiServiceClient } from "../client";
 import {
   CreateProjectRequest,
@@ -23,5 +24,15 @@ export const ProjectService = {
 
   async deleteProject(projectId: string): Promise<void> {
     return apiServiceClient.delete(`/projects/${projectId}`);
+  },
+
+  async directFill(
+    projectId: string,
+    data: ConnectionOptions & { engine: string }
+  ): Promise<any> {
+    return apiServiceClient.post(
+      `/projects/${projectId}/datasets/${projectId}/direct-fill`,
+      data
+    );
   },
 };

@@ -17,7 +17,6 @@ const selectOptions = [
   { value: "one-to-one", label: "Один-к-одному (1:1)" },
   { value: "one-to-many", label: "Один-ко-многим (1:N)" },
   { value: "many-to-one", label: "Многие-к-одному (N:1)" },
-  { value: "many-to-many", label: "Многие-ко-многим (N:M)" },
 ];
 
 export const RelationDialog = (props: RelationDialogProps) => {

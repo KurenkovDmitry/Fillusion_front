@@ -103,7 +103,7 @@ export const DeleteDialog = (props: DeleteDialogProps) => {
           sx={{
             padding: "0 24px 16px 24px",
             gap: "12px",
-            justifyContent: "flex-start",
+            justifyContent: "flex-end",
           }}
         >
           <Button
@@ -135,6 +135,7 @@ export const DeleteDialog = (props: DeleteDialogProps) => {
               textTransform: "none",
               fontSize: "14px",
               padding: "8px 20px",
+              minWidth: "135px",
               "&:hover": {
                 backgroundColor: "#b71c1c",
               },

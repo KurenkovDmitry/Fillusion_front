@@ -33,6 +33,10 @@ export default defineConfig({
         target: "https://fillusion.ru",
         changeOrigin: true,
       },
+      "/agent": {
+        target: "https://fillusion.ru",
+        changeOrigin: true,
+      },
     },
   },
 });

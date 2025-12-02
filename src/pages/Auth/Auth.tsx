@@ -10,10 +10,8 @@ import {
 } from "@mui/material";
 import { Form, Formik } from "formik";
 import * as yup from "yup";
-import { useLocation } from "react-router-dom";
 import { TextInput } from "../../ui/form";
 import { useAuth } from "@shared/hooks";
-import { useTokenStore } from "../../store/tokenStore";
 
 // Схемы валидации
 const loginSchema = yup.object({
@@ -46,7 +44,10 @@ const signupSchema = yup.object({
       "Пароль должен содержать хотя бы одну заглавную букву"
     )
     .matches(/.*[0-9].*/, "Пароль должен содержать хотя бы одну цифру")
-    .matches(/.*[a-z].*/, "Пароль должен содержать хотя бы одну строчную букву")
+    .matches(
+      /.*[a-zа-я].*/,
+      "Пароль должен содержать хотя бы одну строчную букву"
+    )
     .required("Пароль обязателен"),
   repeatPassword: yup
     .string()
@@ -54,24 +55,29 @@ const signupSchema = yup.object({
     .required("Повторите пароль"),
 });
 
+const forgotPasswordSchema = yup.object({
+  email: yup
+    .string()
+    .email("Введите корректный email")
+    .required("Email обязателен"),
+});
+
+type Tabs =
+  | "login"
+  | "signup"
+  | "confirm"
+  | "forgotPassword"
+  | "forgotPasswordSuccess";
+
 export const Auth = (props: { open: boolean; onClose: () => void }) => {
-  const [activeTab, setActiveTab] = useState<"login" | "signup" | "confirm">(
-    "login"
-  );
+  const [activeTab, setActiveTab] = useState<Tabs>("login");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isChanging, setIsChanging] = useState(false);
 
-  const { login, register } = useAuth();
-  const location = useLocation();
+  const { login, register, forgotPassword } = useAuth();
 
-  // Получаем путь для возврата после аутентификации
-  const from = (location.state as any)?.from?.pathname || "/";
-
-  const handleChangeTab = (
-    event: React.SyntheticEvent,
-    newValue: "login" | "signup" | "confirm"
-  ) => {
+  const handleChangeTab = (event: React.SyntheticEvent, newValue: Tabs) => {
     setIsChanging(true);
     setTimeout(() => {
       setActiveTab(newValue);
@@ -114,22 +120,44 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
     }
   };
 
+  const handleForgotPassword = async (values: { email: string }) => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      await forgotPassword(values);
+
+      setActiveTab("forgotPasswordSuccess");
+    } catch (error: any) {
+      setError(error.message || "Произошла ошибка");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={props.open} onClose={props.onClose} disableScrollLock={true}>
       <Box
         sx={{
-          width: activeTab === "confirm" ? "600px" : "416px",
+          width:
+            activeTab === "confirm" || activeTab === "forgotPasswordSuccess"
+              ? "600px"
+              : activeTab === "forgotPassword"
+              ? "486px"
+              : "416px",
           margin: "auto",
           padding: 4,
           bgcolor: "background.paper",
           boxShadow: 3,
           borderRadius: 2,
-          transition: "height 0.3s ease-in-out",
+          transition: "height 0.3s ease-in-out, width 0.3s ease",
           height:
             activeTab === "login"
               ? "430px"
-              : activeTab === "confirm"
+              : activeTab === "confirm" || activeTab === "forgotPasswordSuccess"
               ? "auto"
+              : activeTab === "forgotPassword"
+              ? "360px"
               : "665px",
           overflow: "hidden",
         }}
@@ -223,6 +251,18 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
                       disabled={isSubmitting}
                     >
                       Зарегистрироваться
+                    </Link>
+                    <Link
+                      component="button"
+                      type="button"
+                      onClick={() =>
+                        handleChangeTab({} as any, "forgotPassword")
+                      }
+                      sx={{ fontWeight: 600 }}
+                      disabled={isSubmitting}
+                      variant="body2"
+                    >
+                      Забыли пароль?
                     </Link>
                   </Typography>
                 </Form>
@@ -322,7 +362,7 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
                 </Form>
               )}
             </Formik>
-          ) : (
+          ) : activeTab === "confirm" ? (
             <div
               style={{
                 display: "flex",
@@ -337,6 +377,75 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
               <p style={{ marginTop: 0 }}>
                 Перейдите по ссылке в письме, чтобы завершить регистрацию и
                 начать работу с платформой.
+              </p>
+              <Button
+                variant="contained"
+                onClick={() => setActiveTab("login")}
+                sx={{ height: "37px", marginTop: "10px" }}
+              >
+                Войти
+              </Button>
+            </div>
+          ) : activeTab === "forgotPassword" ? (
+            <Formik
+              initialValues={{ email: "" }}
+              validationSchema={forgotPasswordSchema}
+              onSubmit={handleForgotPassword}
+              validateOnMount
+            >
+              {({ isValid, dirty }) => (
+                <Form
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    height: "100%",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Typography variant="h3" component="h1">
+                    Восстановление пароля
+                  </Typography>
+
+                  <Typography variant="body1" component="h3">
+                    Введите email, который привязан к вашему аккаунту
+                  </Typography>
+
+                  <TextInput
+                    name="email"
+                    label="Email"
+                    placeholder="Введите адрес эл. почты"
+                    type="email"
+                    disabled={isSubmitting}
+                  />
+
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={!isValid || !dirty || isSubmitting}
+                    sx={{
+                      textTransform: "none",
+                      fontWeight: 600,
+                      height: 44,
+                      position: "relative",
+                    }}
+                  >
+                    Отправить письмо
+                  </Button>
+                </Form>
+              )}
+            </Formik>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                height: "100%",
+              }}
+            >
+              <h2 style={{ marginTop: 0 }}>Проверьте вашу почту</h2>
+              <p style={{ marginTop: 0 }}>
+                Мы отправили письмо с временным паролем на ваш адрес,
+                используйте его для входа в систему, после чего смените его
               </p>
               <Button
                 variant="contained"

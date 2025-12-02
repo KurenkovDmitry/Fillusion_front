@@ -15,6 +15,7 @@ import { SelectField } from "./components/SelectField";
 import { SchemaMaker } from "./components/SchemaMaker";
 import useSchemaStore, {
   mapTableToApiPayload,
+  TableSchema,
   type SchemaField,
 } from "@store/schemaStore";
 import useGenerateStore, {
@@ -22,6 +23,7 @@ import useGenerateStore, {
 } from "@store/generateStore";
 import { SchemaService } from "@services/api";
 import { getTableLayoutPayload } from "../DbEditor/DbEditor";
+import { useShallow } from "zustand/shallow";
 
 const SELECT_MODEL_OPTIONS = [
   { value: "deepseek", label: "Deepseek" },
@@ -44,65 +46,53 @@ const GenerateFormContent = ({
   tableId,
   projectId,
   onClose,
-  onSubmit,
-  loading,
   error,
 }: {
   tableId: string;
   projectId: string;
   onClose: () => void;
-  onSubmit: () => Promise<void>;
-  loading: boolean;
   error: string;
 }) => {
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
   const settings = getTableSettings(tableId);
   const [name, setName] = useState(settings.name ?? "");
   const [query, setQuery] = useState(settings.query ?? "");
-  const [totalRecords, setTotalRecords] = useState(settings.totalRecords ?? 50);
   const [examples, setExamples] = useState(settings.examples ?? "");
-  const [selectModelValue, setSelectModelValue] = useState<
-    TableGenerateSettings["selectModelValue"]
-  >(settings.selectModelValue ?? "deepseek");
-  const [selectOutputValue, setSelectOutputValue] = useState<
-    TableGenerateSettings["selectOutputValue"]
-  >(settings.selectOutputValue ?? "EXPORT_TYPE_SNAPSHOT");
 
   const saveTableSettings = useGenerateStore(
     (state) => state.saveTableSettings
   );
   const updateTable = useSchemaStore((state) => state.updateTable);
-  const tables = useSchemaStore((state) => state.tables);
+  const table: TableSchema = useSchemaStore(
+    useShallow((state) => state.tables[tableId])
+  );
 
   useEffect(() => {
     const settings = getTableSettings(tableId);
     setName(settings.name);
     setQuery(settings.query);
-    setTotalRecords(settings.totalRecords);
     setExamples(settings.examples);
-    setSelectModelValue(settings.selectModelValue);
-    setSelectOutputValue(settings.selectOutputValue);
   }, [tableId, getTableSettings]);
+
+  useEffect(() => {
+    setName(table.name);
+  }, [table.name]);
 
   // Сохранение с API запросом при blur имени таблицы
   const handleNameBlur = async () => {
     const settings = {
       name,
       query,
-      totalRecords,
       examples,
-      selectModelValue,
-      selectOutputValue,
     };
 
     saveTableSettings(tableId, settings);
 
     // Обновляем имя таблицы в schemaStore и на сервере
-    if (name !== tables[tableId]?.name) {
+    if (name !== table?.name) {
       updateTable(tableId, { name });
 
       try {
-        const table = tables[tableId];
         await SchemaService.updateTable(projectId, tableId, {
           ...table,
           name,
@@ -118,10 +108,7 @@ const GenerateFormContent = ({
     saveTableSettings(tableId, {
       name,
       query,
-      totalRecords,
       examples,
-      selectModelValue,
-      selectOutputValue,
     });
   };
 
@@ -129,55 +116,9 @@ const GenerateFormContent = ({
     saveTableSettings(tableId, {
       name,
       query,
-      totalRecords,
       examples,
-      selectModelValue,
-      selectOutputValue,
     });
   };
-
-  const handleTotalRecordsChange = (value: number) => {
-    setTotalRecords(value);
-    saveTableSettings(tableId, {
-      name,
-      query,
-      totalRecords: value,
-      examples,
-      selectModelValue,
-      selectOutputValue,
-    });
-  };
-
-  const handleModelChange = (
-    value: TableGenerateSettings["selectModelValue"]
-  ) => {
-    setSelectModelValue(value);
-    saveTableSettings(tableId, {
-      name,
-      query,
-      totalRecords,
-      examples,
-      selectModelValue: value,
-      selectOutputValue,
-    });
-  };
-
-  const handleOutputChange = (
-    value: TableGenerateSettings["selectOutputValue"]
-  ) => {
-    setSelectOutputValue(value);
-    saveTableSettings(tableId, {
-      name,
-      query,
-      totalRecords,
-      examples,
-      selectModelValue,
-      selectOutputValue: value,
-    });
-  };
-
-  const isValid =
-    query.trim().length > 0 && totalRecords >= 1 && totalRecords <= 100;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -198,16 +139,6 @@ const GenerateFormContent = ({
         onBlur={handleQueryBlur}
         multiline
         placeholder="Например: name: русские имена и фамилии"
-        required
-      />
-      <SliderWithInput
-        label="Количество строк"
-        value={totalRecords}
-        min={1}
-        max={100}
-        onChange={(value) => {
-          handleTotalRecordsChange(value);
-        }}
       />
       <InputField
         label="Примеры данных"
@@ -219,22 +150,7 @@ const GenerateFormContent = ({
         multiline
         placeholder='Например: { "name": "Иван Петров" }'
       />
-      <SelectField
-        label="Модель для генерации"
-        value={selectModelValue}
-        options={SELECT_MODEL_OPTIONS}
-        onChange={(val: string) => {
-          handleModelChange(val as TableGenerateSettings["selectModelValue"]);
-        }}
-      />
-      <SelectField
-        label="Тип выходных данных"
-        value={selectOutputValue}
-        options={SELECT_OUTPUT_OPTIONS}
-        onChange={(val: string) => {
-          handleOutputChange(val as TableGenerateSettings["selectOutputValue"]);
-        }}
-      />
+
       <SchemaMaker />
 
       {error && (
@@ -258,14 +174,6 @@ const GenerateFormContent = ({
         >
           Отмена
         </Button>
-        {/* <Button
-          onClick={onSubmit}
-          disabled={!isValid || loading}
-          variant="contained"
-          sx={{ height: "40px" }}
-        >
-          {loading ? "Загрузка..." : "Начать генерацию"}
-        </Button> */}
       </Box>
     </div>
   );
@@ -275,18 +183,13 @@ export const Generate = (props: GenerateProps) => {
   const { open, setOpen, projectId } = props;
 
   const [snackbar, setSnackbar] = useState({ open: false, message: "" });
-  const [responseJson, setResponseJson] = useState<JSON | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const tables = useSchemaStore((state) => state.tables);
-  const relations = useSchemaStore((state) => state.relations);
   const currentTable = useSchemaStore((s) => s.getCurrentTable)();
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
 
   const handleClose = () => {
     setOpen(false);
-    setResponseJson(null);
     if (!currentTable) return;
     const tableId = currentTable.id;
     SchemaService.updateTable(
@@ -300,131 +203,21 @@ export const Generate = (props: GenerateProps) => {
     );
   };
 
-  const handleFormSubmit = async () => {
-    if (!currentTable || !projectId) return;
-
-    // Проверяем что все поля заполнены
-    const emptyNameField = currentTable.fields.find(
-      (field) => !field.name.trim()
-    );
-
-    if (emptyNameField) {
-      setError("Все поля 'Название' должны быть заполнены");
-      setSnackbar({
-        open: true,
-        message: "Все поля 'Название' должны быть заполнены",
-      });
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      // Берём значения из generateStore
-      const settings = getTableSettings(currentTable.id);
-
-      // Форматируем схему для API
-      const formattedSchema = currentTable.fields.map((field) => {
-        const schemaField: any = {
-          name: field.name,
-          type: field.type,
-          unique: field.unique || false,
-          autoIncrement: field.autoIncrement || false,
-          viaFaker: field.viaFaker || false,
-          isPk: field.isPrimaryKey || false,
-          isFk: false,
-        };
-
-        if (field.viaFaker) {
-          schemaField.fakerType = field.fakerType || "COLUMN_TYPE_UNSPECIFIED";
-          schemaField.locale = field.locale || "LOCALE_UNSPECIFIED";
-        }
-
-        // Проверяем является ли поле FK через relations
-        const relatedRelation = Object.values(relations).find(
-          (rel) => rel.toTable === currentTable.id && rel.toField === field.id
-        );
-
-        if (relatedRelation) {
-          schemaField.isFk = true;
-          schemaField.fkData = {
-            table: tables[relatedRelation.fromTable]?.name,
-            column: tables[relatedRelation.fromTable]?.fields.find(
-              (f) => f.id === relatedRelation.fromField
-            )?.name,
-            unique: false,
-          };
-        }
-
-        return schemaField;
-      });
-
-      // Формируем запрос для генерации
-      const generateRequest = {
-        projectId,
-        network: settings.selectModelValue,
-        tables: [
-          {
-            name: settings.name || currentTable.name,
-            query: settings.query.trim(),
-            totalRecords: String(settings.totalRecords),
-            schema: formattedSchema,
-            examples: settings.examples.trim() || "",
-          },
-        ],
-        exportType: settings.selectOutputValue.toUpperCase(),
-      };
-
-      console.log("Generate request:", generateRequest);
-
-      // Отправляем запрос на генерацию (замените на ваш метод API)
-      // const response = await SchemaService.generateData(generateRequest);
-      // const data = await response.json();
-      // setResponseJson(data);
-
-      // Временная заглушка
-      setResponseJson({ success: true } as any);
-    } catch (err) {
-      const message = (err as Error).message;
-      setError(message);
-      setSnackbar({
-        open: true,
-        message,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <>
       <Dialog open={open} maxWidth="lg" fullWidth onClose={handleClose}>
-        {!responseJson && (
-          <DialogTitle style={{ fontSize: 20 }}>
-            Настройка генерации
-          </DialogTitle>
-        )}
+        <DialogTitle style={{ fontSize: 20 }}>Настройка генерации</DialogTitle>
         <DialogContent
           style={{ scrollbarWidth: "thin", scrollbarColor: "#c0c0c0ff white" }}
         >
-          {responseJson ? (
-            <>
-              <h1>Запрос отправлен!</h1>
-              <h3>
-                Посмотреть результат можно будет на странице истории запросов
-              </h3>
-            </>
-          ) : currentTable && projectId ? (
+          {currentTable && projectId && (
             <GenerateFormContent
               tableId={currentTable.id}
               projectId={projectId}
               onClose={handleClose}
-              onSubmit={handleFormSubmit}
-              loading={loading}
               error={error}
             />
-          ) : null}
+          )}
         </DialogContent>
       </Dialog>
 

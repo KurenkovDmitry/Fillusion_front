@@ -1,6 +1,6 @@
 import { LayoutWithHeader } from "@shared/components/LayoutWithHeader";
 import { QueryButton } from "./components/QueryButton";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { CircularProgress } from "@mui/material";
 import { DatasetDialog } from "./components/DatasetDialog";
 import { GenerateService } from "@services/api/GenerateService/GenerateService";
@@ -28,7 +28,7 @@ export const QueryHistory = () => {
     navigate(`/projects/${projectId}`);
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const fetchDatasets = async () => {
       setLoading(true);
       try {

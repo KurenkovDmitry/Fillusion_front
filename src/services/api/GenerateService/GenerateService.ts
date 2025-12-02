@@ -1,9 +1,9 @@
-import { apiServiceClient } from "../client";
+import { ConnectionOptions } from "../../../pages/QueryHistory/components/DatasetDialog";
 import { apiGeneratorClient } from "../client";
 import {
   DatasetsRequestResponse,
   DatasetsResponse,
-  DownloadDatasetFileResponse,
+  DownloadAgentOS,
   GenerateRequest,
 } from "./GenerateService.types";
 
@@ -29,5 +29,13 @@ export const GenerateService = {
 
   async downloadFile(requestId: string, projectId: string): Promise<any> {
     return apiGeneratorClient.downloadFileAsBlob(requestId, projectId);
+  },
+
+  async downloadAgent(platform: DownloadAgentOS, arch = "amd64"): Promise<any> {
+    return apiGeneratorClient.downloadFileAsBlob(
+      "",
+      "",
+      `/agent/download/${platform}/${arch}`
+    );
   },
 };

@@ -1,29 +1,33 @@
-import { useState } from 'react';
+import { useState } from "react";
 import { Button } from "@mui/material";
 
 interface CopyButtonProps {
-    textToCopy: string;
+  textToCopy: string;
 }
 
 // Компонент принимает текст для копирования как пропс
 export const CopyButton = (props: CopyButtonProps) => {
-  const [buttonText, setButtonText] = useState('Копировать');
+  const [buttonText, setButtonText] = useState("Копировать");
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(props.textToCopy);
-      setButtonText('Скопировано!');
+      setButtonText("Скопировано!");
       setTimeout(() => {
-        setButtonText('Копировать');
+        setButtonText("Копировать");
       }, 2000); // Возвращаем исходный текст через 2 секунды
     } catch (err) {
-      console.error('Ошибка при копировании текста: ', err);
-      setButtonText('Ошибка');
+      console.error("Ошибка при копировании текста: ", err);
+      setButtonText("Ошибка");
     }
   };
 
   return (
-    <Button onClick={handleCopy} style={{width: '140px', height: '40px'}} variant='contained'>
+    <Button
+      onClick={handleCopy}
+      style={{ width: "140px", height: "40px", backgroundColor: "black" }}
+      variant="contained"
+    >
       {buttonText}
     </Button>
   );

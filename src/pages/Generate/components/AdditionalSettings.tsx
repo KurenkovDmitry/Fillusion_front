@@ -265,7 +265,14 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
           },
         }}
       >
-        <div style={{ padding: "15px", width: "700px", maxHeight: "500px" }}>
+        <div
+          style={{
+            padding: "15px",
+            width: "700px",
+            maxHeight: "500px",
+            transition: "max-height 0.3s ease",
+          }}
+        >
           {currentField?.isForeignKey ? (
             <strong>
               Нельзя менять тип внешнего ключа, он наследуется от поля, на

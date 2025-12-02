@@ -122,9 +122,12 @@ class ApiClient {
 
   async downloadFileAsBlob(
     requestId: string,
-    projectId: string
+    projectId: string,
+    url?: string
   ): Promise<Blob> {
-    const url = `${this.baseURL}/datasets/${requestId}/download?project_id=${projectId}`;
+    if (!url) {
+      url = `${this.baseURL}/datasets/${requestId}/download?project_id=${projectId}`;
+    }
     const token = useTokenStore.getState().token;
 
     const response = await fetch(url, {

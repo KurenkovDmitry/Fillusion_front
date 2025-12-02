@@ -6,6 +6,7 @@ interface FeatureCardProps {
   title: string;
   description: string;
   variant?: "features" | "formats";
+  soon?: boolean;
 }
 
 export const FeatureCard = (props: FeatureCardProps) => {
@@ -17,7 +18,10 @@ export const FeatureCard = (props: FeatureCardProps) => {
       {props.variant === "formats" ? (
         props.icon
       ) : (
-        <div className={classes.feature__icon}>{props.icon}</div>
+        <span className={classes.feature__header}>
+          <div className={classes.feature__icon}>{props.icon}</div>
+          {props.soon && <p className={classes.feature__soon}>Скоро</p>}
+        </span>
       )}
       <div>
         <h4 className={classes.feature__title}>{props.title}</h4>

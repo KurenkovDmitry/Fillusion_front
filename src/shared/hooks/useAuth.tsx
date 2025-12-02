@@ -12,6 +12,7 @@ import type {
   LoginRequest,
   RegisterRequest,
   UpdateProfileRequest,
+  ForgotPasswordRequest,
 } from "@services/api";
 import { useTokenStore } from "@store/tokenStore";
 
@@ -24,6 +25,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateProfile: (userData: UpdateProfileRequest) => Promise<void>;
   checkAuth: () => Promise<void>;
+  forgotPassword: (data: ForgotPasswordRequest) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,6 +82,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     navigate("/");
   };
 
+  const forgotPassword = async (data: ForgotPasswordRequest) => {
+    await AuthService.forgotPassword(data);
+  };
+
   const updateProfile = async (userData: UpdateProfileRequest) => {
     await AuthService.updateProfile(userData);
     const user = await AuthService.getCurrentUser();
@@ -95,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     logout,
     updateProfile,
     checkAuth,
+    forgotPassword,
   };
 
   useEffect(() => {

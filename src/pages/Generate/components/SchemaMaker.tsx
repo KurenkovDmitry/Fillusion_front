@@ -285,7 +285,7 @@ export const SchemaMaker: React.FC = () => {
   }
 
   return (
-    <div>
+    <section>
       <div
         style={{
           display: "grid",
@@ -293,6 +293,7 @@ export const SchemaMaker: React.FC = () => {
           alignItems: "center",
           gap: "12px",
           marginBottom: "8px",
+          marginTop: "10px",
           fontWeight: "bold",
           fontSize: "15px",
         }}
@@ -461,6 +462,6 @@ export const SchemaMaker: React.FC = () => {
       >
         Добавить поле
       </Button>
-    </div>
+    </section>
   );
 };

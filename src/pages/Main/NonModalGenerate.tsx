@@ -362,6 +362,7 @@ export const NonModalGenerate = () => {
                     icon={f.icon}
                     title={f.title}
                     description={f.description}
+                    soon={f.title !== "Email"}
                   />
                 </motion.div>
               ))}

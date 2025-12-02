@@ -5,13 +5,7 @@ import { ApiResponse } from "@services/api/SchemaService/SchemaService.types";
 export type TableGenerateSettings = {
   name: string;
   query: string;
-  totalRecords: number;
   examples: string;
-  selectModelValue: "deepseek" | "gemini";
-  selectOutputValue:
-    | "EXPORT_TYPE_JSON"
-    | "EXPORT_TYPE_SNAPSHOT"
-    | "EXPORT_TYPE_DIRECT_DB";
 };
 
 export type GenerateState = {
@@ -32,10 +26,7 @@ const mapApiResponseToGenerationState = (apiResponse: ApiResponse) => {
     tableSettings[table.id] = {
       name: table.name ?? "",
       query: table.meta?.query ?? "",
-      totalRecords: table.meta?.totalRecords ?? 50,
       examples: table.meta?.examples ?? "",
-      selectModelValue: table.meta?.selectModelValue ?? "deepseek",
-      selectOutputValue: table.meta?.selectOutputValue ?? "EXPORT_TYPE_JSON",
     };
   });
 
@@ -47,10 +38,7 @@ const DEFAULT_SETTINGS: (tableId: string) => TableGenerateSettings = (
 ) => ({
   name: useSchemaStore.getState().tables[tableId].name,
   query: "",
-  totalRecords: 50,
   examples: "",
-  selectModelValue: "deepseek",
-  selectOutputValue: "EXPORT_TYPE_SNAPSHOT",
 });
 
 const useGenerateStore = create<GenerateState>((set, get) => ({
