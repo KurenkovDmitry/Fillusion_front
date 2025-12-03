@@ -91,9 +91,11 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   }, [currentField]);
 
   const [locale, setLocale] = useState<"LOCALE_RU_RU" | "LOCALE_EN_US">(
-    "LOCALE_RU_RU"
+    currentField?.locale ?? "LOCALE_RU_RU"
   );
-  const [fakerType, setFakerType] = useState("COLUMN_TYPE_FIRST_NAME");
+  const [fakerType, setFakerType] = useState(
+    currentField?.fakerType ?? "COLUMN_TYPE_FIRST_NAME"
+  );
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -150,6 +152,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
             viaFaker: true,
             fakerType: fakerType,
             locale: locale,
+            type: fakerType === "COLUMN_TYPE_INT" ? "int" : "text",
           };
 
       const relations = getAllRelations().filter(
@@ -219,7 +222,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
         viaFaker: true,
         fakerType: type,
         locale: locale,
-        type: "text",
+        type: type === "COLUMN_TYPE_INT" ? "int" : "text",
       };
       updateField(currentTableId, fieldId, update);
       setTablesToSaveOnClose((prev) => prev.add(currentTableId));
