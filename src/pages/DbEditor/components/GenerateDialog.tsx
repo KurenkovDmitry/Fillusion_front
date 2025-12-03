@@ -65,20 +65,6 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
     state.isEveryFieldGeneratedWithFaker()
   );
 
-  // 2. Убираем лишний стейт restriction, он нам не нужен, так как isFakerOnly и так реактивный
-  const [totalRecords, setTotalRecords] = useState(isFakerOnly ? 50 : 10);
-
-  // 3. useEffect нужен только для "сброса" значения, если условия изменились
-  useEffect(() => {
-    // Если переключились на AI (isFakerOnly === false) и записей больше 10 -> сбрасываем
-    if (!isFakerOnly && totalRecords > 10) {
-      setTotalRecords(10);
-    }
-    // Если переключились на Faker (isFakerOnly === true), можно автоматически не менять,
-    // или выставить 50, если хотите:
-    // if (isFakerOnly && totalRecords < 50) setTotalRecords(50);
-  }, [isFakerOnly, totalRecords]);
-
   const handleGenerate = async () => {
     if (!projectId) return;
 
@@ -137,7 +123,7 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
         return {
           name: settings.name || table.name,
           query: settings.query || "",
-          totalRecords: String(totalRecords),
+          totalRecords: String(settings.totalRecords),
           schema,
           examples: settings.examples || "",
         };
@@ -226,15 +212,6 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
           <p style={{ margin: 0, fontSize: "14px" }}>
             Завершите настройку и начните генерацию
           </p>
-          <SliderWithInput
-            label="Количество строк"
-            value={totalRecords}
-            min={1}
-            max={!isFakerOnly ? 10 : 100}
-            onChange={(value) => {
-              setTotalRecords(value);
-            }}
-          />
           {!isFakerOnly && (
             <SelectField
               label="Модель для генерации"

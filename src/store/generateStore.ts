@@ -5,6 +5,7 @@ import { ApiResponse } from "@services/api/SchemaService/SchemaService.types";
 export type TableGenerateSettings = {
   name: string;
   query: string;
+  totalRecords: number;
   examples: string;
 };
 
@@ -26,6 +27,7 @@ const mapApiResponseToGenerationState = (apiResponse: ApiResponse) => {
     tableSettings[table.id] = {
       name: table.name ?? "",
       query: table.meta?.query ?? "",
+      totalRecords: table.meta?.totalRecords ?? 50,
       examples: table.meta?.examples ?? "",
     };
   });
@@ -38,6 +40,7 @@ const DEFAULT_SETTINGS: (tableId: string) => TableGenerateSettings = (
 ) => ({
   name: useSchemaStore.getState().tables[tableId].name,
   query: "",
+  totalRecords: 50,
   examples: "",
 });
 

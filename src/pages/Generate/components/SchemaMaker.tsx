@@ -221,7 +221,25 @@ export const SchemaMaker: React.FC = () => {
           id,
           mapTableToApiPayload(updatedTable as TableSchema)
         );
-        updateTable(id, newTable.table);
+        const mappedApiTable: TableSchema = {
+          ...newTable.table,
+          fields: newTable.table.fields.map((f) => ({
+            id: f.id,
+            name: f.name,
+            type: f.type,
+            unique: f.generation?.uniqueValues,
+            autoIncrement: f.generation?.autoIncrement,
+            isPrimaryKey: f.isPrimaryKey,
+            isForeignKey: f.isForeignKey,
+            viaFaker: f.generation?.viaFaker,
+            fakerType: f.generation?.fakerType,
+            locale: f.generation?.fakerLocale as
+              | "LOCALE_RU_RU"
+              | "LOCALE_EN_US"
+              | undefined,
+          })),
+        };
+        updateTable(id, mappedApiTable);
       } catch (err) {
         console.error("Failed to add field:", err);
       }

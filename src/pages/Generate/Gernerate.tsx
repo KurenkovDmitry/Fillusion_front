@@ -19,6 +19,7 @@ import useGenerateStore from "@store/generateStore";
 import { SchemaService } from "@services/api";
 import { getTableLayoutPayload } from "../DbEditor/DbEditor";
 import { useShallow } from "zustand/shallow";
+import { SliderWithInput } from "./components/SliderWithinput";
 
 interface GenerateProps {
   projectId: string;
@@ -41,8 +42,14 @@ const GenerateFormContent = ({
 }) => {
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
   const settings = getTableSettings(tableId);
+  const isFakerOnly = useSchemaStore((state) =>
+    state.isTableGeneratedWithFaker(tableId)
+  );
   const [name, setName] = useState(settings.name ?? "");
   const [query, setQuery] = useState(settings.query ?? "");
+  const [totalRecords, setTotalRecords] = useState(
+    settings.totalRecords ? settings.totalRecords : isFakerOnly ? 50 : 10
+  );
   const [examples, setExamples] = useState(settings.examples ?? "");
 
   const saveTableSettings = useGenerateStore(
@@ -69,6 +76,7 @@ const GenerateFormContent = ({
     const settings = {
       name,
       query,
+      totalRecords,
       examples,
     };
 
@@ -105,6 +113,7 @@ const GenerateFormContent = ({
     saveTableSettings(tableId, {
       name,
       query,
+      totalRecords,
       examples,
     });
   };
@@ -113,9 +122,26 @@ const GenerateFormContent = ({
     saveTableSettings(tableId, {
       name,
       query,
+      totalRecords,
       examples,
     });
   };
+
+  const handleTotalRecordsChange = (value: number) => {
+    setTotalRecords(value);
+    saveTableSettings(tableId, {
+      name,
+      query,
+      totalRecords: value,
+      examples,
+    });
+  };
+
+  useEffect(() => {
+    if (!isFakerOnly && totalRecords > 10) {
+      handleTotalRecordsChange(10);
+    }
+  }, [isFakerOnly, totalRecords]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -136,6 +162,15 @@ const GenerateFormContent = ({
         onBlur={handleQueryBlur}
         multiline
         placeholder="Например: name: русские имена и фамилии"
+      />
+      <SliderWithInput
+        label="Количество строк"
+        value={totalRecords}
+        min={1}
+        max={isFakerOnly ? 100 : 10}
+        onChange={(value) => {
+          handleTotalRecordsChange(value);
+        }}
       />
       <InputField
         label="Примеры данных"
