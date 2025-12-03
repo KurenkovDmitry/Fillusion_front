@@ -168,7 +168,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
 
   const handleDirectFill = async () => {
     try {
-      await ProjectService.directFill(props.projectId, {
+      await ProjectService.directFill(props.projectId, props.requestId, {
         ...connectionOptions,
         engine: selectDBOptions[0].value,
       });

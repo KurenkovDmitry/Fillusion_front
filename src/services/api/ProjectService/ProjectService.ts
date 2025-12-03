@@ -28,10 +28,11 @@ export const ProjectService = {
 
   async directFill(
     projectId: string,
+    requestId: string,
     data: ConnectionOptions & { engine: string }
   ): Promise<any> {
     return apiServiceClient.post(
-      `/projects/${projectId}/datasets/${projectId}/direct-fill`,
+      `/projects/${projectId}/datasets/${requestId}/direct-fill`,
       data
     );
   },
