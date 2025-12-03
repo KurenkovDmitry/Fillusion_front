@@ -9,32 +9,16 @@ import {
   Snackbar,
 } from "@mui/material";
 import { InputField } from "./components/InputField";
-import { SliderWithInput } from "./components/SliderWithinput";
 import TableIcon from "@assets/table.svg?react";
-import { SelectField } from "./components/SelectField";
 import { SchemaMaker } from "./components/SchemaMaker";
 import useSchemaStore, {
   mapTableToApiPayload,
   TableSchema,
-  type SchemaField,
 } from "@store/schemaStore";
-import useGenerateStore, {
-  type TableGenerateSettings,
-} from "@store/generateStore";
+import useGenerateStore from "@store/generateStore";
 import { SchemaService } from "@services/api";
 import { getTableLayoutPayload } from "../DbEditor/DbEditor";
 import { useShallow } from "zustand/shallow";
-
-const SELECT_MODEL_OPTIONS = [
-  { value: "deepseek", label: "Deepseek" },
-  { value: "gemini", label: "Gemini" },
-];
-
-const SELECT_OUTPUT_OPTIONS = [
-  { value: "EXPORT_TYPE_SNAPSHOT", label: "Snapshot" },
-  { value: "EXPORT_TYPE_JSON", label: "JSON" },
-  // { value: "EXPORT_TYPE_DIRECT_DB", label: "Прямое подключение" },
-];
 
 interface GenerateProps {
   projectId: string;
@@ -47,11 +31,13 @@ const GenerateFormContent = ({
   projectId,
   onClose,
   error,
+  setSnackbar,
 }: {
   tableId: string;
   projectId: string;
   onClose: () => void;
   error: string;
+  setSnackbar: any;
 }) => {
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
   const settings = getTableSettings(tableId);
@@ -91,7 +77,6 @@ const GenerateFormContent = ({
     // Обновляем имя таблицы в schemaStore и на сервере
     if (name !== table?.name) {
       updateTable(tableId, { name });
-
       try {
         await SchemaService.updateTable(projectId, tableId, {
           ...table,
@@ -102,6 +87,18 @@ const GenerateFormContent = ({
         console.error("Failed to update table name:", error);
       }
     }
+  };
+
+  const saveToServer = () => {
+    SchemaService.updateTable(
+      projectId,
+      tableId,
+      mapTableToApiPayload({
+        ...table,
+        meta: getTableSettings(tableId),
+        layout: getTableLayoutPayload(table),
+      })
+    );
   };
 
   const handleQueryBlur = () => {
@@ -174,6 +171,23 @@ const GenerateFormContent = ({
         >
           Отмена
         </Button>
+        <Button
+          onClick={() => {
+            saveToServer();
+            setSnackbar({ open: true, message: "🗸 Изменения сохранены" });
+          }}
+          sx={{
+            border: "1px solid #4f8cff",
+            height: "40px",
+            transition: "background-color 0.3s ease, color 0.3s ease",
+            "&:hover": {
+              backgroundColor: "#4f8cff",
+              color: "white",
+            },
+          }}
+        >
+          Сохранить изменения
+        </Button>
       </Box>
     </div>
   );
@@ -182,7 +196,11 @@ const GenerateFormContent = ({
 export const Generate = (props: GenerateProps) => {
   const { open, setOpen, projectId } = props;
 
-  const [snackbar, setSnackbar] = useState({ open: false, message: "" });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    variant: "error",
+  });
   const [error, setError] = useState("");
 
   const currentTable = useSchemaStore((s) => s.getCurrentTable)();
@@ -216,6 +234,7 @@ export const Generate = (props: GenerateProps) => {
               projectId={projectId}
               onClose={handleClose}
               error={error}
+              setSnackbar={setSnackbar}
             />
           )}
         </DialogContent>
@@ -229,10 +248,13 @@ export const Generate = (props: GenerateProps) => {
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
         sx={{
           "& .MuiSnackbarContent-root": {
-            backgroundColor: "#940d0dff",
+            backgroundColor:
+              snackbar.variant === "error" ? "#940d0dff" : "#4f8cff",
             color: "white",
             fontSize: "16px",
             borderRadius: "12px",
+            display: "flex",
+            justifyContent: "center",
           },
         }}
       />

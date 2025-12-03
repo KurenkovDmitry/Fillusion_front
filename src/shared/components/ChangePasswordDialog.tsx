@@ -7,7 +7,10 @@ import {
   TextField,
   Button,
   Typography,
+  InputAdornment, // Добавлено
+  IconButton, // Добавлено
 } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material"; // Добавлено (убедитесь, что пакет @mui/icons-material установлен)
 import { Formik, Form } from "formik";
 import * as yup from "yup";
 import { useStyles } from "./LayoutWithHeader.styles";
@@ -40,6 +43,18 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
 }) => {
   const { classes } = useStyles();
   const [serverError, setServerError] = useState<string | null>(null);
+
+  // Состояния для видимости паролей
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Обработчик клика (чтобы не терялся фокус с инпута)
+  const handleMouseDownPassword = (
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    // event.preventDefault();
+  };
 
   return (
     <Dialog
@@ -88,10 +103,11 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
                 "&.MuiDialogContent-root": { paddingTop: 0, paddingBottom: 0 },
               }}
             >
+              {/* ТЕКУЩИЙ ПАРОЛЬ */}
               <TextField
                 name="currentPassword"
                 label="Текущий пароль"
-                type="password"
+                type={showCurrentPassword ? "text" : "password"} // Динамический тип
                 value={values.currentPassword}
                 onChange={handleChange}
                 onBlur={handleBlur}
@@ -101,11 +117,33 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
                 helperText={touched.currentPassword && errors.currentPassword}
                 fullWidth
                 margin="normal"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() =>
+                          setShowCurrentPassword(!showCurrentPassword)
+                        }
+                        onMouseDown={handleMouseDownPassword}
+                        edge="end"
+                      >
+                        {showCurrentPassword ? (
+                          <VisibilityOff />
+                        ) : (
+                          <Visibility />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
+
+              {/* НОВЫЙ ПАРОЛЬ */}
               <TextField
                 name="newPassword"
                 label="Новый пароль"
-                type="password"
+                type={showNewPassword ? "text" : "password"}
                 value={values.newPassword}
                 onChange={handleChange}
                 onBlur={handleBlur}
@@ -113,11 +151,27 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
                 helperText={touched.newPassword && errors.newPassword}
                 fullWidth
                 margin="normal"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        onMouseDown={handleMouseDownPassword}
+                        edge="end"
+                      >
+                        {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
+
+              {/* ПОДТВЕРЖДЕНИЕ ПАРОЛЯ */}
               <TextField
                 name="confirmNewPassword"
                 label="Подтверждение пароля"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 value={values.confirmNewPassword}
                 onChange={handleChange}
                 onBlur={handleBlur}
@@ -130,7 +184,28 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
                 }
                 fullWidth
                 margin="normal"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        onMouseDown={handleMouseDownPassword}
+                        edge="end"
+                      >
+                        {showConfirmPassword ? (
+                          <VisibilityOff />
+                        ) : (
+                          <Visibility />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
+
               {serverError && (
                 <Typography color="error" sx={{ mt: 2, textAlign: "center" }}>
                   {serverError}

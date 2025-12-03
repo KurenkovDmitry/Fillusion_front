@@ -13,8 +13,6 @@ import {
 import { Edit, Logout, Person } from "@mui/icons-material";
 import { useAuth } from "../hooks/useAuth";
 import { Auth } from "@pages";
-
-// Импортируем наши новые части
 import { useStyles } from "./LayoutWithHeader.styles";
 import { EditProfileDialog } from "./EditProfileDialog";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
@@ -77,6 +75,10 @@ export const LayoutWithHeader: React.FC<LayoutProps> = ({
     await logout();
   };
 
+  const navigateToProjects = () => {
+    navigate("/projects");
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column" }}>
       <header
@@ -108,76 +110,86 @@ export const LayoutWithHeader: React.FC<LayoutProps> = ({
 
         {/* Пользователь авторизован */}
         {!isLoading && user && (
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography
-              variant="body1"
-              sx={{
-                color: "white",
-                fontWeight: 600,
-                display: { xs: "none", sm: "block" },
-              }}
+          <div className={classes.header__logoSection}>
+            <span
+              className={classes.header__projectsLink}
+              aria-label="projects-link"
+              onClick={navigateToProjects}
             >
-              {user.name}
-            </Typography>
+              Проекты
+            </span>
+            <div className={classes.header__divider} />
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: "white",
+                  fontWeight: 500,
+                  display: { xs: "none", sm: "block" },
+                }}
+              >
+                {user.name}
+              </Typography>
 
-            <IconButton
-              onClick={(e) => setAnchorEl(e.currentTarget)}
-              sx={{
-                padding: "4px",
-                "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.1)" },
-              }}
-            >
-              {user.avatarUrl ? (
-                <Avatar src={user.avatarUrl} sx={{ width: 40, height: 40 }} />
-              ) : (
-                <Avatar
-                  sx={{
-                    bgcolor: getAvatarColor(user.name),
-                    width: 40,
-                    height: 40,
-                    fontSize: 14,
-                    fontWeight: 600,
+              <IconButton
+                onClick={(e) => setAnchorEl(e.currentTarget)}
+                sx={{
+                  padding: "4px",
+                  "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.1)" },
+                }}
+              >
+                {user.avatarUrl ? (
+                  <Avatar src={user.avatarUrl} sx={{ width: 40, height: 40 }} />
+                ) : (
+                  <Avatar
+                    sx={{
+                      bgcolor: getAvatarColor(user.name),
+                      width: 40,
+                      height: 40,
+                      fontSize: 14,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {getUserInitials(user.name)}
+                  </Avatar>
+                )}
+              </IconButton>
+
+              <Menu
+                disableScrollLock
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={() => setAnchorEl(null)}
+                transformOrigin={{ horizontal: "right", vertical: "top" }}
+                anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+              >
+                <MenuItem
+                  onClick={() => {
+                    setIsEditOpen(true);
+                    setAnchorEl(null);
                   }}
+                  sx={{ gap: 1 }}
                 >
-                  {getUserInitials(user.name)}
-                </Avatar>
-              )}
-            </IconButton>
-
-            <Menu
-              disableScrollLock
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={() => setAnchorEl(null)}
-              transformOrigin={{ horizontal: "right", vertical: "top" }}
-              anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-            >
-              <MenuItem
-                onClick={() => {
-                  setIsEditOpen(true);
-                  setAnchorEl(null);
-                }}
-                sx={{ gap: 1 }}
-              >
-                <Edit fontSize="small" /> Изменить профиль
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  setIsPassOpen(true);
-                  setAnchorEl(null);
-                }}
-                sx={{ gap: 1 }}
-              >
-                <Person fontSize="small" /> Изменить пароль
-              </MenuItem>
-              <MenuItem
-                onClick={handleLogout}
-                sx={{ gap: 1, color: "error.main" }}
-              >
-                <Logout fontSize="small" /> Выйти
-              </MenuItem>
-            </Menu>
-          </Box>
+                  <Edit fontSize="small" /> Изменить профиль
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    setIsPassOpen(true);
+                    setAnchorEl(null);
+                  }}
+                  sx={{ gap: 1 }}
+                >
+                  <Person fontSize="small" /> Изменить пароль
+                </MenuItem>
+                <MenuItem
+                  onClick={handleLogout}
+                  sx={{ gap: 1, color: "error.main" }}
+                >
+                  <Logout fontSize="small" /> Выйти
+                </MenuItem>
+              </Menu>
+            </Box>
+          </div>
         )}
 
         {/* Кнопка войти */}

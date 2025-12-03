@@ -38,7 +38,7 @@ export interface ConnectionOptions {
 
 const selectOSOptions = [
   { value: "windows", label: "Windows" },
-  { value: "linux", label: "Linux" },
+  // { value: "linux", label: "Linux" },
 ];
 
 const selectDBOptions = [
@@ -293,7 +293,10 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
             >
               <ErrorOutlineIcon />
               Для правильной работы прямого заполения необходимо скачать и
-              включить агент
+              включить агент. Для включения агента необходимо после запуска
+              файла отобразить скрытые значки на панели задач, нажать на
+              "Fillusion Agent", далее на настройки, откроется интерфейс агента,
+              в нем нажмите на "Подключить".
             </div>
             <Accordion
               sx={{
@@ -364,6 +367,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
                 label="Пароль"
                 onChange={(e) => handleInput(e.target.value, "password")}
                 value={connectionOptions.password}
+                type="password"
               />
             </div>
             <Button

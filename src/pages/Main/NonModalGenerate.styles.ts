@@ -12,7 +12,7 @@ export const useStyles = makeStyles()((_theme) => ({
   main__container: {
     display: "flex",
     flexDirection: "column",
-    minHeight: "90dvh",
+    minHeight: "80dvh",
     alignItems: "center",
     justifyContent: "center",
   },

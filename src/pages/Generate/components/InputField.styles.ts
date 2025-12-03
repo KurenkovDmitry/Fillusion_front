@@ -14,9 +14,10 @@ export const useStyles = makeStyles()((_theme) => ({
     border: "1px solid #ccc",
     transition: "border-color 0.3s ease",
 
-    // ":focus": {
-    //   borderColor: "black",
-    // },
+    '&[type="password"]:not(:placeholder-shown)': {
+      letterSpacing: "2px",
+      fontFamily: "caption",
+    },
 
     ":hover, :focus": {
       borderColor: "#818181ff",

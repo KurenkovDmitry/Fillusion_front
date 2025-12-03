@@ -117,8 +117,8 @@ export const InputField = (props: InputFieldProps) => {
           />
         ) : (
           <input
-            {...props}
             type="text"
+            {...props}
             {...controlledProps}
             className={classes.input__border}
             placeholder={props.placeholder || props.label}

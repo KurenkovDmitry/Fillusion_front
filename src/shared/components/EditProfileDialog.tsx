@@ -77,14 +77,7 @@ export const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
           }
         }}
       >
-        {({
-          values,
-          handleChange,
-          handleBlur,
-          isSubmitting,
-          isValid,
-          dirty,
-        }) => {
+        {({ values, isSubmitting, isValid, dirty }) => {
           // Создаем превью URL безопасно
           const avatarPreview = values.avatar
             ? URL.createObjectURL(values.avatar)

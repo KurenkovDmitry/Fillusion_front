@@ -16,6 +16,26 @@ export const useStyles = makeStyles()((_theme) => ({
     minWidth: "100dvw",
     zIndex: 2,
   },
+  header__logoSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: "20px",
+  },
+  header__divider: {
+    width: "1px",
+    height: "45px",
+    backgroundColor: "#5c5c5cff",
+  },
+  header__projectsLink: {
+    color: "white",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "text-shadow 0.3s ease",
+
+    "&:hover": {
+      textShadow: "0 0 8px #ffffff6b",
+    },
+  },
   logo: {
     margin: "16px 0",
     color: "white",
@@ -49,7 +69,7 @@ export const useStyles = makeStyles()((_theme) => ({
   },
   saveButton: {
     textTransform: "none",
-    fontWeight: 600,
+    fontWeight: 500,
     borderRadius: "8px",
     background: "#000000ff",
     color: "white",
@@ -72,5 +92,7 @@ export const useStyles = makeStyles()((_theme) => ({
   buttonOutlined: {
     color: "black",
     borderColor: "black",
+    fontWeight: "500",
+    borderRadius: "11px",
   },
 }));
