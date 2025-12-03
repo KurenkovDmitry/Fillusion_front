@@ -91,7 +91,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   }, [currentField]);
 
   const [locale, setLocale] = useState<"LOCALE_RU_RU" | "LOCALE_EN_US">(
-    currentField?.locale ?? "LOCALE_RU_RU"
+    currentField?.locale === "LOCALE_RU_RU" ? "LOCALE_RU_RU" : "LOCALE_EN_US"
   );
   const [fakerType, setFakerType] = useState(
     currentField?.fakerType ?? "COLUMN_TYPE_FIRST_NAME"
