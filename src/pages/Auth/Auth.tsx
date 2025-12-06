@@ -77,7 +77,7 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
 
   const { login, register, forgotPassword } = useAuth();
 
-  const handleChangeTab = (event: React.SyntheticEvent, newValue: Tabs) => {
+  const handleChangeTab = (newValue: Tabs) => {
     setIsChanging(true);
     setTimeout(() => {
       setActiveTab(newValue);
@@ -246,7 +246,7 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
                     <Link
                       component="button"
                       type="button"
-                      onClick={() => handleChangeTab({} as any, "signup")}
+                      onClick={() => handleChangeTab("signup")}
                       sx={{ fontWeight: 600 }}
                       disabled={isSubmitting}
                     >
@@ -255,9 +255,7 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
                     <Link
                       component="button"
                       type="button"
-                      onClick={() =>
-                        handleChangeTab({} as any, "forgotPassword")
-                      }
+                      onClick={() => handleChangeTab("forgotPassword")}
                       sx={{ fontWeight: 600 }}
                       disabled={isSubmitting}
                       variant="body2"
@@ -352,7 +350,7 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
                     <Link
                       component="button"
                       type="button"
-                      onClick={() => handleChangeTab({} as any, "login")}
+                      onClick={() => handleChangeTab("login")}
                       sx={{ fontWeight: 600 }}
                       disabled={isSubmitting}
                     >
@@ -431,6 +429,11 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
                   >
                     Отправить письмо
                   </Button>
+                  <div style={{ width: "100%", fontSize: "14px" }}>
+                    <Link onClick={() => handleChangeTab("login")}>
+                      Вернуться к логину
+                    </Link>
+                  </div>
                 </Form>
               )}
             </Formik>

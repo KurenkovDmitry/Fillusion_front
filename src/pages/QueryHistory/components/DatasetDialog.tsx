@@ -72,7 +72,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
   };
 
   useEffect(() => {
-    if (!props.open) return;
+    if (!props.open || props.status === "PENDING") return;
 
     const fetchRequest = async () => {
       setLoading(true);
@@ -139,7 +139,6 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
     setDownloading(true);
 
     try {
-      // Используйте исправленный метод
       const blob = await GenerateService.downloadAgent(selectOSValue);
 
       // Создаем URL для Blob
@@ -194,9 +193,21 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
       maxWidth="lg"
       fullWidth={props.status !== "PENDING"}
       onClose={() => props.setOpen(false)}
+      disableScrollLock
     >
       <DialogContent
-        style={{ scrollbarWidth: "thin", scrollbarColor: "#c0c0c0ff white" }}
+        sx={{
+          scrollbarWidth: "thin",
+          scrollbarColor: "#c0c0c0ff white",
+          height: loading
+            ? "200px"
+            : props.status === "PENDING"
+            ? "auto"
+            : responseObj?.exportType === "EXPORT_TYPE_DIRECT_DB"
+            ? "810px"
+            : "627px",
+          transition: "height 0.2s ease",
+        }}
       >
         {loading ? (
           <Box
@@ -304,6 +315,9 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
                 border: "1px solid black",
                 "&.MuiPaper-rounded": {
                   borderRadius: "10px",
+                },
+                "&.Mui-expanded": {
+                  margin: 0,
                 },
               }}
             >

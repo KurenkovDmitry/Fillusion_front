@@ -34,7 +34,7 @@ type SelectOutputType =
 
 const SELECT_MODEL_OPTIONS = [
   { value: "deepseek", label: "Deepseek" },
-  { value: "gemini", label: "Gemini" },
+  // { value: "gemini", label: "Gemini" },
 ];
 
 const SELECT_OUTPUT_OPTIONS = [

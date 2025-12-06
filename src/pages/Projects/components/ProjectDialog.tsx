@@ -28,7 +28,6 @@ export const ProjectDialog = (props: ProjectDialogProps) => {
   const [nameError, setNameError] = useState(false);
   const [descriptionError, setDescriptionError] = useState(false);
 
-  // Reset form when dialog opens/closes or project changes
   useEffect(() => {
     if (props.dialogState.open) {
       if (!props.newProject && currentProject) {

@@ -1,12 +1,13 @@
 import { LayoutWithHeader } from "@shared/components/LayoutWithHeader";
 import { QueryButton } from "./components/QueryButton";
-import { useEffect, useLayoutEffect, useState } from "react";
-import { CircularProgress } from "@mui/material";
+import { useLayoutEffect, useState } from "react";
+import { CircularProgress, IconButton } from "@mui/material";
 import { DatasetDialog } from "./components/DatasetDialog";
 import { GenerateService } from "@services/api/GenerateService/GenerateService";
 import { useNavigate, useParams } from "react-router-dom";
 import { Dataset } from "@services/api/GenerateService/GenerateService.types";
 import EmptyIcon from "@assets/emptyIcon.svg?react";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 export const QueryHistory = () => {
   const { projectId } = useParams();
@@ -63,7 +64,12 @@ export const QueryHistory = () => {
           margin: "20px 0",
         }}
       >
-        <h1 style={{ fontSize: "1.5rem" }}>История запросов</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+          <IconButton sx={{ width: "32px", height: "32px" }}>
+            <ArrowBackIcon onClick={handleEditorClick} />
+          </IconButton>
+          <h1 style={{ fontSize: "1.5rem" }}>История запросов</h1>
+        </div>
         <section
           style={{
             display: "flex",

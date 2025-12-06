@@ -125,6 +125,7 @@ export const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
                           variant="outlined"
                           size="small"
                           className={classes.buttonOutlined}
+                          component="span"
                         >
                           Загрузить
                         </Button>

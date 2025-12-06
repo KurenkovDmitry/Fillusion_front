@@ -24,6 +24,7 @@ import { getLabelByValue } from "./constants/constants";
 import { PkSettings } from "./PkSettings";
 import { useParams } from "react-router-dom";
 import { SchemaService } from "@services/api";
+import { AnimatePresence, motion } from "framer-motion";
 
 const typeOptions = [
   { value: "text", label: "Text" },
@@ -351,110 +352,115 @@ export const SchemaMaker: React.FC = () => {
         <Droppable droppableId="schemaFields">
           {(provided) => (
             <div {...provided.droppableProps} ref={provided.innerRef}>
-              {schema.map((field, idx) => (
-                <Draggable key={field.id} draggableId={field.id} index={idx}>
-                  {(provided) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "30px 50px 1fr 1fr 90px 40px",
-                        alignItems: "center",
-                        gap: "12px",
-                        marginBottom: "8px",
-                        ...provided.draggableProps.style,
-                      }}
-                    >
-                      <div
-                        {...provided.dragHandleProps}
-                        style={{ display: "flex", justifyContent: "center" }}
-                      >
-                        <DragIndicatorIcon
-                          sx={{ color: "#888", cursor: "grab" }}
-                        />
-                      </div>
-
-                      <PkSettings
-                        field={field}
-                        tableId={currentTable.id}
-                        projectId={projectId!}
-                      />
-
-                      <InputField
-                        name={`${idx}`}
-                        value={localFieldNames[field.id] || field.name}
-                        placeholder="Введите название поля"
-                        onChange={(e) =>
-                          handleFieldNameChange(field.id, e.target.value)
-                        }
-                        onBlur={() => handleFieldNameBlur(field.id)}
-                        useFormik={false}
-                      />
-
-                      <Tooltip
-                        title={
-                          field.isForeignKey
-                            ? "Нельзя менять тип внешнего ключа"
-                            : field.viaFaker
-                            ? "Тип фейкера можно поменять только в настройках"
-                            : ""
-                        }
-                        enterDelay={500}
-                        arrow
-                        slotProps={{
-                          popper: {
-                            sx: {
-                              [`&.${tooltipClasses.popper}[data-popper-placement*="bottom"] .${tooltipClasses.tooltip}`]:
-                                {
-                                  marginTop: "5px",
-                                },
-                            },
-                          },
+              <AnimatePresence>
+                {schema.map((field, idx) => (
+                  <Draggable key={field.id} draggableId={field.id} index={idx}>
+                    {(provided) => (
+                      <motion.div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "30px 50px 1fr 1fr 90px 40px",
+                          alignItems: "center",
+                          gap: "12px",
+                          marginBottom: "8px",
+                          ...provided.draggableProps.style,
                         }}
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                       >
-                        <div>
-                          <SelectField
-                            value={localFieldTypes[field.id] || field.type}
-                            options={
-                              field.isPrimaryKey ? PKTypeOptions : typeOptions
-                            }
-                            onChange={(val: any) =>
-                              handleFieldTypeChange(field.id, val as string)
-                            }
-                            displayLabel={
-                              field.viaFaker
-                                ? getLabelByValue(field.fakerType!) +
-                                  " (" +
-                                  field.locale?.slice(7) +
-                                  ")"
-                                : undefined
-                            }
-                            disabled={getSelectDisabledState(field)}
+                        <div
+                          {...provided.dragHandleProps}
+                          style={{ display: "flex", justifyContent: "center" }}
+                        >
+                          <DragIndicatorIcon
+                            sx={{ color: "#888", cursor: "grab" }}
                           />
                         </div>
-                      </Tooltip>
-                      <div
-                        style={{ display: "flex", justifyContent: "center" }}
-                      >
-                        <AdditionalSettings
-                          fieldId={field.id}
+
+                        <PkSettings
+                          field={field}
+                          tableId={currentTable.id}
                           projectId={projectId!}
                         />
-                      </div>
 
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRemoveField(idx)}
-                        sx={{ color: "#d32f2f" }}
-                        aria-label="Удалить поле"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </div>
-                  )}
-                </Draggable>
-              ))}
+                        <InputField
+                          name={`${idx}`}
+                          value={localFieldNames[field.id] || field.name}
+                          placeholder="Введите название поля"
+                          onChange={(e) =>
+                            handleFieldNameChange(field.id, e.target.value)
+                          }
+                          onBlur={() => handleFieldNameBlur(field.id)}
+                          useFormik={false}
+                        />
+
+                        <Tooltip
+                          title={
+                            field.isForeignKey
+                              ? "Нельзя менять тип внешнего ключа"
+                              : field.viaFaker
+                              ? "Тип фейкера можно поменять только в настройках"
+                              : ""
+                          }
+                          enterDelay={500}
+                          arrow
+                          slotProps={{
+                            popper: {
+                              sx: {
+                                [`&.${tooltipClasses.popper}[data-popper-placement*="bottom"] .${tooltipClasses.tooltip}`]:
+                                  {
+                                    marginTop: "5px",
+                                  },
+                              },
+                            },
+                          }}
+                        >
+                          <div>
+                            <SelectField
+                              value={localFieldTypes[field.id] || field.type}
+                              options={
+                                field.isPrimaryKey ? PKTypeOptions : typeOptions
+                              }
+                              onChange={(val: any) =>
+                                handleFieldTypeChange(field.id, val as string)
+                              }
+                              displayLabel={
+                                field.viaFaker
+                                  ? getLabelByValue(field.fakerType!) +
+                                    " (" +
+                                    field.locale?.slice(7) +
+                                    ")"
+                                  : undefined
+                              }
+                              disabled={getSelectDisabledState(field)}
+                            />
+                          </div>
+                        </Tooltip>
+                        <div
+                          style={{ display: "flex", justifyContent: "center" }}
+                        >
+                          <AdditionalSettings
+                            fieldId={field.id}
+                            projectId={projectId!}
+                          />
+                        </div>
+
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRemoveField(idx)}
+                          sx={{ color: "#d32f2f" }}
+                          aria-label="Удалить поле"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </motion.div>
+                    )}
+                  </Draggable>
+                ))}
+              </AnimatePresence>
               {provided.placeholder}
             </div>
           )}
