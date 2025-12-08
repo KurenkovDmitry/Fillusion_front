@@ -77,7 +77,6 @@ export const ProjectDialog = (props: ProjectDialogProps) => {
   };
 
   const handleSubmit = async () => {
-    // Validate both fields before submitting
     if (!isNameValid) setNameError(true);
     if (!isDescriptionValid) setDescriptionError(true);
 

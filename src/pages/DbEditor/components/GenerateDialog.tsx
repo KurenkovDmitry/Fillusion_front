@@ -4,18 +4,16 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Tooltip,
 } from "@mui/material";
 import { useParams } from "react-router-dom";
 import useSchemaStore from "@store/schemaStore";
 import useGenerateStore from "@store/generateStore";
 import { GenerateService } from "@services/api/GenerateService/GenerateService";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type {
   GenerateRequest,
   ColumnSchema,
 } from "@services/api/GenerateService/GenerateService.types";
-import { SliderWithInput } from "../../Generate/components/SliderWithinput";
 import { SelectField } from "../../Generate/components/SelectField";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { AnimatePresence, motion } from "framer-motion";
@@ -23,6 +21,7 @@ import { AnimatePresence, motion } from "framer-motion";
 interface GenerateDialogProps {
   open: boolean;
   onClose: () => void;
+  onSucces: () => void;
 }
 
 type SelectModelType = "deepseek" | "gemini";
@@ -60,10 +59,6 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
   const relations = useSchemaStore((state) => state.relations);
   const getAllTables = useSchemaStore((state) => state.getAllTables);
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
-  // 1. Подписываемся сразу на результат вычисления (boolean)
-  const isFakerOnly = useSchemaStore((state) =>
-    state.isEveryFieldGeneratedWithFaker()
-  );
 
   const handleGenerate = async () => {
     if (!projectId) return;
@@ -151,7 +146,7 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
       props.onClose();
 
       // Можно показать уведомление об успехе
-      // showNotification("Генерация данных запущена!");
+      props.onSucces();
     } catch (err) {
       console.error("Generation failed:", err);
       setError(
@@ -212,16 +207,14 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
           <p style={{ margin: 0, fontSize: "14px" }}>
             Завершите настройку и начните генерацию
           </p>
-          {!isFakerOnly && (
-            <SelectField
-              label="Модель для генерации"
-              value={selectModelValue}
-              options={SELECT_MODEL_OPTIONS}
-              onChange={(val: string) => {
-                setSelectModelValue(val as SelectModelType);
-              }}
-            />
-          )}
+          <SelectField
+            label="Модель для генерации"
+            value={selectModelValue}
+            options={SELECT_MODEL_OPTIONS}
+            onChange={(val: string) => {
+              setSelectModelValue(val as SelectModelType);
+            }}
+          />
           <SelectField
             label="Тип выходных данных"
             value={selectOutputValue}

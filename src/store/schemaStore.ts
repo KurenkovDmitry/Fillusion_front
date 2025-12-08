@@ -146,9 +146,6 @@ interface SchemaState {
     referencedFieldId: string;
   } | null;
   isFieldForeignKey: (tableId: string, fieldId: string) => boolean;
-
-  isEveryFieldGeneratedWithFaker: () => boolean;
-  isTableGeneratedWithFaker: (tableId: string) => boolean;
 }
 
 // Маппер из API формата в формат store
@@ -546,7 +543,6 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
 
       const { [relationId]: removed, ...restRelations } = state.relations;
 
-      // ✅ Сбрасываем FK поле в обычное
       const updatedTables = { ...state.tables };
 
       if (updatedTables[relation.toTable]) {
@@ -631,21 +627,6 @@ const useSchemaStore = create<SchemaState>((set, get) => ({
     const state = get();
     return Object.values(state.relations).some(
       (relation) => relation.toTable === tableId && relation.toField === fieldId
-    );
-  },
-
-  isEveryFieldGeneratedWithFaker: () => {
-    const tables = get().tables;
-
-    return Object.values(tables).every((table) =>
-      table.fields.every((f) => f.viaFaker || f.isPrimaryKey || f.isForeignKey)
-    );
-  },
-
-  isTableGeneratedWithFaker: (tableId: string) => {
-    const table = get().tables[tableId];
-    return table.fields.every(
-      (f) => f.viaFaker || f.isPrimaryKey || f.isForeignKey
     );
   },
 }));

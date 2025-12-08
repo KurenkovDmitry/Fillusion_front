@@ -178,18 +178,15 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
             updateField(relation.toTable, relation.toField, updates);
           });
         }
+        saveTableToServer(findTableByFieldId(props.fieldId)!.id);
       } else {
-        removeFieldProperties(currentTableId, fieldId, [
-          "unique",
-          "autoIncrement",
-        ]);
+        removeFieldProperties(currentTableId, fieldId, ["autoIncrement"]);
         updateField(currentTableId, fieldId, updates);
 
         if (relations) {
           relations.forEach((relation) => {
             // toField - это FK
             removeFieldProperties(relation.toTable, relation.toField, [
-              "unique",
               "autoIncrement",
             ]);
             updateField(relation.toTable, relation.toField, updates);
@@ -199,15 +196,18 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
     },
     [
       currentTableId,
-      fieldId,
       approach,
       checkedUnique,
       checkedAutoincrement,
       fakerType,
       locale,
+      getAllRelations,
+      saveTableToServer,
+      findTableByFieldId,
+      props.fieldId,
+      fieldId,
       removeFieldProperties,
       updateField,
-      getAllRelations,
     ]
   );
 

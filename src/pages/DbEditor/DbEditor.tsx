@@ -656,6 +656,30 @@ const getTableName = () => {
     : `table_${tables.length + 1}`;
 };
 
+const getPluralForm = (
+  count: number,
+  one: string,
+  two: string,
+  five: string
+): string => {
+  const lastDigit = count % 10;
+  const lastTwoDigits = count % 100;
+
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return five;
+  }
+
+  if (lastDigit === 1) {
+    return one;
+  }
+
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return two;
+  }
+
+  return five;
+};
+
 export const DatabaseDiagram: React.FC = () => {
   const { projectId } = useParams();
 
@@ -700,7 +724,11 @@ export const DatabaseDiagram: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [selectedRelation, setSelectedRelation] = useState<string | null>(null);
   const [relationDialogOpen, setRelationDialogOpen] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: "" });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    isError: true,
+  });
 
   const tableLayouts = useMemo(
     () => JSON.parse(tableLayoutsJson),
@@ -830,6 +858,7 @@ export const DatabaseDiagram: React.FC = () => {
         setSnackbar({
           open: true,
           message: "Нельзя провести связь между полями одной таблицы",
+          isError: true,
         });
         return;
       }
@@ -844,6 +873,7 @@ export const DatabaseDiagram: React.FC = () => {
         setSnackbar({
           open: true,
           message: "Нельзя провести связь от первичного ключа",
+          isError: true,
         });
         return;
       }
@@ -853,6 +883,7 @@ export const DatabaseDiagram: React.FC = () => {
         setSnackbar({
           open: true,
           message: "Нельзя провести связь к внешнему ключу",
+          isError: true,
         });
         return;
       }
@@ -862,6 +893,7 @@ export const DatabaseDiagram: React.FC = () => {
         setSnackbar({
           open: true,
           message: "Внешний ключ не может ссылаться на несколько полей",
+          isError: true,
         });
         return;
       }
@@ -948,6 +980,7 @@ export const DatabaseDiagram: React.FC = () => {
           setSnackbar({
             open: true,
             message: "Не удалось создать связь",
+            isError: true,
           });
           return;
         } finally {
@@ -958,6 +991,7 @@ export const DatabaseDiagram: React.FC = () => {
         setSnackbar({
           open: true,
           message: "Произошла ошибка при создании связи",
+          isError: true,
         });
       }
     },
@@ -1041,30 +1075,6 @@ export const DatabaseDiagram: React.FC = () => {
         console.log("error");
       }
     }
-  };
-
-  const getPluralForm = (
-    count: number,
-    one: string,
-    two: string,
-    five: string
-  ): string => {
-    const lastDigit = count % 10;
-    const lastTwoDigits = count % 100;
-
-    if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
-      return five;
-    }
-
-    if (lastDigit === 1) {
-      return one;
-    }
-
-    if (lastDigit >= 2 && lastDigit <= 4) {
-      return two;
-    }
-
-    return five;
   };
 
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -1247,7 +1257,6 @@ export const DatabaseDiagram: React.FC = () => {
                       setCurrentTable(t.id);
                       setOpen(true);
                     }}
-                    // sx={{ border: "1px solid white" }}
                   >
                     <Tooltip title="Настройки генерации таблицы" arrow>
                       <CodeIcon sx={{ color: "#fff" }} />
@@ -1343,6 +1352,13 @@ export const DatabaseDiagram: React.FC = () => {
       <GenerateDialog
         open={generateConformationOpen}
         onClose={() => setGenerateConformationOpen(false)}
+        onSucces={() =>
+          setSnackbar({
+            open: true,
+            message: "Запрос на генерацию отправлен",
+            isError: false,
+          })
+        }
       />
 
       {deleteDialog.tableId && (
@@ -1370,12 +1386,14 @@ export const DatabaseDiagram: React.FC = () => {
       <Snackbar
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         open={snackbar.open}
-        message={"× " + snackbar.message}
+        message={(snackbar.isError ? "× " : "🗸 ") + snackbar.message}
         autoHideDuration={6000}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
         sx={{
           "& .MuiSnackbarContent-root": {
-            backgroundColor: "#940d0dff",
+            backgroundColor: snackbar.isError
+              ? "#940d0dff"
+              : "rgba(54, 244, 101, 0.9)",
             color: "white",
             fontSize: "16px",
             borderRadius: "12px",

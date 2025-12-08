@@ -2,10 +2,12 @@ import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined
 import { useStyles } from "./ProjectCard.styles";
 import { IconButton, Tooltip } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate } from "react-router-dom";
 
 interface ProjectCardProps {
   setOpenFromCard: (projectId: string, open: boolean) => void;
+  setDeleteOpenFromCard: (projectId: string, open: boolean) => void;
   id: string;
   title: string;
   description: string;
@@ -41,6 +43,10 @@ export const ProjectCard = (props: ProjectCardProps) => {
     props.setOpenFromCard(props.id, true);
   };
 
+  const handleDeleteClick = () => {
+    props.setDeleteOpenFromCard(props.id, true);
+  };
+
   return (
     <article className={classes.project__card}>
       <div>
@@ -49,6 +55,11 @@ export const ProjectCard = (props: ProjectCardProps) => {
           <Tooltip title="Редактировать проект" placement="top" arrow>
             <IconButton size="small" onClick={handleSettingsClick}>
               <SettingsIcon sx={{ color: "#888" }} />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Удалить проект" placement="top" arrow>
+            <IconButton size="small" onClick={handleDeleteClick}>
+              <DeleteIcon sx={{ color: "#e00000ff" }} />
             </IconButton>
           </Tooltip>
         </span>

@@ -65,8 +65,11 @@ export const QueryHistory = () => {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <IconButton sx={{ width: "32px", height: "32px" }}>
-            <ArrowBackIcon onClick={handleEditorClick} />
+          <IconButton
+            sx={{ width: "32px", height: "32px" }}
+            onClick={handleEditorClick}
+          >
+            <ArrowBackIcon />
           </IconButton>
           <h1 style={{ fontSize: "1.5rem" }}>История запросов</h1>
         </div>
@@ -83,12 +86,16 @@ export const QueryHistory = () => {
               <QueryButton
                 key={idx}
                 status={val.status}
+                exportType={val.exportType}
                 requsetId={val.requestId}
-                query={
-                  val.tables[0]?.name ?? `Запрос ${val.requestId.slice(6, 10)}`
-                }
+                query={`Таблицы ${val.tableNames.reduce(
+                  (prev, cur, idx, arr) =>
+                    (prev += idx === arr.length - 1 ? `${cur}` : `${cur}, `),
+                  ""
+                )}`}
                 network={val.network}
                 totalRecords={val.tablesCount}
+                createdAt={val.createdAt}
                 last={idx === arr.length - 1}
                 onClick={() => handleOpen(val.requestId, val.status)}
               />

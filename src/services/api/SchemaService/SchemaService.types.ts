@@ -43,7 +43,8 @@ export type meta = {
   selectOutputValue:
     | "EXPORT_TYPE_JSON"
     | "EXPORT_TYPE_SNAPSHOT"
-    | "EXPORT_TYPE_DIRECT_DB";
+    | "EXPORT_TYPE_DIRECT_DB"
+    | "EXPORT_TYPE_EXCEL";
 };
 
 export type ApiTable = {

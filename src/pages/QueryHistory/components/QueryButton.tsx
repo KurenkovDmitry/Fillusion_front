@@ -3,28 +3,63 @@ import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import UpdateIcon from "@mui/icons-material/Update";
 import DoneIcon from "@mui/icons-material/Done";
 
+type ExportType =
+  | "EXPORT_TYPE_JSON"
+  | "EXPORT_TYPE_SNAPSHOT"
+  | "EXPORT_TYPE_DIRECT_DB"
+  | "EXPORT_TYPE_EXCEL"
+  | "EXPORT_TYPE_UNSPECIFIED";
+
+type Status = "PENDING" | "SUCCESS";
+
 interface QueryButtonProps {
   requsetId: string;
   query: string;
   network: string;
   totalRecords: string;
   last?: boolean;
-  status: string;
+  status: Status;
+  exportType: ExportType;
+  createdAt: string;
   onClick?: () => void;
 }
 
+const sx = { width: "18px" };
+
+const getStatusLabel = (status: Status) =>
+  status === "PENDING"
+    ? "В процессе генерации"
+    : status === "SUCCESS"
+    ? "Генерация завершена"
+    : status;
+
+const getExportTypeLabel = (exportType: ExportType) =>
+  exportType === "EXPORT_TYPE_DIRECT_DB"
+    ? "Прямое подключение"
+    : exportType === "EXPORT_TYPE_EXCEL"
+    ? "Excel"
+    : exportType === "EXPORT_TYPE_JSON"
+    ? "JSON"
+    : exportType === "EXPORT_TYPE_SNAPSHOT"
+    ? "Снапшот БД"
+    : exportType;
+
+const getStatusIcon = (status: Status) =>
+  status === "PENDING" ? <UpdateIcon sx={sx} /> : <DoneIcon sx={sx} />;
+
+const formatDate = (date: string) => {
+  // формат 2025-11-29T21:50:36.091372Z
+  return "Создан " + date.slice(0, 10).split("-").reverse().join(".");
+};
+
 export const QueryButton = (props: QueryButtonProps) => {
-  const statusLabel =
-    props.status === "PENDING"
-      ? "В процессе генерации"
-      : props.status === "SUCCESS"
-      ? "Генерация завершена"
-      : props.status;
+  const statusLabel = getStatusLabel(props.status);
 
-  const sx = { width: "18px" };
+  const exportTypeLabel = getExportTypeLabel(props.exportType);
 
-  const statusIcon =
-    props.status === "PENDING" ? <UpdateIcon sx={sx} /> : <DoneIcon sx={sx} />;
+  const statusIcon = getStatusIcon(props.status);
+
+  const dateLabel = formatDate(props.createdAt);
 
   return (
     <article
@@ -61,8 +96,27 @@ export const QueryButton = (props: QueryButtonProps) => {
               style={{ height: "26px", borderRadius: "8px" }}
             />
             <Chip
+              label={dateLabel}
+              sx={{
+                height: "26px",
+                borderRadius: "8px",
+                border: "1px solid rgba(121, 121, 121, 1)",
+                backgroundColor: "transparent",
+              }}
+            />
+            <Chip
               label={"Количество таблиц: " + props.totalRecords}
-              style={{
+              sx={{
+                height: "26px",
+                borderRadius: "8px",
+                border: "1px solid rgba(121, 121, 121, 1)",
+                backgroundColor: "transparent",
+              }}
+            />
+
+            <Chip
+              label={exportTypeLabel}
+              sx={{
                 height: "26px",
                 borderRadius: "8px",
                 border: "1px solid rgba(121, 121, 121, 1)",

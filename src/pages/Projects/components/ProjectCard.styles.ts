@@ -17,8 +17,9 @@ export const useStyles = makeStyles()((_theme) => ({
   },
 
   card__headerSection: {
-    display: "flex",
-    justifyContent: "space-between",
+    display: "grid",
+    gridTemplateColumns: "1fr auto auto",
+    gap: "10px",
     alignItems: "center",
   },
 

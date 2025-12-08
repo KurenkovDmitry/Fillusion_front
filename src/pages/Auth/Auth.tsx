@@ -183,6 +183,7 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
 
           {activeTab === "login" ? (
             <Formik
+              key="login"
               initialValues={{ email: "", password: "" }}
               validationSchema={loginSchema}
               onSubmit={handleLogin}
@@ -268,6 +269,7 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
             </Formik>
           ) : activeTab === "signup" ? (
             <Formik
+              key="signup"
               initialValues={{
                 name: "",
                 email: "",
@@ -386,6 +388,7 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
             </div>
           ) : activeTab === "forgotPassword" ? (
             <Formik
+              key="forgotPassword"
               initialValues={{ email: "" }}
               validationSchema={forgotPasswordSchema}
               onSubmit={handleForgotPassword}

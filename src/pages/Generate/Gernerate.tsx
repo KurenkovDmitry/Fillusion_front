@@ -42,13 +42,10 @@ const GenerateFormContent = ({
 }) => {
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
   const settings = getTableSettings(tableId);
-  const isFakerOnly = useSchemaStore((state) =>
-    state.isTableGeneratedWithFaker(tableId)
-  );
   const [name, setName] = useState(settings.name ?? "");
   const [query, setQuery] = useState(settings.query ?? "");
   const [totalRecords, setTotalRecords] = useState(
-    settings.totalRecords ? settings.totalRecords : isFakerOnly ? 50 : 10
+    settings.totalRecords ? settings.totalRecords : 50
   );
   const [examples, setExamples] = useState(settings.examples ?? "");
 
@@ -137,12 +134,6 @@ const GenerateFormContent = ({
     });
   };
 
-  useEffect(() => {
-    if (!isFakerOnly && totalRecords > 10) {
-      handleTotalRecordsChange(10);
-    }
-  }, [isFakerOnly, totalRecords]);
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <InputField
@@ -167,7 +158,7 @@ const GenerateFormContent = ({
         label="Количество строк"
         value={totalRecords}
         min={1}
-        max={isFakerOnly ? 100 : 10}
+        max={100}
         onChange={(value) => {
           handleTotalRecordsChange(value);
         }}
@@ -191,8 +182,8 @@ const GenerateFormContent = ({
         </div>
       )}
 
-      <Box width="100%" display="flex" justifyContent="space-between">
-        <Button
+      <Box width="100%" display="flex" justifyContent="flex-end">
+        {/* <Button
           onClick={onClose}
           sx={{
             border: "1px solid #4f8cff",
@@ -205,11 +196,12 @@ const GenerateFormContent = ({
           }}
         >
           Отмена
-        </Button>
+        </Button> */}
         <Button
           onClick={() => {
             saveToServer();
             setSnackbar({ open: true, message: "🗸 Изменения сохранены" });
+            onClose();
           }}
           sx={{
             border: "1px solid #4f8cff",

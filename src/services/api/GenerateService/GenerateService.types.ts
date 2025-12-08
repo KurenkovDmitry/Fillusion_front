@@ -8,12 +8,18 @@ export type TableData = {
 
 export type Dataset = {
   requestId: string;
+  createdAt: string;
   projectId: string;
   network: string;
-  status: string;
+  status: "PENDING" | "SUCCESS";
   tablesCount: string;
-  tables: TableData[];
-  exportType: "EXPORT_TYPE_UNSPECIFIED" | string;
+  tableNames: string[];
+  exportType:
+    | "EXPORT_TYPE_UNSPECIFIED"
+    | "EXPORT_TYPE_JSON"
+    | "EXPORT_TYPE_SNAPSHOT"
+    | "EXPORT_TYPE_DIRECT_DB"
+    | "EXPORT_TYPE_EXCEL";
 };
 
 export type DatasetsResponse = {
