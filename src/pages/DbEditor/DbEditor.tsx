@@ -965,6 +965,7 @@ export const DatabaseDiagram: React.FC = () => {
                       type: toFieldNewType,
                       isPrimaryKey: false,
                       isForeignKey: true,
+                      viaFaker: false,
                     }
                   : f
               ),
