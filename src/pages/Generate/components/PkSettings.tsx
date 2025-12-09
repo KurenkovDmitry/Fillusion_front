@@ -108,6 +108,7 @@ export const PkSettings = (props: PkSettingsProps) => {
         isPrimaryKey: true,
         isForeignKey: false,
         viaFaker: false,
+        unique: true,
         type: "int",
       });
 

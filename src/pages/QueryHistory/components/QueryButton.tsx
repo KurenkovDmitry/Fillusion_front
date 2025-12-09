@@ -52,6 +52,28 @@ const formatDate = (date: string) => {
   return "Создан " + date.slice(0, 10).split("-").reverse().join(".");
 };
 
+function beautifyUpdatedAt(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 1) return "только что";
+  if (diffMins < 60) return `${diffMins} мин назад`;
+
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} ч назад`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays} дн назад`;
+
+  return date.toLocaleString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export const QueryButton = (props: QueryButtonProps) => {
   const statusLabel = getStatusLabel(props.status);
 
@@ -59,7 +81,7 @@ export const QueryButton = (props: QueryButtonProps) => {
 
   const statusIcon = getStatusIcon(props.status);
 
-  const dateLabel = formatDate(props.createdAt);
+  const dateLabel = beautifyUpdatedAt(props.createdAt);
 
   return (
     <article
@@ -95,15 +117,7 @@ export const QueryButton = (props: QueryButtonProps) => {
               label={props.network}
               style={{ height: "26px", borderRadius: "8px" }}
             />
-            <Chip
-              label={dateLabel}
-              sx={{
-                height: "26px",
-                borderRadius: "8px",
-                border: "1px solid rgba(121, 121, 121, 1)",
-                backgroundColor: "transparent",
-              }}
-            />
+
             <Chip
               label={"Количество таблиц: " + props.totalRecords}
               sx={{
@@ -113,7 +127,15 @@ export const QueryButton = (props: QueryButtonProps) => {
                 backgroundColor: "transparent",
               }}
             />
-
+            <Chip
+              label={dateLabel}
+              sx={{
+                height: "26px",
+                borderRadius: "8px",
+                border: "1px solid rgba(121, 121, 121, 1)",
+                backgroundColor: "transparent",
+              }}
+            />
             <Chip
               label={exportTypeLabel}
               sx={{

@@ -14,30 +14,31 @@ interface ProjectCardProps {
   updatedAt: string;
 }
 
+function beautifyUpdatedAt(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 1) return "только что";
+  if (diffMins < 60) return `${diffMins} мин назад`;
+
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} ч назад`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays} дн назад`;
+
+  return date.toLocaleString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export const ProjectCard = (props: ProjectCardProps) => {
   const { classes } = useStyles();
   const navigate = useNavigate();
-  function beautifyUpdatedAt(dateString: string): string {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-
-    if (diffMins < 1) return "только что";
-    if (diffMins < 60) return `${diffMins} мин назад`;
-
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours} ч назад`;
-
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 7) return `${diffDays} дн назад`;
-
-    return date.toLocaleString("ru-RU", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  }
 
   const handleSettingsClick = () => {
     props.setOpenFromCard(props.id, true);

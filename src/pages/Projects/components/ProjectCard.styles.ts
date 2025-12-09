@@ -5,6 +5,7 @@ export const useStyles = makeStyles()((_theme) => ({
     display: "flex",
     flexDirection: "column",
     width: "100%",
+    height: "100%",
     borderRadius: "8px",
     boxShadow: "0 5px 7px rgba(0,0,0,0.1)",
     transition: "box-shadow 0.3s ease",

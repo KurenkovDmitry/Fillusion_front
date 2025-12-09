@@ -1,6 +1,6 @@
 import { LayoutWithHeader } from "@shared/components/LayoutWithHeader";
 import { useNavigate } from "react-router-dom";
-import { Button, Chip } from "@mui/material";
+import { Button, Chip, Fab, Fade, useScrollTrigger } from "@mui/material";
 import { useAuth } from "@shared/hooks/useAuth";
 import SplitText from "./components/SplitText";
 import { useState } from "react";
@@ -17,9 +17,39 @@ import EmailIcon from "@assets/email.svg?react";
 import TgIcon from "@assets/tg.svg?react";
 import VkIcon from "@assets/vk.svg?react";
 import IosShareIcon from "@mui/icons-material/IosShare";
+import NorthIcon from "@mui/icons-material/North";
 import { motion } from "framer-motion";
 import { FeatureCard } from "./components/FeatureCard";
 import { CodeBox } from "./components/CodeBox";
+
+const animationProps = {
+  initial: { opacity: 0, y: 50 }, // Начальное состояние
+  whileInView: { opacity: 1, y: 0 }, // Когда элемент появился на экране
+  viewport: { once: true }, // Анимировать только один раз
+  transition: { duration: 0.5 },
+};
+
+const codeExample = `{
+  "datasets": [
+    {
+      "records": [
+        {
+          "id": "5796835f-af62-4adc-acad-baf84ef787d8",
+          "rating": 10,
+          "review": "Отличная лампа! Яркий регулируемый свет, стильный дизайн. Рекомендую!",
+          "user_id": "3b5b7d6b-fc05-4bc9-8515-edd52785c89c"
+        },
+        {
+          "id": "17bace43-77a2-4728-9093-7912cc2f279e",
+          "rating": 9,
+          "review": "Очень доволен: удобная настройка, комфортный для глаз свет. Лучшая покупка!",
+          "user_id": "83c679dc-8c08-4fd3-be67-6799dfa0775a"
+        }
+      ],
+      "table_name": "reviews"
+    }
+  ]
+}`;
 
 export const NonModalGenerate = () => {
   const { user } = useAuth();
@@ -33,13 +63,6 @@ export const NonModalGenerate = () => {
       return;
     }
     navigate("/projects");
-  };
-
-  const animationProps = {
-    initial: { opacity: 0, y: 50 }, // Начальное состояние
-    whileInView: { opacity: 1, y: 0 }, // Когда элемент появился на экране
-    viewport: { once: true }, // Анимировать только один раз
-    transition: { duration: 0.5 },
   };
 
   const features = [
@@ -116,30 +139,31 @@ export const NonModalGenerate = () => {
     },
   ];
 
-  const codeExample = `{
-  "datasets": [
-    {
-      "records": [
-        {
-          "id": "5796835f-af62-4adc-acad-baf84ef787d8",
-          "rating": 10,
-          "review": "Отличная лампа! Яркий регулируемый свет, стильный дизайн. Рекомендую!",
-          "user_id": "3b5b7d6b-fc05-4bc9-8515-edd52785c89c"
-        },
-        {
-          "id": "17bace43-77a2-4728-9093-7912cc2f279e",
-          "rating": 9,
-          "review": "Очень доволен: удобная настройка, комфортный для глаз свет. Лучшая покупка!",
-          "user_id": "83c679dc-8c08-4fd3-be67-6799dfa0775a"
-        }
-      ],
-      "table_name": "reviews"
-    }
-  ]
-}`;
+  const trigger = useScrollTrigger({
+    disableHysteresis: true,
+    threshold: 200,
+  });
+
+  const handleScrollClick = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <LayoutWithHeader activeLogin={isLoginOpen} setActiveLogin={setIsLoginOpen}>
+      <Fade in={trigger}>
+        <div
+          style={{
+            position: "fixed",
+            bottom: "60px",
+            right: "40px",
+            zIndex: 1000,
+          }}
+        >
+          <Fab size="medium" onClick={handleScrollClick}>
+            <NorthIcon />
+          </Fab>
+        </div>
+      </Fade>
       <div className={classes.main}>
         <section className={classes.main__container}>
           <div className={classes.main__content}>

@@ -7,6 +7,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  DialogTitle,
 } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import { CopyButton } from "../../Generate/components/CopyButton";
@@ -199,13 +200,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
         sx={{
           scrollbarWidth: "thin",
           scrollbarColor: "#c0c0c0ff white",
-          height: loading
-            ? "200px"
-            : props.status === "PENDING"
-            ? "auto"
-            : responseObj?.exportType === "EXPORT_TYPE_DIRECT_DB"
-            ? "810px"
-            : "627px",
+          height: loading ? "200px" : "auto",
           transition: "height 0.2s ease",
         }}
       >
@@ -232,6 +227,11 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
           </div>
         ) : responseObj?.exportType !== "EXPORT_TYPE_DIRECT_DB" ? (
           <>
+            <DialogTitle
+              sx={{ padding: 0, paddingBottom: "10px", fontSize: "16px" }}
+            >
+              Результат генерации
+            </DialogTitle>
             <Box
               sx={{
                 fontFamily: "monospace",
@@ -241,7 +241,6 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
                 scrollbarWidth: "thin",
               }}
             >
-              <h3>Результат генерации</h3>
               {error ? (
                 <div style={{ color: "#d32f2f", padding: "12px" }}>{error}</div>
               ) : responseJson ? (

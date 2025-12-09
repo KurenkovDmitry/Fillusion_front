@@ -904,8 +904,9 @@ export const DatabaseDiagram: React.FC = () => {
             ? toField.type
             : "int";
         const toFieldUpdates = {
-          isPrimaryKey: true,
           isForeignKey: false,
+          isPrimaryKey: true,
+          unique: true,
           viaFaker: false, // убираем фейкер
           type: toFieldNewType, // выставляем правильный тип
         };
@@ -923,11 +924,14 @@ export const DatabaseDiagram: React.FC = () => {
         updateField(params.source, source.fieldId, sourceUpdate);
 
         const newRelation = {
-          fromTable: params.target, // Меняем местами: связь идёт от PK
+          fromTable: params.target, // идёт от unique
           toTable: params.source, // к FK
           fromField: target.fieldId,
           toField: source.fieldId,
-          type: "one-to-many" as const,
+          type:
+            fromField.unique && toField.unique
+              ? ("one-to-one" as const)
+              : ("one-to-many" as const),
           fromHandle: target.direction as "left" | "right",
           toHandle: source.direction as "left" | "right",
         };
