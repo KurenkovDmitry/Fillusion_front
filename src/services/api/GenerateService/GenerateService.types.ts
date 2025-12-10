@@ -11,7 +11,7 @@ export type Dataset = {
   createdAt: string;
   projectId: string;
   network: string;
-  status: "PENDING" | "SUCCESS";
+  status: "PENDING" | "SUCCESS" | "ERROR";
   tablesCount: string;
   tableNames: string[];
   exportType:

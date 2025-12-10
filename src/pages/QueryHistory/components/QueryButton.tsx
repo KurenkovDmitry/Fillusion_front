@@ -2,6 +2,7 @@ import { Chip } from "@mui/material";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import UpdateIcon from "@mui/icons-material/Update";
 import DoneIcon from "@mui/icons-material/Done";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 
 type ExportType =
   | "EXPORT_TYPE_JSON"
@@ -10,7 +11,7 @@ type ExportType =
   | "EXPORT_TYPE_EXCEL"
   | "EXPORT_TYPE_UNSPECIFIED";
 
-type Status = "PENDING" | "SUCCESS";
+type Status = "PENDING" | "SUCCESS" | "ERROR";
 
 interface QueryButtonProps {
   requsetId: string;
@@ -31,6 +32,8 @@ const getStatusLabel = (status: Status) =>
     ? "В процессе генерации"
     : status === "SUCCESS"
     ? "Генерация завершена"
+    : status === "ERROR"
+    ? "Ошибка генерации"
     : status;
 
 const getExportTypeLabel = (exportType: ExportType) =>
@@ -45,7 +48,13 @@ const getExportTypeLabel = (exportType: ExportType) =>
     : exportType;
 
 const getStatusIcon = (status: Status) =>
-  status === "PENDING" ? <UpdateIcon sx={sx} /> : <DoneIcon sx={sx} />;
+  status === "PENDING" ? (
+    <UpdateIcon sx={sx} />
+  ) : status === "ERROR" ? (
+    <ErrorOutlineIcon sx={sx} />
+  ) : (
+    <DoneIcon sx={sx} />
+  );
 
 const formatDate = (date: string) => {
   // формат 2025-11-29T21:50:36.091372Z
@@ -109,7 +118,11 @@ export const QueryButton = (props: QueryButtonProps) => {
           <div style={{ width: "100%", display: "flex", gap: "12px" }}>
             <Chip
               label={statusLabel}
-              style={{ height: "26px", borderRadius: "8px" }}
+              style={{
+                height: "26px",
+                borderRadius: "8px",
+                border: props.status === "ERROR" ? "1px solid red" : "unset",
+              }}
               icon={statusIcon}
               sx={{ minWidth: "183px" }}
             />

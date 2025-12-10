@@ -88,7 +88,9 @@ export const QueryHistory = () => {
                 status={val.status}
                 exportType={val.exportType}
                 requsetId={val.requestId}
-                query={`Таблицы ${val.tableNames.reduce(
+                query={`Таблиц${
+                  val.tableNames.length === 1 ? "а" : "ы"
+                } ${val.tableNames.reduce(
                   (prev, cur, idx, arr) =>
                     (prev += idx === arr.length - 1 ? `${cur}` : `${cur}, `),
                   ""

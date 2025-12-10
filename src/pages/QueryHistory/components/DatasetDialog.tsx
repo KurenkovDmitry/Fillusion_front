@@ -20,6 +20,7 @@ import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { DatasetsRequestResponse } from "@services/api/GenerateService/GenerateService.types";
 import { SelectField } from "../../Generate/components/SelectField";
 import { InputField } from "../../Generate/components/InputField";
+import { useNavigate } from "react-router-dom";
 
 interface DatasetDialogProps {
   open: boolean;
@@ -68,19 +69,21 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
     }
   );
 
+  const navigate = useNavigate();
+
   const handleInput = (value: string, type: any) => {
     setConnectionOptions((prev) => ({ ...prev, [type]: value }));
   };
 
   useEffect(() => {
-    if (!props.open || props.status === "PENDING") return;
+    if (!props.open || props.status === "PENDING" || props.status === "ERROR")
+      return;
 
     const fetchRequest = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        // Используем GenerateService вместо прямого fetch
         const data = await GenerateService.getDataset(
           props.requestId,
           props.projectId
@@ -191,7 +194,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
   return (
     <Dialog
       open={props.open}
-      maxWidth="lg"
+      maxWidth={props.status === "ERROR" ? "md" : "lg"}
       fullWidth={props.status !== "PENDING"}
       onClose={() => props.setOpen(false)}
       disableScrollLock
@@ -224,6 +227,35 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
           >
             <h2 style={{ marginTop: 0 }}>Генерация еще не завершилась</h2>
             <PendingActionsIcon sx={{ width: "100px", height: "100px" }} />
+          </div>
+        ) : props.status === "ERROR" ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              padding: "10px 20px",
+            }}
+          >
+            <h2 style={{ marginTop: 0 }}>Произошла ошибка при генерации</h2>
+            <span>
+              Во время генерации произошла ошибка. Попробуйте повторить запрос
+              позже
+            </span>
+            <Button
+              variant="contained"
+              sx={{
+                width: "fit-content",
+                marginTop: "20px",
+                height: "40px",
+                backgroundColor: "black",
+                "&:hover": {
+                  backgroundColor: "#292929ff",
+                },
+              }}
+              onClick={() => navigate(`/projects/${props.projectId}`)}
+            >
+              Вернуться к реадктору
+            </Button>
           </div>
         ) : responseObj?.exportType !== "EXPORT_TYPE_DIRECT_DB" ? (
           <>

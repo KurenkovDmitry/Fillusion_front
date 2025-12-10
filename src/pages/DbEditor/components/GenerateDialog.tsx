@@ -24,7 +24,7 @@ interface GenerateDialogProps {
   onSucces: () => void;
 }
 
-type SelectModelType = "deepseek" | "gemini";
+type SelectModelType = "deepseek" | "gemini" | "local_qwen";
 type SelectOutputType =
   | "EXPORT_TYPE_SNAPSHOT"
   | "EXPORT_TYPE_JSON"
@@ -32,7 +32,8 @@ type SelectOutputType =
   | "EXPORT_TYPE_DIRECT_DB";
 
 const SELECT_MODEL_OPTIONS = [
-  { value: "deepseek", label: "Deepseek" },
+  { value: "local_qwen", label: "Qwen" },
+  { value: "deepseek", label: "Deepseek (нестабильна)" },
   // { value: "gemini", label: "Gemini" },
 ];
 
@@ -50,7 +51,7 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
   const [error, setError] = useState<string | null>(null);
 
   const [selectModelValue, setSelectModelValue] =
-    useState<SelectModelType>("deepseek");
+    useState<SelectModelType>("local_qwen");
   const [selectOutputValue, setSelectOutputValue] = useState<SelectOutputType>(
     "EXPORT_TYPE_SNAPSHOT"
   );
