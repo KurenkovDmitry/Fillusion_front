@@ -45,7 +45,7 @@ class ApiClient {
 
     try {
       const response = await fetch(url, { ...config, headers });
-
+      const errorResponseClone = response.clone();
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         if (
@@ -60,9 +60,9 @@ class ApiClient {
             return this.request(endpoint, options, true);
           }
         }
-        throw new Error(
-          errorData.message || `HTTP error status: ${response.status}`
-        );
+
+        const errorText = await errorResponseClone.text();
+        throw new Error(errorText || `HTTP error status: ${response.status}`);
       }
 
       const contentType = response.headers.get("content-type");
