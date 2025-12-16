@@ -25,20 +25,7 @@ import { PkSettings } from "./PkSettings";
 import { useParams } from "react-router-dom";
 import { SchemaService } from "@services/api";
 import { AnimatePresence, motion } from "framer-motion";
-
-const typeOptions = [
-  { value: "text", label: "Text" },
-  { value: "int", label: "Integer" },
-  { value: "bigint", label: "Big Integer" },
-  { value: "float", label: "Float" },
-  { value: "bool", label: "Boolean" },
-  { value: "uuid", label: "UUID" },
-];
-
-const PKTypeOptions = [
-  { value: "int", label: "Integer" },
-  { value: "uuid", label: "UUID" },
-];
+import { typeOptions, PKTypeOptions } from "@shared/constants";
 
 // Утилита debounce для отложенных запросов
 function debounce<T extends (...args: any[]) => any>(
@@ -201,6 +188,7 @@ export const SchemaMaker: React.FC = () => {
     const currentTable = getCurrentTable();
     const id = currentTableId;
     if (!currentTable) return;
+    if (currentTable.fields.length >= 20) return;
 
     const newField = {
       name: getFieldName(currentTable),
@@ -369,6 +357,7 @@ export const SchemaMaker: React.FC = () => {
                         }}
                         initial={{ opacity: 0 }}
                         whileInView={{ opacity: 1 }}
+                        viewport={{ once: true }}
                         exit={{ opacity: 0 }}
                       >
                         <div
@@ -451,7 +440,11 @@ export const SchemaMaker: React.FC = () => {
                         <IconButton
                           size="small"
                           onClick={() => handleRemoveField(idx)}
-                          sx={{ color: "#d32f2f" }}
+                          sx={{
+                            color: "#d32f2f",
+                            width: "34px",
+                            height: "34px",
+                          }}
                           aria-label="Удалить поле"
                         >
                           <DeleteIcon />
@@ -471,6 +464,7 @@ export const SchemaMaker: React.FC = () => {
         variant="contained"
         startIcon={<AddIcon />}
         onClick={handleAddField}
+        disabled={currentTable.fields.length >= 20}
         sx={{
           marginTop: "6px",
           background: "#4f8cff",

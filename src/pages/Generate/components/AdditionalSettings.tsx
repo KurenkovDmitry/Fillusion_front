@@ -24,11 +24,35 @@ const lacaleSelectOptions = [
   { value: "LOCALE_EN_US", label: "Английский (EN)" },
 ];
 
+const getUpdateFieldType = (type: string) => {
+  switch (type) {
+    case "COLUMN_TYPE_INT":
+      return "int";
+    case "COLUMN_TYPE_REAL":
+      return "real";
+    case "COLUMN_TYPE_BOOLEAN":
+      return "bool";
+    case "COLUMN_TYPE_UUID":
+      return "uuid";
+    case "COLUMN_TYPE_DATE":
+      return "date";
+    case "COLUMN_TYPE_TIME":
+      return "time";
+    case "COLUMN_TYPE_TIMESTAMP":
+      return "timestamp";
+    case "COLUMN_TYPE_TIMESTAMPTZ":
+      return "timestamptz";
+    default:
+      return "text";
+  }
+};
+
 export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   const { fieldId, projectId } = props;
   const updateField = useSchemaStore((s) => s.updateField);
   const removeFieldProperties = useSchemaStore((s) => s.removeFieldProperties);
   const tables = useSchemaStore((s) => s.tables);
+  const relations = useSchemaStore((s) => s.relations);
   const getAllRelations = useSchemaStore((state) => state.getAllRelations);
 
   const { classes } = useStyles();
@@ -58,29 +82,35 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
     currentField?.autoIncrement ?? false
   );
 
+  const [hasRelation, setHasRelation] = useState(
+    getAllRelations().some((r) => r.fromField === currentField?.id)
+  );
+
   const [tablesToSaveOnClose, setTablesToSaveOnClose] = useState<Set<string>>(
     new Set()
   );
 
-  const saveTableToServer = async (tableId: string) => {
-    if (!projectId) return;
+  const saveTableToServer = useCallback(
+    async (tableId: string) => {
+      if (!projectId) return;
+      const table = useSchemaStore.getState().tables[tableId];
+      if (!table) return;
 
-    const table = useSchemaStore.getState().tables[tableId];
-    if (!table) return;
-
-    try {
-      await SchemaService.updateTable(
-        projectId,
-        tableId,
-        mapTableToApiPayload({
-          ...table,
-          layout: getTableLayoutPayload(table),
-        })
-      );
-    } catch (err) {
-      console.error("Failed to save table:", err);
-    }
-  };
+      try {
+        await SchemaService.updateTable(
+          projectId,
+          tableId,
+          mapTableToApiPayload({
+            ...table,
+            layout: getTableLayoutPayload(table),
+          })
+        );
+      } catch (err) {
+        console.error("Failed to save table:", err);
+      }
+    },
+    [projectId]
+  );
 
   // Синхронизация при изменении поля
   useEffect(() => {
@@ -89,6 +119,12 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
     setCheckedUnique(currentField.unique ?? false);
     setCheckedAutoincrement(currentField.autoIncrement ?? false);
   }, [currentField]);
+
+  useEffect(() => {
+    setHasRelation(
+      getAllRelations().some((r) => r.fromField === currentField?.id)
+    );
+  }, [currentField?.id, getAllRelations, relations]);
 
   const [locale, setLocale] = useState<"LOCALE_RU_RU" | "LOCALE_EN_US">(
     currentField?.locale === "LOCALE_RU_RU" ? "LOCALE_RU_RU" : "LOCALE_EN_US"
@@ -101,11 +137,23 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleClose = () => {
-    setAnchorEl(null);
-    tablesToSaveOnClose.forEach((tableId) => saveTableToServer(tableId));
-    setTablesToSaveOnClose(new Set());
-  };
+  const handleClose = useCallback(
+    (idsToSaveImmediately?: Set<string>) => {
+      const finalSet = new Set(tablesToSaveOnClose);
+
+      if (idsToSaveImmediately) {
+        idsToSaveImmediately.forEach((id) => finalSet.add(id));
+      }
+
+      finalSet.forEach(async (tableId) => {
+        await saveTableToServer(tableId);
+      });
+
+      setTablesToSaveOnClose(new Set());
+      setAnchorEl(null);
+    },
+    [saveTableToServer, tablesToSaveOnClose]
+  );
 
   const handleAutoIncrementChange = useCallback(() => {
     if (!currentTableId) return;
@@ -116,7 +164,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
     updateField(currentTableId, fieldId, {
       autoIncrement: newValue,
     });
-    setTablesToSaveOnClose((prev) => prev.add(currentTableId));
+    setTablesToSaveOnClose((prev) => new Set(prev).add(currentTableId));
   }, [currentTableId, fieldId, checkedAutoincrement, updateField]);
 
   const handleUniqueChange = useCallback(() => {
@@ -128,7 +176,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
     updateField(currentTableId, fieldId, {
       unique: newValue,
     });
-    setTablesToSaveOnClose((prev) => prev.add(currentTableId));
+    setTablesToSaveOnClose((prev) => new Set(prev).add(currentTableId));
   }, [currentTableId, fieldId, checkedUnique, updateField]);
 
   const open = Boolean(anchorEl);
@@ -152,7 +200,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
             viaFaker: true,
             fakerType: fakerType,
             locale: locale,
-            type: fakerType === "COLUMN_TYPE_INT" ? "int" : "text",
+            type: getUpdateFieldType(fakerType),
           };
 
       const relations = getAllRelations().filter(
@@ -222,22 +270,28 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
         viaFaker: true,
         fakerType: type,
         locale: locale,
-        type: type === "COLUMN_TYPE_INT" ? "int" : "text",
+        type: getUpdateFieldType(type),
       };
+
       updateField(currentTableId, fieldId, update);
-      setTablesToSaveOnClose((prev) => prev.add(currentTableId));
+
+      const idsToSave = new Set<string>();
+      idsToSave.add(currentTableId);
+
       const relations = getAllRelations().filter(
         (r) => r.fromField === fieldId
       );
+
       if (relations) {
         relations.forEach((relation) => {
           updateField(relation.toTable, relation.toField, update);
-          setTablesToSaveOnClose((prev) => prev.add(relation.toTable));
+          idsToSave.add(relation.toTable);
         });
       }
-      handleClose();
+
+      handleClose(idsToSave);
     },
-    [currentTableId, fieldId, locale, updateField, getAllRelations]
+    [currentTableId, locale, updateField, fieldId, getAllRelations, handleClose]
   );
 
   if (!currentTableId) {
@@ -252,7 +306,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
       <Popover
         open={open}
         anchorEl={anchorEl}
-        onClose={handleClose}
+        onClose={() => handleClose()}
         anchorOrigin={{
           vertical: "top",
           horizontal: "right",
@@ -361,13 +415,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                               ? "Базовые типы"
                               : category}
                           </h4>
-                          <div
-                            style={{
-                              display: "grid",
-                              gap: "10px",
-                              gridTemplateColumns: "1fr 1fr",
-                            }}
-                          >
+                          <div className={classes.datatypeContainer}>
                             {types.map((type) => (
                               <div
                                 key={type.value}
@@ -414,7 +462,10 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                     >
                       <div
                         className={classes.parametrs}
-                        onClick={handleUniqueChange}
+                        onClick={() => {
+                          if (hasRelation) return;
+                          handleUniqueChange();
+                        }}
                       >
                         <Checkbox
                           checked={checkedUnique}
@@ -422,6 +473,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                             transition: "all 0.1s ease-in-out",
                             "&:active": { transform: "scale(0.95)" },
                           }}
+                          disabled={hasRelation}
                         />
                         <div
                           style={{

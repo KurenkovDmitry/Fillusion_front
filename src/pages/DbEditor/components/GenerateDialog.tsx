@@ -265,7 +265,7 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
                   }}
                 >
                   <ErrorOutlineIcon />
-                  При выборе прямого подключения вам нужно будет скачать агент
+                  При выборе прямого подключения необходимо скачать агент
                   Fillusion в истории запросов
                 </div>
               </motion.div>

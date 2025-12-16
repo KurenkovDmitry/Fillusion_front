@@ -14,13 +14,31 @@ export const availableDataTypes = {
       value: "COLUMN_TYPE_TEXT",
       label: "Текст",
       examples: ["Произвольный текст", "Описание", "Заметка"],
-      examples_en: ["lorem", "ipsum", "exmaple text"],
+      examples_en: ["lorem", "ipsum", "example text"],
     },
     {
       value: "COLUMN_TYPE_INT",
       label: "Целое число",
       examples: ["42", "1000", "777"],
       examples_en: ["42", "1000", "777"],
+    },
+    {
+      value: "COLUMN_TYPE_REAL",
+      label: "Дробное число",
+      examples: ["3.14", "0.001", "-99.9"],
+      examples_en: ["3.14", "0.001", "-99.9"],
+    },
+    {
+      value: "COLUMN_TYPE_BOOLEAN",
+      label: "Логический",
+      examples: ["true", "false"],
+      examples_en: ["true", "false"],
+    },
+    {
+      value: "COLUMN_TYPE_UUID",
+      label: "UUID",
+      examples: ["550e8400-e29b-41d4-a716-446655440000"],
+      examples_en: ["550e8400-e29b-41d4-a716-446655440000"],
     },
   ],
   personalInfo: [
@@ -63,6 +81,32 @@ export const availableDataTypes = {
         "+7 (495) 123-45-67",
         "+7 (903) 987-65-43",
       ],
+    },
+  ],
+  datetime: [
+    {
+      value: "COLUMN_TYPE_DATE",
+      label: "Дата",
+      examples: ["2023-12-31", "1995-05-15"],
+      examples_en: ["2023-12-31", "1995-05-15"],
+    },
+    {
+      value: "COLUMN_TYPE_TIME",
+      label: "Время",
+      examples: ["14:30:00", "09:15:45"],
+      examples_en: ["14:30:00", "09:15:45"],
+    },
+    {
+      value: "COLUMN_TYPE_TIMESTAMP",
+      label: "Дата и время",
+      examples: ["2023-12-31 14:30:00"],
+      examples_en: ["2023-12-31 14:30:00"],
+    },
+    {
+      value: "COLUMN_TYPE_TIMESTAMPTZ",
+      label: "Дата и время (с зоной)",
+      examples: ["2023-12-31 14:30:00+03"],
+      examples_en: ["2023-12-31 14:30:00+03"],
     },
   ],
 };

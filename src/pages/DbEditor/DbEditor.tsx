@@ -43,11 +43,16 @@ import { getLabelByValue } from "../Generate/components/constants/constants";
 import { GenerateDialog } from "./components/GenerateDialog";
 import { PkSettings } from "../Generate/components/PkSettings";
 import { AnimatePresence, motion } from "framer-motion";
+import { typeOptions, PKTypeOptions } from "@shared/constants";
+import SelfLoopEdge from "./components/SelfLoopEdge";
 
 interface TableNodeData {
   id: string;
   [key: string]: string;
 }
+const edgeTypes = {
+  selfLoop: SelfLoopEdge,
+};
 
 export type DatabaseTableNodeType = Node<TableNodeData, "databaseTable">;
 
@@ -62,20 +67,6 @@ interface StoreNode {
     id: string;
   };
 }
-
-const typeOptions = [
-  { value: "text", label: "Text" },
-  { value: "int", label: "Integer" },
-  { value: "bigint", label: "Big Integer" },
-  { value: "float", label: "Float" },
-  { value: "bool", label: "Boolean" },
-  { value: "uuid", label: "UUID" },
-];
-
-const PKTypeOptions = [
-  { value: "int", label: "Integer" },
-  { value: "uuid", label: "UUID" },
-];
 
 export const getTableLayoutPayload = (currentTable: TableSchema) => {
   return {
@@ -321,6 +312,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     setCurrentTable(id);
     const currentTable = getCurrentTable();
     if (!currentTable) return;
+    if (currentTable.fields.length >= 20) return;
 
     const newField = {
       name: getFieldName(table),
@@ -598,6 +590,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
       >
         <button
           onClick={handleAddField}
+          disabled={table.fields.length >= 20}
           className="nodrag"
           style={{
             width: "100%",
@@ -605,8 +598,8 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
             background: "#f5f5f5",
             border: "1px dashed #ccc",
             borderRadius: "4px",
-            color: "#666",
-            cursor: "pointer",
+            color: table.fields.length >= 20 ? "#c5c5c5ff" : "#666",
+            cursor: table.fields.length >= 20 ? "initial" : "pointer",
             fontSize: "14px",
             fontWeight: "500",
             display: "flex",
@@ -624,8 +617,12 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
             e.currentTarget.style.borderColor = "#ccc";
           }}
         >
-          <span style={{ fontSize: "18px", lineHeight: 1 }}>+</span>
-          Добавить поле
+          <span style={{ fontSize: "18px", lineHeight: 1 }}>
+            {table.fields.length >= 20 ? "" : "+"}
+          </span>
+          {table.fields.length >= 20
+            ? "Достигнуто максимальное число полей"
+            : "Добавить поле"}
         </button>
       </div>
 
@@ -768,7 +765,7 @@ export const DatabaseDiagram: React.FC = () => {
         target: relation.toTable,
         sourceHandle: `${relation.fromField}-${relation.fromHandle}`,
         targetHandle: `${relation.toField}-${relation.toHandle}`,
-        type: "default",
+        type: relation.fromTable === relation.toTable ? "selfLoop" : "default",
         animated: false,
         style: {
           stroke: "#666",
@@ -854,14 +851,14 @@ export const DatabaseDiagram: React.FC = () => {
       const fromTable = tables[params.source];
       const toTable = tables[params.target];
 
-      if (fromTable.id === toTable.id) {
-        setSnackbar({
-          open: true,
-          message: "Нельзя провести связь между полями одной таблицы",
-          isError: true,
-        });
-        return;
-      }
+      // if (fromTable.id === toTable.id) {
+      //   setSnackbar({
+      //     open: true,
+      //     message: "Нельзя провести связь между полями одной таблицы", теперь можно
+      //     isError: true,
+      //   });
+      //   return;
+      // }
 
       const fromField = fromTable?.fields.find((f) => f.id === source.fieldId);
       const toField = toTable?.fields.find((f) => f.id === target.fieldId);
@@ -899,16 +896,13 @@ export const DatabaseDiagram: React.FC = () => {
       }
 
       try {
-        const toFieldNewType =
-          toField.type === "int" || toField.type === "uuid"
-            ? toField.type
-            : "int";
+        // const toFieldNewType =
+        //   toField.type === "int" || toField.type === "uuid"
+        //     ? toField.type
+        //     : "int";
         const toFieldUpdates = {
-          isForeignKey: false,
-          isPrimaryKey: true,
           unique: true,
-          viaFaker: false, // убираем фейкер
-          type: toFieldNewType, // выставляем правильный тип
+          type: toField.type, // выставляем правильный тип
         };
         // toField (целевое) становится PK
         updateField(params.target, target.fieldId, toFieldUpdates);
@@ -917,8 +911,10 @@ export const DatabaseDiagram: React.FC = () => {
         const sourceUpdate: Partial<SchemaField> = {
           isPrimaryKey: false,
           isForeignKey: true,
-          type: toFieldNewType,
-          viaFaker: false,
+          type: toField.type,
+          viaFaker: toField.viaFaker,
+          fakerType: toField.fakerType,
+          locale: toField.locale,
         };
 
         updateField(params.source, source.fieldId, sourceUpdate);
@@ -962,10 +958,7 @@ export const DatabaseDiagram: React.FC = () => {
                 f.id === source.fieldId
                   ? {
                       ...f,
-                      type: toFieldNewType,
-                      isPrimaryKey: false,
-                      isForeignKey: true,
-                      viaFaker: false,
+                      ...sourceUpdate,
                     }
                   : f
               ),
@@ -1148,7 +1141,7 @@ export const DatabaseDiagram: React.FC = () => {
             🔗 Проведите линию для создания связи
             <br />
             Поле, от которого проводится связь станет FK, а поле, к которому
-            идет связь станет PK
+            идет связь станет уникальным
             <br />
             💬 Кликните на связь для изменения типа
           </div>
@@ -1185,22 +1178,49 @@ export const DatabaseDiagram: React.FC = () => {
             }}
           >
             <h3 style={{ margin: 0, fontSize: 16, color: "#fff" }}>Таблицы</h3>
-            <Button
-              onClick={handleAddTable}
-              aria-label="Добавить таблицу"
-              style={{
-                background: "#4f8cff",
-                border: "none",
-                color: "white",
-                borderRadius: 6,
-                height: "32px",
-                width: "32px",
-                cursor: "pointer",
-                fontSize: "20px",
-              }}
-            >
-              +
-            </Button>
+            {Object.values(tables).length < 20 ? (
+              <Button
+                onClick={handleAddTable}
+                aria-label="Добавить таблицу"
+                variant="contained"
+                sx={{
+                  background: "#4f8cff",
+                  border: "none",
+                  color: "white",
+                  borderRadius: "6px",
+                  height: "32px",
+                  width: "32px",
+                  cursor: "pointer",
+                  fontSize: "20px",
+                  "&.Mui-disabled": {
+                    backgroundColor: "#3d3d3dff",
+                    color: "#123",
+                  },
+                }}
+              >
+                +
+              </Button>
+            ) : (
+              <Tooltip title="Максимальное число таблиц - 20" arrow>
+                <Button
+                  variant="contained"
+                  sx={{
+                    backgroundColor: "#3d3d3dff",
+                    color: "#123",
+                    borderRadius: "6px",
+                    height: "32px",
+                    width: "32px",
+                    cursor: "default",
+                    fontSize: "20px",
+                    "&:hover": {
+                      backgroundColor: "#3d3d3dff",
+                    },
+                  }}
+                >
+                  +
+                </Button>
+              </Tooltip>
+            )}
           </div>
 
           <div
@@ -1322,6 +1342,7 @@ export const DatabaseDiagram: React.FC = () => {
         <ReactFlow
           nodes={reactFlowNodes}
           edges={reactFlowEdges}
+          edgeTypes={edgeTypes}
           onNodesChange={handleNodesChange}
           onEdgesChange={handleEdgesChange}
           onNodeDragStop={onNodeDragStop}
