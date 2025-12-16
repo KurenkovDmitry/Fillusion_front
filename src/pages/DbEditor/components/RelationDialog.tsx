@@ -19,6 +19,11 @@ const selectOptions = [
   { value: "many-to-one", label: "Многие-к-одному (N:1)" },
 ];
 
+// используется когда оба поля уникальные
+const restrictedSelectOptions = [
+  { value: "one-to-one", label: "Один-к-одному (1:1)" },
+];
+
 export const RelationDialog = (props: RelationDialogProps) => {
   const updateRelation = useSchemaStore((state) => state.updateRelation);
   const removeRelation = useSchemaStore((state) => state.removeRelation);
@@ -101,7 +106,11 @@ export const RelationDialog = (props: RelationDialogProps) => {
             setRelationType(val as RelationType)
           }
           label="Тип связи"
-          options={selectOptions}
+          options={
+            fromField?.unique && toField?.unique
+              ? restrictedSelectOptions
+              : selectOptions
+          }
         />
 
         <div

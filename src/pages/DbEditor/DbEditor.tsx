@@ -45,6 +45,7 @@ import { PkSettings } from "../Generate/components/PkSettings";
 import { AnimatePresence, motion } from "framer-motion";
 import { typeOptions, PKTypeOptions } from "@shared/constants";
 import SelfLoopEdge from "./components/SelfLoopEdge";
+import { ImportSchemaDialog } from "./components/ImportSchemaDialog";
 
 interface TableNodeData {
   id: string;
@@ -699,6 +700,7 @@ export const DatabaseDiagram: React.FC = () => {
   const addRelation = useSchemaStore((state) => state.addRelation);
   const removeRelation = useSchemaStore((state) => state.removeRelation);
   const getAllTables = useSchemaStore((state) => state.getAllTables);
+  const getAllRelations = useSchemaStore((state) => state.getAllRelations);
   const setCurrentTable = useSchemaStore((state) => state.setCurrentTable);
 
   const tableLayoutsJson = useSchemaStore((state) =>
@@ -721,6 +723,7 @@ export const DatabaseDiagram: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [selectedRelation, setSelectedRelation] = useState<string | null>(null);
   const [relationDialogOpen, setRelationDialogOpen] = useState(false);
+  const [importSchemaDialogOpen, setImportSchemaDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -875,6 +878,15 @@ export const DatabaseDiagram: React.FC = () => {
         return;
       }
 
+      if (fromField.id === toField.id) {
+        setSnackbar({
+          open: true,
+          message: "Нельзя провести связь от поля на него же",
+          isError: true,
+        });
+        return;
+      }
+
       // Проверяем что toField не является внешним ключом
       if (toField.isForeignKey) {
         setSnackbar({
@@ -890,6 +902,19 @@ export const DatabaseDiagram: React.FC = () => {
         setSnackbar({
           open: true,
           message: "Внешний ключ не может ссылаться на несколько полей",
+          isError: true,
+        });
+        return;
+      }
+
+      const fromFieldHasRelation = getAllRelations().some(
+        (r) => r.fromField === fromField.id
+      );
+      if (fromFieldHasRelation) {
+        setSnackbar({
+          open: true,
+          message:
+            "Нельзя провести связь от поля, на которое ссылается другое поле",
           isError: true,
         });
         return;
@@ -924,10 +949,9 @@ export const DatabaseDiagram: React.FC = () => {
           toTable: params.source, // к FK
           fromField: target.fieldId,
           toField: source.fieldId,
-          type:
-            fromField.unique && toField.unique
-              ? ("one-to-one" as const)
-              : ("one-to-many" as const),
+          type: fromField.unique
+            ? ("one-to-one" as const)
+            : ("one-to-many" as const),
           fromHandle: target.direction as "left" | "right",
           toHandle: source.direction as "left" | "right",
         };
@@ -1335,6 +1359,22 @@ export const DatabaseDiagram: React.FC = () => {
             >
               Перейти к истории запросов
             </Button>
+            <Button
+              variant="contained"
+              sx={{
+                width: "100%",
+                height: "42px",
+                backgroundColor: "transparent",
+                border: "1px solid white",
+                "&:hover": {
+                  backgroundColor: "rgb(79, 140, 255)",
+                  border: "rgb(79, 140, 255)",
+                },
+              }}
+              onClick={() => setImportSchemaDialogOpen(true)}
+            >
+              Импортировать схему
+            </Button>
           </div>
         </aside>
 
@@ -1382,6 +1422,17 @@ export const DatabaseDiagram: React.FC = () => {
           setSnackbar({
             open: true,
             message: "Запрос на генерацию отправлен",
+            isError: false,
+          })
+        }
+      />
+      <ImportSchemaDialog
+        open={importSchemaDialogOpen}
+        onClose={() => setImportSchemaDialogOpen(false)}
+        onSucces={() =>
+          setSnackbar({
+            open: true,
+            message: "Схема успешно импортирована",
             isError: false,
           })
         }

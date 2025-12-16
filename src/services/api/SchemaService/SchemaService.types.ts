@@ -94,3 +94,8 @@ type TableCreateInternal = Omit<Omit<ApiTableInternal, "id">, "fields"> & {
 export interface TableCreate {
   table: TableCreateInternal;
 }
+
+export interface ImportSchemaPayload {
+  replace_existing: boolean;
+  sql: string;
+}

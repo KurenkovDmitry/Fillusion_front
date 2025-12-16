@@ -17,6 +17,7 @@ interface InputFieldProps
   useFormik?: boolean;
   error?: boolean; // Добавлено
   helperText?: string; // Добавлено
+  lineCount?: number;
 }
 
 export const InputField = (props: InputFieldProps) => {
@@ -109,7 +110,7 @@ export const InputField = (props: InputFieldProps) => {
             className={classes.input__border}
             style={{
               ...inputStyle,
-              minHeight: "140px",
+              minHeight: props.lineCount ? `${props.lineCount}lh` : "140px",
               resize: "none",
               scrollbarWidth: "thin",
               scrollbarColor: "#c0c0c0ff #F3F3F5",

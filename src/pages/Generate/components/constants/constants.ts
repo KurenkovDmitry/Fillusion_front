@@ -104,7 +104,7 @@ export const availableDataTypes = {
     },
     {
       value: "COLUMN_TYPE_TIMESTAMPTZ",
-      label: "Дата и время (с зоной)",
+      label: "Дата и время (с часовым поясом)",
       examples: ["2023-12-31 14:30:00+03"],
       examples_en: ["2023-12-31 14:30:00+03"],
     },

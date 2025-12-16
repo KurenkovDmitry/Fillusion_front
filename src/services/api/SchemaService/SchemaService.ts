@@ -5,6 +5,7 @@ import {
   ApiTable,
   ApiTableInternal,
   ApiTableResponse,
+  ImportSchemaPayload,
   RelationApi,
   RelationCreate,
   TableCreate,
@@ -71,5 +72,12 @@ export const SchemaService = {
 
   async deleteTable(projectId: string, tableId: string): Promise<void> {
     return apiServiceClient.delete(`/projects/${projectId}/tables/${tableId}`);
+  },
+
+  async importSchema(
+    projectId: string,
+    data: ImportSchemaPayload
+  ): Promise<ApiResponse> {
+    return apiServiceClient.post(`/projects/${projectId}/schema/import`, data);
   },
 };
