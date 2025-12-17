@@ -415,6 +415,66 @@ export const NonModalGenerate = () => {
             </motion.article>
           </div>
         </section>
+        <section
+          style={{
+            height: "150px",
+            width: "100%",
+            backgroundColor: "#18191b",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <div
+            style={{
+              width: "70%",
+              color: "#a1a1a1ff",
+              textAlign: "center",
+              marginTop: "20px",
+              alignItems: "baseline",
+              lineHeight: "14px",
+            }}
+          >
+            <span style={{ fontFamily: "sans-serif", fontSize: "16px" }}>
+              ©
+            </span>{" "}
+            2025 Fillusion
+          </div>
+          <div
+            style={{
+              width: "70%",
+              color: "#a1a1a1ff",
+              textAlign: "center",
+            }}
+          >
+            Создано командой Coffee Overflow
+          </div>
+          <div
+            style={{
+              width: "70%",
+              color: "#a1a1a1ff",
+              textAlign: "center",
+            }}
+          >
+            Email: anyflexsolutions@gmail.com
+          </div>
+          <div
+            style={{
+              width: "70%",
+              color: "#a1a1a1ff",
+              textAlign: "center",
+            }}
+          >
+            Telegram:{" "}
+            <a
+              style={{ color: "#c4c4c4ff", cursor: "pointer" }}
+              href="https://t.me/fillusion_group"
+            >
+              https://t.me/fillusion_group
+            </a>
+          </div>
+        </section>
       </div>
     </LayoutWithHeader>
   );
