@@ -404,6 +404,43 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
             <section style={{ marginBottom: "20px" }}>
               {approach === "faker" ? (
                 <>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr",
+                      gap: "10px",
+                    }}
+                  >
+                    <div
+                      className={classes.parametrs}
+                      onClick={() => {
+                        if (hasRelation || currentField?.isPrimaryKey) return;
+                        handleUniqueChange();
+                      }}
+                    >
+                      <Checkbox
+                        checked={checkedUnique}
+                        sx={{
+                          transition: "all 0.1s ease-in-out",
+                          "&:active": { transform: "scale(0.95)" },
+                        }}
+                        disabled={hasRelation || currentField?.isPrimaryKey}
+                      />
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateRows: "1fr 1fr",
+                        }}
+                      >
+                        <h5 style={{ margin: "4px 0 0 0", fontSize: "15px" }}>
+                          Уникальное
+                        </h5>
+                        <span style={{ fontSize: "13px" }}>
+                          Все значения будут уникальными
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                   <div>
                     <SelectField
                       options={lacaleSelectOptions}
@@ -511,7 +548,14 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                     </div>
                     <div
                       className={classes.parametrs}
-                      onClick={handleAutoIncrementChange}
+                      onClick={() => {
+                        if (
+                          currentField?.type !== "int" &&
+                          currentField?.type !== "bigint"
+                        )
+                          return;
+                        handleAutoIncrementChange();
+                      }}
                     >
                       <Checkbox
                         checked={checkedAutoincrement}
@@ -519,6 +563,10 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                           transition: "all 0.1s ease-in-out",
                           "&:active": { transform: "scale(0.95)" },
                         }}
+                        disabled={
+                          currentField?.type !== "int" &&
+                          currentField?.type !== "bigint"
+                        }
                       />
                       <div
                         style={{
