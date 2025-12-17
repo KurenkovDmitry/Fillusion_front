@@ -60,6 +60,9 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
   const relations = useSchemaStore((state) => state.relations);
   const getAllTables = useSchemaStore((state) => state.getAllTables);
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
+  const isFakerOnly = useSchemaStore((state) =>
+    state.isEveryFieldGeneratedWithFaker()
+  );
 
   const handleGenerate = async () => {
     if (!projectId) return;
@@ -208,14 +211,16 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
           <p style={{ margin: 0, fontSize: "14px" }}>
             Завершите настройку и начните генерацию
           </p>
-          <SelectField
-            label="Модель для генерации"
-            value={selectModelValue}
-            options={SELECT_MODEL_OPTIONS}
-            onChange={(val: string) => {
-              setSelectModelValue(val as SelectModelType);
-            }}
-          />
+          {!isFakerOnly && (
+            <SelectField
+              label="Модель для генерации"
+              value={selectModelValue}
+              options={SELECT_MODEL_OPTIONS}
+              onChange={(val: string) => {
+                setSelectModelValue(val as SelectModelType);
+              }}
+            />
+          )}
           <SelectField
             label="Тип выходных данных"
             value={selectOutputValue}

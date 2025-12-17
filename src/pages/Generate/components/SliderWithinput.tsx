@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface SliderWithInputProps {
   value: number;
@@ -74,10 +74,10 @@ export const SliderWithInput = (props: SliderWithInputProps) => {
   };
 
   // ✅ Синхронизируем с props.value
-  useState(() => {
+  useEffect(() => {
     setValue(props.value);
     setInputValue(String(props.value));
-  });
+  }, [props.value, props.max]);
 
   return (
     <div

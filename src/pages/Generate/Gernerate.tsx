@@ -42,6 +42,9 @@ const GenerateFormContent = ({
 }) => {
   const getTableSettings = useGenerateStore((state) => state.getTableSettings);
   const settings = getTableSettings(tableId);
+  const isFakerOnly = useSchemaStore((state) =>
+    state.isTableGeneratedWithFaker(tableId)
+  );
   const [name, setName] = useState(settings.name ?? "");
   const [query, setQuery] = useState(settings.query ?? "");
   const [totalRecords, setTotalRecords] = useState(
@@ -134,6 +137,12 @@ const GenerateFormContent = ({
     });
   };
 
+  useEffect(() => {
+    if (!isFakerOnly && totalRecords > 10) {
+      handleTotalRecordsChange(10);
+    }
+  }, [isFakerOnly, totalRecords]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <InputField
@@ -158,7 +167,7 @@ const GenerateFormContent = ({
         label="Количество строк"
         value={totalRecords}
         min={1}
-        max={100}
+        max={isFakerOnly ? 100 : 20}
         onChange={(value) => {
           handleTotalRecordsChange(value);
         }}

@@ -15,4 +15,5 @@ export const typeOptions = [
 export const PKTypeOptions = [
   { value: "int", label: "Integer" },
   { value: "uuid", label: "UUID" },
+  { value: "serial", label: "Serial" },
 ];

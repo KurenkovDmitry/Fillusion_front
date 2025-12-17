@@ -1,4 +1,4 @@
-import { Button, Dialog, DialogTitle } from "@mui/material";
+import { Alert, Button, Dialog, DialogTitle } from "@mui/material";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { InputField } from "../../Generate/components/InputField";
@@ -15,6 +15,7 @@ interface ImportSchemaDialogProps {
 export const ImportSchemaDialog = (props: ImportSchemaDialogProps) => {
   const { projectId } = useParams();
   const [schema, setSchema] = useState("");
+  const [error, setError] = useState<{ message: string } | null>(null);
   const loadFromApi = useSchemaStore((state) => state.loadFromApi);
 
   const handleSchemaImport = async () => {
@@ -28,27 +29,40 @@ export const ImportSchemaDialog = (props: ImportSchemaDialogProps) => {
     try {
       const newSchema = await SchemaService.importSchema(projectId, payload);
       loadFromApi(newSchema);
+      props.onSucces();
+      props.onClose();
     } catch (e) {
       console.error(e);
+      setError(e as { message: string });
     }
   };
 
   return (
     <Dialog open={props.open} onClose={props.onClose} maxWidth="md" fullWidth>
       <DialogTitle>Импорт схемы</DialogTitle>
+      {error && (
+        <div style={{ paddingInline: "24px" }}>
+          <Alert variant="outlined" severity="error">
+            {error.message}
+          </Alert>
+        </div>
+      )}
       <div style={{ paddingInline: "24px", paddingBottom: "24px" }}>
         <InputField
           label="SQL схема"
           lineCount={20}
           value={schema}
-          onChange={(e) => setSchema(e.target.value)}
+          onChange={(e) => {
+            setError(null);
+            setSchema(e.target.value);
+          }}
           multiline
           placeholder={`Пример: 
   CREATE TABLE IF NOT EXISTS Users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    group_id REFERENCES Groups(id)
+    group_id INTEGER REFERENCES Groups(id)
   );
 
   CREATE TABLE IF NOT EXISTS Groups (

@@ -203,6 +203,10 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
     currentField?.id,
   ]);
 
+  if (currentField?.isPrimaryKey && !currentField.unique) {
+    handleUniqueChange();
+  }
+
   const open = Boolean(anchorEl);
 
   const handleApproachChange = useCallback(
@@ -479,7 +483,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                     <div
                       className={classes.parametrs}
                       onClick={() => {
-                        if (hasRelation) return;
+                        if (hasRelation || currentField?.isPrimaryKey) return;
                         handleUniqueChange();
                       }}
                     >
@@ -489,7 +493,7 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                           transition: "all 0.1s ease-in-out",
                           "&:active": { transform: "scale(0.95)" },
                         }}
-                        disabled={hasRelation}
+                        disabled={hasRelation || currentField?.isPrimaryKey}
                       />
                       <div
                         style={{
