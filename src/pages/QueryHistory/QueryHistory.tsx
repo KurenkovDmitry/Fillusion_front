@@ -98,6 +98,7 @@ export const QueryHistory = () => {
                 network={val.network}
                 totalRecords={val.tablesCount}
                 createdAt={val.createdAt}
+                doneTablesCount={val.doneTablesCount}
                 last={idx === arr.length - 1}
                 onClick={() => handleOpen(val.requestId, val.status)}
               />

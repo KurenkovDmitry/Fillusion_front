@@ -322,7 +322,12 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
             </span>
             <Button
               variant="contained"
-              sx={{ mt: 2, bgcolor: "black" }}
+              sx={{
+                mt: 2,
+                bgcolor: "black",
+                height: "42px",
+                width: "fit-content",
+              }}
               onClick={() => navigate(`/projects/${props.projectId}`)}
             >
               Вернуться к редактору

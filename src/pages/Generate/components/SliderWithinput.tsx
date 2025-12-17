@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Tooltip } from "@mui/material";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 interface SliderWithInputProps {
   value: number;
@@ -7,16 +9,17 @@ interface SliderWithInputProps {
   step?: number;
   label: string;
   onChange?: (value: number) => void;
+  tooltipLabel?: string;
 }
 
 export const SliderWithInput = (props: SliderWithInputProps) => {
   const [value, setValue] = useState(props.value);
-  const [inputValue, setInputValue] = useState(String(props.value)); // ✅ Отдельное состояние для input
+  const [inputValue, setInputValue] = useState(String(props.value));
 
   const handleSliderChange = (event: Event, newValue: number | number[]) => {
     const numValue = newValue as number;
     setValue(numValue);
-    setInputValue(String(numValue)); // ✅ Синхронизируем input
+    setInputValue(String(numValue));
     if (props.onChange) {
       props.onChange(numValue);
     }
@@ -25,16 +28,14 @@ export const SliderWithInput = (props: SliderWithInputProps) => {
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = event.target.value;
 
-    // ✅ Разрешаем пустую строку для возможности очистки
     if (rawValue === "") {
       setInputValue("");
       return;
     }
 
-    // ✅ Проверяем что это валидное число
     const numValue = Number(rawValue);
     if (!isNaN(numValue)) {
-      setInputValue(rawValue); // ✅ Сохраняем строку как есть
+      setInputValue(rawValue);
       setValue(numValue);
       if (props.onChange) {
         props.onChange(numValue);
@@ -43,7 +44,6 @@ export const SliderWithInput = (props: SliderWithInputProps) => {
   };
 
   const handleBlur = () => {
-    // ✅ Если поле пустое, устанавливаем минимальное значение
     if (inputValue === "" || isNaN(Number(inputValue))) {
       setValue(props.min);
       setInputValue(String(props.min));
@@ -68,16 +68,14 @@ export const SliderWithInput = (props: SliderWithInputProps) => {
         props.onChange(props.max);
       }
     } else {
-      // ✅ Нормализуем значение (убираем лидирующие нули)
       setInputValue(String(numValue));
     }
   };
 
-  // ✅ Синхронизируем с props.value
   useEffect(() => {
     setValue(props.value);
     setInputValue(String(props.value));
-  }, [props.value, props.max]);
+  }, [props.value, props.max, props.label]);
 
   return (
     <div
@@ -95,9 +93,18 @@ export const SliderWithInput = (props: SliderWithInputProps) => {
           fontSize: "15px",
           lineHeight: "18px",
           alignSelf: "flex-start",
+          alignItems: "center",
+          display: "flex",
         }}
       >
         {props.label}
+        {props.max === 10 && (
+          <Tooltip title={props.tooltipLabel} arrow placement="top-start">
+            <HelpOutlineIcon
+              sx={{ width: "16px", height: "16px", color: "#9c9c9cff" }}
+            />
+          </Tooltip>
+        )}
       </h4>
       <div
         style={{
@@ -110,7 +117,7 @@ export const SliderWithInput = (props: SliderWithInputProps) => {
       >
         <input
           type="number"
-          value={inputValue} // ✅ Используем inputValue
+          value={inputValue}
           onChange={handleInputChange}
           onBlur={handleBlur}
           style={{

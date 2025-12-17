@@ -14,6 +14,7 @@ export type Dataset = {
   status: "PENDING" | "SUCCESS" | "ERROR";
   tablesCount: string;
   tableNames: string[];
+  doneTablesCount: string;
   exportType:
     | "EXPORT_TYPE_UNSPECIFIED"
     | "EXPORT_TYPE_JSON"

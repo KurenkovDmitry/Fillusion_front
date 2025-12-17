@@ -164,13 +164,16 @@ const GenerateFormContent = ({
         placeholder="Например: name: русские имена и фамилии"
       />
       <SliderWithInput
-        label="Количество строк"
+        label={
+          isFakerOnly ? "Количество строк" : "Количество строк (с ограничением)"
+        }
         value={totalRecords}
         min={1}
-        max={isFakerOnly ? 100 : 20}
-        onChange={(value) => {
+        max={isFakerOnly ? 100 : 10}
+        onChange={(value: number) => {
           handleTotalRecordsChange(value);
         }}
+        tooltipLabel="Для генерации данных с помощью нейросети установлено ограничение в 10 записей на таблицу"
       />
       <InputField
         label="Примеры данных"

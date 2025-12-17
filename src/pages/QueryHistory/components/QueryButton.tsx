@@ -19,6 +19,7 @@ interface QueryButtonProps {
   network: string;
   totalRecords: string;
   last?: boolean;
+  doneTablesCount: string;
   status: Status;
   exportType: ExportType;
   createdAt: string;
@@ -55,11 +56,6 @@ const getStatusIcon = (status: Status) =>
   ) : (
     <DoneIcon sx={sx} />
   );
-
-const formatDate = (date: string) => {
-  // формат 2025-11-29T21:50:36.091372Z
-  return "Создан " + date.slice(0, 10).split("-").reverse().join(".");
-};
 
 function beautifyUpdatedAt(dateString: string): string {
   const date = new Date(dateString);
@@ -132,7 +128,11 @@ export const QueryButton = (props: QueryButtonProps) => {
             />
 
             <Chip
-              label={"Количество таблиц: " + props.totalRecords}
+              label={
+                props.status === "PENDING"
+                  ? `Готово таблиц: ${props.doneTablesCount}/${props.totalRecords}`
+                  : "Количество таблиц: " + props.totalRecords
+              }
               sx={{
                 height: "26px",
                 borderRadius: "8px",
