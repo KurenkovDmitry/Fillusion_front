@@ -8,6 +8,14 @@ import {
   AccordionSummary,
   AccordionDetails,
   DialogTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Typography,
 } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import { CopyButton } from "../../Generate/components/CopyButton";
@@ -191,10 +199,78 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
     return JSON.stringify(rest, null, 2);
   };
 
+  const renderDatasetsTables = () => {
+    // Если объекта нет или в нем нет datasets
+    if (!responseObj || !responseObj.datasets) {
+      // Если есть просто JSON текст, но нет структуры datasets (фоллбэк)
+      if (responseJson) return <pre>{formatResponse(responseJson)}</pre>;
+      return <div style={{ color: "#666" }}>Нет данных</div>;
+    }
+
+    return (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {responseObj.datasets.map((dataset: any, idx: number) => {
+          // Получаем заголовки из первой записи, если она есть
+          const headers =
+            dataset.records.length > 0 ? Object.keys(dataset.records[0]) : [];
+
+          return (
+            <Box key={idx}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                {dataset.table_name || `Table ${idx + 1}`}
+              </Typography>
+
+              <TableContainer component={Paper} variant="outlined">
+                <Table
+                  stickyHeader
+                  size="small"
+                  aria-label={dataset.table_name}
+                >
+                  <TableHead>
+                    <TableRow>
+                      {headers.map((header) => (
+                        <TableCell
+                          key={header}
+                          sx={{
+                            fontWeight: "bold",
+                            backgroundColor: "#f5f5f5",
+                          }}
+                        >
+                          {header}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {dataset.records.map((row: any, rowIdx: number) => (
+                      <TableRow hover key={rowIdx}>
+                        {headers.map((header) => (
+                          <TableCell key={`${rowIdx}-${header}`}>
+                            {/* Простая проверка на случай, если значение null или объект */}
+                            {typeof row[header] === "object" &&
+                            row[header] !== null
+                              ? JSON.stringify(row[header])
+                              : String(row[header] ?? "")}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          );
+        })}
+      </Box>
+    );
+  };
+
+  // ... (formatResponse можно оставить для кнопки "Копировать", но для рендера он больше не нужен)
+
   return (
     <Dialog
       open={props.open}
-      maxWidth={props.status === "ERROR" ? "md" : "lg"}
+      maxWidth={props.status === "ERROR" ? "md" : "xl"} // Увеличил ширину до xl для таблиц
       fullWidth={props.status !== "PENDING"}
       onClose={() => props.setOpen(false)}
       disableScrollLock
@@ -208,6 +284,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
         }}
       >
         {loading ? (
+          /* ... Лоадер (без изменений) ... */
           <Box
             display="flex"
             justifyContent="center"
@@ -217,6 +294,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
             <CircularProgress />
           </Box>
         ) : props.status === "PENDING" ? (
+          /* ... Pending (без изменений) ... */
           <div
             style={{
               display: "flex",
@@ -229,6 +307,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
             <PendingActionsIcon sx={{ width: "100px", height: "100px" }} />
           </div>
         ) : props.status === "ERROR" ? (
+          /* ... Error (без изменений) ... */
           <div
             style={{
               display: "flex",
@@ -243,18 +322,10 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
             </span>
             <Button
               variant="contained"
-              sx={{
-                width: "fit-content",
-                marginTop: "20px",
-                height: "40px",
-                backgroundColor: "black",
-                "&:hover": {
-                  backgroundColor: "#292929ff",
-                },
-              }}
+              sx={{ mt: 2, bgcolor: "black" }}
               onClick={() => navigate(`/projects/${props.projectId}`)}
             >
-              Вернуться к реадктору
+              Вернуться к редактору
             </Button>
           </div>
         ) : responseObj?.exportType !== "EXPORT_TYPE_DIRECT_DB" ? (
@@ -264,25 +335,24 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
             >
               Результат генерации
             </DialogTitle>
+
+            {/* --- ВОТ ЗДЕСЬ ИЗМЕНЕНИЯ --- */}
             <Box
               sx={{
-                fontFamily: "monospace",
-                fontSize: "15px",
-                maxHeight: "60vh",
                 overflowY: "auto",
                 scrollbarWidth: "thin",
               }}
             >
               {error ? (
                 <div style={{ color: "#d32f2f", padding: "12px" }}>{error}</div>
-              ) : responseJson ? (
-                <pre>{formatResponse(responseJson)}</pre>
               ) : (
-                <div style={{ color: "#666" }}>Нет данных</div>
+                renderDatasetsTables() // Вызываем функцию рендера таблиц
               )}
             </Box>
+            {/* --------------------------- */}
 
-            <Box display="flex" mt={1} gap="20px">
+            <Box display="flex" mt={2} gap="20px">
+              {/* Кнопки остались без изменений */}
               <Button
                 variant="outlined"
                 startIcon={
