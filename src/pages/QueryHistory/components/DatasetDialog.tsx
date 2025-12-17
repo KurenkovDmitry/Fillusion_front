@@ -1,6 +1,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogActions, // <--- Добавлен импорт
   Box,
   Button,
   CircularProgress,
@@ -8,6 +9,14 @@ import {
   AccordionSummary,
   AccordionDetails,
   DialogTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Typography,
 } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import { CopyButton } from "../../Generate/components/CopyButton";
@@ -110,16 +119,12 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
     setError(null);
 
     try {
-      // Используйте исправленный метод
       const blob = await GenerateService.downloadFile(
         props.requestId,
         props.projectId
       );
 
-      // Создаем URL для Blob
       const url = window.URL.createObjectURL(blob);
-
-      // Создаем и кликаем ссылку
       const link = document.createElement("a");
       link.href = url;
       link.download = JSON.parse(responseJson).fileName ?? "generation";
@@ -128,8 +133,6 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      // Очищаем память
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Download failed:", err);
@@ -144,11 +147,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
 
     try {
       const blob = await GenerateService.downloadAgent(selectOSValue);
-
-      // Создаем URL для Blob
       const url = window.URL.createObjectURL(blob);
-
-      // Создаем и кликаем ссылку
       const link = document.createElement("a");
       link.href = url;
       link.download = `fillusion-agent-${selectOSValue}-amd64.${
@@ -159,8 +158,6 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      // Очищаем память
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Download failed:", err);
@@ -185,27 +182,109 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
       return responseJson;
     }
     const data = JSON.parse(responseJson);
-
     const { file, fileName, exportType, ...rest } = data;
-
     return JSON.stringify(rest, null, 2);
+  };
+
+  const renderDatasetsTables = () => {
+    if (!responseObj || !responseObj.datasets) {
+      if (responseJson) return <pre>{formatResponse(responseJson)}</pre>;
+      return <div style={{ color: "#666" }}>Нет данных</div>;
+    }
+
+    return (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {responseObj.datasets.map((dataset: any, idx: number) => {
+          const headers =
+            dataset.records.length > 0 ? Object.keys(dataset.records[0]) : [];
+
+          return (
+            <Box key={idx}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                {dataset.table_name || `Table ${idx + 1}`}
+              </Typography>
+
+              <TableContainer component={Paper} variant="outlined">
+                <Table
+                  stickyHeader
+                  size="small"
+                  aria-label={dataset.table_name}
+                >
+                  <TableHead>
+                    <TableRow>
+                      {headers.map((header) => (
+                        <TableCell
+                          key={header}
+                          sx={{
+                            fontWeight: "bold",
+                            backgroundColor: "#f5f5f5",
+                          }}
+                        >
+                          {header}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {dataset.records.map((row: any, rowIdx: number) => (
+                      <TableRow hover key={rowIdx}>
+                        {headers.map((header) => (
+                          <TableCell key={`${rowIdx}-${header}`}>
+                            {typeof row[header] === "object" &&
+                            row[header] !== null
+                              ? JSON.stringify(row[header])
+                              : String(row[header] ?? "")}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          );
+        })}
+      </Box>
+    );
   };
 
   return (
     <Dialog
       open={props.open}
-      maxWidth={props.status === "ERROR" ? "md" : "lg"}
+      maxWidth={props.status === "ERROR" ? "md" : "xl"}
       fullWidth={props.status !== "PENDING"}
       onClose={() => props.setOpen(false)}
       disableScrollLock
+      // Добавляем paper props для flex-layout, если понадобится тонкая настройка,
+      // но обычно DialogActions работает и так.
     >
+      {/* 
+        Мы выносим DialogTitle и DialogActions за пределы DialogContent, 
+        чтобы скролл был только у контента. 
+      */}
+
+      {/* --- Заголовок (всегда виден сверху) --- */}
+      {props.status !== "PENDING" &&
+        props.status !== "ERROR" &&
+        responseObj?.exportType !== "EXPORT_TYPE_DIRECT_DB" && (
+          <DialogTitle
+            sx={{ paddingBottom: "10px", fontSize: "16px", flexShrink: 0 }}
+          >
+            Результат генерации
+          </DialogTitle>
+        )}
+
       <DialogContent
         sx={{
           scrollbarWidth: "thin",
           scrollbarColor: "#c0c0c0ff white",
           height: loading ? "200px" : "auto",
           transition: "height 0.2s ease",
+          // dividers prop автоматически добавляет разделители при скролле
         }}
+        dividers={
+          !loading && props.status !== "PENDING" && props.status !== "ERROR"
+        }
       >
         {loading ? (
           <Box
@@ -243,78 +322,25 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
             </span>
             <Button
               variant="contained"
-              sx={{
-                width: "fit-content",
-                marginTop: "20px",
-                height: "40px",
-                backgroundColor: "black",
-                "&:hover": {
-                  backgroundColor: "#292929ff",
-                },
-              }}
+              sx={{ mt: 2, bgcolor: "black" }}
               onClick={() => navigate(`/projects/${props.projectId}`)}
             >
-              Вернуться к реадктору
+              Вернуться к редактору
             </Button>
           </div>
         ) : responseObj?.exportType !== "EXPORT_TYPE_DIRECT_DB" ? (
-          <>
-            <DialogTitle
-              sx={{ padding: 0, paddingBottom: "10px", fontSize: "16px" }}
-            >
-              Результат генерации
-            </DialogTitle>
-            <Box
-              sx={{
-                fontFamily: "monospace",
-                fontSize: "15px",
-                maxHeight: "60vh",
-                overflowY: "auto",
-                scrollbarWidth: "thin",
-              }}
-            >
-              {error ? (
-                <div style={{ color: "#d32f2f", padding: "12px" }}>{error}</div>
-              ) : responseJson ? (
-                <pre>{formatResponse(responseJson)}</pre>
-              ) : (
-                <div style={{ color: "#666" }}>Нет данных</div>
-              )}
-            </Box>
-
-            <Box display="flex" mt={1} gap="20px">
-              <Button
-                variant="outlined"
-                startIcon={
-                  downloading ? (
-                    <CircularProgress size={16} />
-                  ) : (
-                    <DownloadIcon />
-                  )
-                }
-                onClick={handleDownload}
-                disabled={downloading || loading}
-                sx={{
-                  height: "40px",
-                  color: "black",
-                  border: "1px solid black",
-                  fontWeight: "500",
-                }}
-              >
-                {downloading ? "Скачивание..." : "Скачать файл"}
-              </Button>
-
-              <CopyButton textToCopy={formatResponse(responseJson)} />
-
-              <Button
-                variant="contained"
-                onClick={() => props.setOpen(false)}
-                sx={{ height: "40px", backgroundColor: "black" }}
-              >
-                Назад
-              </Button>
-            </Box>
-          </>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {error ? (
+              <div style={{ color: "#d32f2f", padding: "12px" }}>{error}</div>
+            ) : (
+              renderDatasetsTables()
+            )}
+          </Box>
         ) : (
           <div
             style={{ display: "flex", flexDirection: "column", gap: "20px" }}
@@ -335,11 +361,9 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
             >
               <ErrorOutlineIcon />
               Для правильной работы прямого заполения необходимо скачать и
-              включить агент. Для включения агента необходимо после запуска
-              файла отобразить скрытые значки на панели задач, нажать на
-              "Fillusion Agent", далее на настройки, откроется интерфейс агента,
-              в нем нажмите на "Подключить".
+              включить агент...
             </div>
+            {/* ... accordion и инпуты ... */}
             <Accordion
               sx={{
                 boxShadow: "none",
@@ -357,9 +381,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
               </AccordionSummary>
               <AccordionDetails>
                 <p style={{ marginTop: "0" }}>
-                  Для прямого подключения необходимо скачать клиент Fillusion
-                  для вашей ОС (на данный момент гарантированно поддерживается
-                  только Windows)
+                  Для прямого подключения необходимо скачать клиент Fillusion...
                 </p>
                 <SelectField
                   options={selectOSOptions}
@@ -415,21 +437,67 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
                 type="password"
               />
             </div>
+          </div>
+        )}
+      </DialogContent>
+
+      {/* --- Нижняя панель с кнопками (Всегда видна) --- */}
+      {props.status !== "PENDING" && props.status !== "ERROR" && (
+        <DialogActions sx={{ padding: "16px 24px" }}>
+          {responseObj?.exportType !== "EXPORT_TYPE_DIRECT_DB" ? (
+            <Box display="flex" width="100%" gap="20px">
+              <Button
+                variant="outlined"
+                startIcon={
+                  downloading ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    <DownloadIcon />
+                  )
+                }
+                onClick={handleDownload}
+                disabled={downloading || loading}
+                sx={{
+                  height: "40px",
+                  color: "black",
+                  border: "1px solid black",
+                  fontWeight: "500",
+                }}
+              >
+                {downloading ? "Скачивание..." : "Скачать файл"}
+              </Button>
+
+              <CopyButton textToCopy={formatResponse(responseJson)} />
+
+              {/* Flex-grow пушер, если нужно прижать кнопку Назад вправо, 
+                  но у вас было всё слева, поэтому оставляем как есть или добавляем Spacer */}
+              <Box flexGrow={0} />
+
+              <Button
+                variant="contained"
+                onClick={() => props.setOpen(false)}
+                sx={{ height: "40px", backgroundColor: "black" }}
+              >
+                Назад
+              </Button>
+            </Box>
+          ) : (
+            // Кнопка для режима Direct Fill (тоже вынесена вниз, чтобы не уезжала)
             <Button
               variant="contained"
               sx={{
                 backgroundColor: "black",
                 height: "42px",
                 "&:hover": { backgroundColor: "#242424ff" },
-                marginTop: "16px",
+                width: "100%", // или как вам удобнее по дизайну
               }}
               onClick={handleDirectFill}
             >
               Начать прямое заполнение
             </Button>
-          </div>
-        )}
-      </DialogContent>
+          )}
+        </DialogActions>
+      )}
     </Dialog>
   );
 };

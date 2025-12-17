@@ -324,6 +324,35 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
                     disabled={isSubmitting}
                   />
 
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      textAlign: "center",
+                      lineHeight: 1.3,
+                      my: 1,
+                    }}
+                  >
+                    Нажимая кнопку «Зарегистрироваться», вы соглашаетесь с{" "}
+                    <Link
+                      href="ПОЛЬЗОВАТЕЛЬСКОЕ_СОГЛАШЕНИЕ.pdf"
+                      download
+                      underline="hover"
+                      color="primary"
+                    >
+                      Пользовательским соглашением
+                    </Link>{" "}
+                    и{" "}
+                    <Link
+                      href="ПОЛИТИКА_ПО_ОБРАБОТКЕ_ПЕРСОНАЛЬНЫХ_ДАННЫХ.pdf"
+                      download
+                      underline="hover"
+                      color="primary"
+                    >
+                      Политикой по обработке пользовательских данных
+                    </Link>
+                  </Typography>
+
                   <Button
                     type="submit"
                     variant="contained"
