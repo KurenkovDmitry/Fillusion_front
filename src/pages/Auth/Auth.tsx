@@ -335,7 +335,7 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
                   >
                     Нажимая кнопку «Зарегистрироваться», вы соглашаетесь с{" "}
                     <Link
-                      href="assets/ПОЛЬЗОВАТЕЛЬСКОЕ_СОГЛАШЕНИЕ.pdf"
+                      href="ПОЛЬЗОВАТЕЛЬСКОЕ_СОГЛАШЕНИЕ.pdf"
                       download
                       underline="hover"
                       color="primary"
@@ -344,7 +344,7 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
                     </Link>{" "}
                     и{" "}
                     <Link
-                      href="assets/ПОЛИТИКА_ПО_ОБРАБОТКЕ_ПЕРСОНАЛЬНЫХ_ДАННЫХ.pdf"
+                      href="ПОЛИТИКА_ПО_ОБРАБОТКЕ_ПЕРСОНАЛЬНЫХ_ДАННЫХ.pdf"
                       download
                       underline="hover"
                       color="primary"
