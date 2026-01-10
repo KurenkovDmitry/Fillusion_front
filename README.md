@@ -44,18 +44,3 @@ npm install
 ```bash
 npm run dev
 ```
-
-## 🔧 Конфигурация
-
-Проект использует ESLint для поддержания качества кода. Конфигурация находится в `eslint.config.js`.
-
-TypeScript настроен через файлы:
-- `tsconfig.json` - основная конфигурация
-- `tsconfig.app.json` - для приложения
-- `tsconfig.node.json` - для Node.js окружения
-
-## 👥 Авторы
-
-- [chsd0](https://github.com/chsd0)
-- [vovasvl](https://github.com/vovasvl) (Vladimir Svetlakov)
-- [KurenkovDmitry](https://github.com/KurenkovDmitry) (Куренков Дмитрий Александрович)
