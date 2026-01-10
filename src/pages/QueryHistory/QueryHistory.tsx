@@ -95,6 +95,11 @@ export const QueryHistory = () => {
                     (prev += idx === arr.length - 1 ? `${cur}` : `${cur}, `),
                   ""
                 )}`}
+                queuePosition={
+                  val.queuePosition && val.queuePosition != 0
+                    ? val.queuePosition
+                    : undefined
+                }
                 network={val.network}
                 totalRecords={val.tablesCount}
                 createdAt={val.createdAt}

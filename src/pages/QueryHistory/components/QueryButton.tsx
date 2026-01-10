@@ -23,6 +23,7 @@ interface QueryButtonProps {
   status: Status;
   exportType: ExportType;
   createdAt: string;
+  queuePosition?: number;
   onClick?: () => void;
 }
 
@@ -108,9 +109,16 @@ export const QueryButton = (props: QueryButtonProps) => {
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          <h3 style={{ margin: 0, fontWeight: "500", fontSize: "16px" }}>
-            {props.query}
-          </h3>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <h3 style={{ margin: 0, fontWeight: "500", fontSize: "16px" }}>
+              {props.query}{" "}
+            </h3>
+            <h3 style={{ margin: 0, fontWeight: "400", fontSize: "16px" }}>
+              {props.queuePosition
+                ? `⏳ ${props.queuePosition}-й в очереди`
+                : ""}
+            </h3>
+          </div>
           <div style={{ width: "100%", display: "flex", gap: "12px" }}>
             <Chip
               label={statusLabel}
