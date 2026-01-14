@@ -255,15 +255,15 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
       fullWidth={props.status !== "PENDING"}
       onClose={() => props.setOpen(false)}
       disableScrollLock
-      // Добавляем paper props для flex-layout, если понадобится тонкая настройка,
-      // но обычно DialogActions работает и так.
+      sx={{
+        "& .MuiPaper-root.MuiDialog-paperWidthXl": {
+          "@media (max-width: 600px)": {
+            width: "95%",
+            margin: 0,
+          },
+        },
+      }}
     >
-      {/* 
-        Мы выносим DialogTitle и DialogActions за пределы DialogContent, 
-        чтобы скролл был только у контента. 
-      */}
-
-      {/* --- Заголовок (всегда виден сверху) --- */}
       {props.status !== "PENDING" &&
         props.status !== "ERROR" &&
         responseObj?.exportType !== "EXPORT_TYPE_DIRECT_DB" && (
@@ -281,6 +281,9 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
           height: loading ? "200px" : "auto",
           transition: "height 0.2s ease",
           // dividers prop автоматически добавляет разделители при скролле
+          "@media (max-width: 600px)": {
+            padding: "8px 12px",
+          },
         }}
         dividers={
           !loading && props.status !== "PENDING" && props.status !== "ERROR"
@@ -312,7 +315,7 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
             style={{
               display: "flex",
               flexDirection: "column",
-              padding: "10px 20px",
+              padding: window.innerWidth <= 600 ? "5px 10px" : "10px 20px",
             }}
           >
             <h2 style={{ marginTop: 0 }}>Произошла ошибка при генерации</h2>
@@ -448,9 +451,15 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
 
       {/* --- Нижняя панель с кнопками (Всегда видна) --- */}
       {props.status !== "PENDING" && props.status !== "ERROR" && (
-        <DialogActions sx={{ padding: "16px 24px" }}>
+        <DialogActions
+          sx={{ padding: window.innerWidth <= 600 ? "8px 12px" : "16px 24px" }}
+        >
           {responseObj?.exportType !== "EXPORT_TYPE_DIRECT_DB" ? (
-            <Box display="flex" width="100%" gap="20px">
+            <Box
+              display="flex"
+              width="100%"
+              gap={window.innerWidth <= 600 ? "5px" : "20px"}
+            >
               <Button
                 variant="outlined"
                 startIcon={
@@ -467,6 +476,9 @@ export const DatasetDialog = (props: DatasetDialogProps) => {
                   color: "black",
                   border: "1px solid black",
                   fontWeight: "500",
+                  "@media (max-width: 600px)": {
+                    lineHeight: "18px",
+                  },
                 }}
               >
                 {downloading ? "Скачивание..." : "Скачать файл"}

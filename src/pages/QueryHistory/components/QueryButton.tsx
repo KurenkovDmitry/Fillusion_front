@@ -108,7 +108,14 @@ export const QueryButton = (props: QueryButtonProps) => {
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            width: "100%",
+          }}
+        >
           <div style={{ display: "flex", gap: "8px" }}>
             <h3 style={{ margin: 0, fontWeight: "500", fontSize: "16px" }}>
               {props.query}{" "}
@@ -119,7 +126,14 @@ export const QueryButton = (props: QueryButtonProps) => {
                 : ""}
             </h3>
           </div>
-          <div style={{ width: "100%", display: "flex", gap: "12px" }}>
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              gap: "12px",
+              flexWrap: "wrap",
+            }}
+          >
             <Chip
               label={statusLabel}
               style={{

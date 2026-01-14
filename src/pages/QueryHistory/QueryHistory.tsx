@@ -8,8 +8,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Dataset } from "@services/api/GenerateService/GenerateService.types";
 import EmptyIcon from "@assets/emptyIcon.svg?react";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { useStyles } from "./QueryHistory.styles";
 
 export const QueryHistory = () => {
+  const { classes } = useStyles();
   const { projectId } = useParams();
   const [datasets, setDatasets] = useState<Dataset[]>();
   const [loading, setLoading] = useState<boolean>(false);
@@ -53,17 +55,7 @@ export const QueryHistory = () => {
         requestId={requsetId}
         status={requsetStatus}
       />
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          width: "70%",
-          padding: "10px 32px 26px 32px",
-          border: "1px solid rgb(200 200 200)",
-          borderRadius: "12px",
-          margin: "20px 0",
-        }}
-      >
+      <div className={classes.container}>
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
           <IconButton
             sx={{ width: "32px", height: "32px" }}
