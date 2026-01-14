@@ -21,6 +21,11 @@ import { getTableLayoutPayload } from "../DbEditor/DbEditor";
 import { useShallow } from "zustand/shallow";
 import { SliderWithInput } from "./components/SliderWithinput";
 
+const MAX_TABLE_NAME_LENGTH = 50;
+
+const TABLE_NAME_ALLOWED_FULL = /^[A-Za-z0-9_]+$/;
+const TABLE_NAME_ALLOWED_INPUT = /^[A-Za-z0-9_]*$/;
+
 interface GenerateProps {
   projectId: string;
   open: boolean;
@@ -46,6 +51,8 @@ const GenerateFormContent = ({
     state.isTableGeneratedWithFaker(tableId)
   );
   const [name, setName] = useState(settings.name ?? "");
+  const [nameError, setNameError] = useState<string>("");
+
   const [query, setQuery] = useState(settings.query ?? "");
   const [totalRecords, setTotalRecords] = useState(
     settings.totalRecords ? settings.totalRecords : 50
@@ -71,10 +78,18 @@ const GenerateFormContent = ({
     setName(table.name);
   }, [table.name]);
 
-  // Сохранение с API запросом при blur имени таблицы
   const handleNameBlur = async () => {
+    const trimmed = name.trim();
+
+    const isValidName =
+      trimmed.length > 0 &&
+      trimmed.length <= MAX_TABLE_NAME_LENGTH &&
+      TABLE_NAME_ALLOWED_FULL.test(trimmed);
+
+    const safeName = isValidName ? trimmed : table?.name ?? "";
+
     const settings = {
-      name,
+      name: safeName,
       query,
       totalRecords,
       examples,
@@ -82,13 +97,26 @@ const GenerateFormContent = ({
 
     saveTableSettings(tableId, settings);
 
-    // Обновляем имя таблицы в schemaStore и на сервере
-    if (name !== table?.name) {
-      updateTable(tableId, { name });
+    if (!isValidName) {
+      setName(safeName);
+      setNameError(
+        trimmed ? "Только латинские буквы, цифры и нижнее подчеркивание" : ""
+      );
+      setSnackbar({
+        open: true,
+        message:
+          "Некорректное имя таблицы: разрешены латиница, цифры и нижнее подчеркивание",
+        variant: "error",
+      });
+      return;
+    }
+
+    if (safeName !== table?.name) {
+      updateTable(tableId, { name: safeName });
       try {
         await SchemaService.updateTable(projectId, tableId, {
           ...table,
-          name,
+          name: safeName,
           layout: getTableLayoutPayload(table),
         });
       } catch (error) {
@@ -150,7 +178,20 @@ const GenerateFormContent = ({
         name="name"
         required
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        error={!!nameError}
+        helperText={nameError}
+        onChange={(e) => {
+          const next = e.target.value.slice(0, MAX_TABLE_NAME_LENGTH);
+          setName(next);
+
+          if (next && !TABLE_NAME_ALLOWED_INPUT.test(next)) {
+            setNameError(
+              "Только латинские буквы, цифры и нижнее подчеркивание"
+            );
+          } else {
+            setNameError("");
+          }
+        }}
         onBlur={handleNameBlur}
       />
       <InputField
@@ -215,8 +256,9 @@ const GenerateFormContent = ({
             setSnackbar({ open: true, message: "🗸 Изменения сохранены" });
             onClose();
           }}
+          disabled={!!nameError}
           sx={{
-            border: "1px solid #4f8cff",
+            border: !nameError ? "1px solid #4f8cff" : "1px solid #00000042",
             height: "40px",
             transition: "background-color 0.3s ease, color 0.3s ease",
             "&:hover": {

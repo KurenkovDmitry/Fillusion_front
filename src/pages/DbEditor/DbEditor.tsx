@@ -49,6 +49,7 @@ import { ImportSchemaDialog } from "./components/ImportSchemaDialog";
 import { PhoneDialog } from "./components/PhoneDialog";
 
 const MAX_FIELDS = 10;
+const MAX_TABLE_NAME_LENGTH = 50;
 
 interface TableNodeData {
   id: string;
@@ -141,6 +142,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [tableName, setTableName] = useState(table?.name || "");
+  const [tableNameError, setTableNameError] = useState(false);
   const [open, setOpen] = useState(false);
 
   const [localFieldValues, setLocalFieldValues] = useState<
@@ -238,13 +240,35 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     };
   }, []);
 
+  const validateTableName = (name: string): boolean => {
+    const validPattern = /^[A-Za-z0-9_]+$/;
+    return validPattern.test(name) && name.length <= MAX_TABLE_NAME_LENGTH;
+  };
+
+  const handleTableNameChange = (value: string) => {
+    const truncatedValue = value.slice(0, MAX_TABLE_NAME_LENGTH);
+    setTableName(truncatedValue);
+
+    if (truncatedValue === "" || validateTableName(truncatedValue)) {
+      setTableNameError(false);
+    } else {
+      setTableNameError(true);
+    }
+  };
+
   const handleTableNameBlur = () => {
     setIsEditingName(false);
     const trimmedName = tableName.trim();
 
     if (!trimmedName) {
-      // Восстанавливаем если пустое
       setTableName(table?.name || "");
+      setTableNameError(false);
+      return;
+    }
+
+    if (!validateTableName(trimmedName)) {
+      setTableName(table?.name || "");
+      setTableNameError(false);
       return;
     }
 
@@ -252,6 +276,8 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
       updateTable(id, { name: trimmedName });
       debouncedSaveToServer(id);
     }
+
+    setTableNameError(false);
   };
 
   const handleFieldChange = (
@@ -260,7 +286,6 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     value: string
   ) => {
     if (key === "name") {
-      // Отмечаем что input активен
       activeInputs.current.add(fieldId);
       setLocalFieldValues((prev) => ({ ...prev, [fieldId]: value }));
     } else {
@@ -279,13 +304,11 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
   };
 
   const handleFieldBlur = (fieldId: string) => {
-    // Убираем из активных сразу
     activeInputs.current.delete(fieldId);
 
     debouncedUpdateField.cancel?.();
     const currentValue = localFieldValues[fieldId]?.trim();
 
-    // Если значение пустое - восстанавливаем
     if (!currentValue) {
       const field = table.fields.find((f) => f.id === fieldId);
       if (field) {
@@ -298,7 +321,6 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
       return;
     }
 
-    // Обновляем только если значение изменилось
     const field = table.fields.find((f) => f.id === fieldId);
     if (field && currentValue !== field.name) {
       updateField(id, fieldId, { name: currentValue });
@@ -307,7 +329,6 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     }
   };
 
-  // Обработчик фокуса
   const handleFieldFocus = (fieldId: string) => {
     activeInputs.current.add(fieldId);
   };
@@ -403,19 +424,20 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
           <input
             autoFocus
             value={tableName}
-            onChange={(e) => setTableName(e.target.value)}
+            onChange={(e) => handleTableNameChange(e.target.value)}
             onBlur={handleTableNameBlur}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleTableNameBlur();
               if (e.key === "Escape") {
                 setTableName(table.name);
+                setTableNameError(false);
                 setIsEditingName(false);
               }
             }}
             style={{
               background: "transparent",
-              border: "1px solid white",
-              color: "white",
+              border: `1px solid ${tableNameError ? "#ff4444" : "white"}`,
+              color: tableNameError ? "#ff4444" : "white",
               fontWeight: "bold",
               fontSize: "16px",
               width: "100%",
