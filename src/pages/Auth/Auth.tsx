@@ -137,7 +137,19 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
   };
 
   return (
-    <Dialog open={props.open} onClose={props.onClose} disableScrollLock={true}>
+    <Dialog
+      open={props.open}
+      onClose={props.onClose}
+      disableScrollLock={true}
+      sx={{
+        "& .MuiPaper-root": {
+          "@media (max-width: 600px)": {
+            width: "95%",
+            margin: 0,
+          },
+        },
+      }}
+    >
       <Box
         sx={{
           width:
@@ -148,11 +160,11 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
               : "416px",
           margin: "auto",
           padding: 4,
+          bgcolor: "background.paper",
+          boxShadow: 3,
           "@media (max-width: 600px)": {
             width: "100%",
           },
-          bgcolor: "background.paper",
-          boxShadow: 3,
           borderRadius: 2,
           transition: "height 0.3s ease-in-out, width 0.3s ease",
           height:
