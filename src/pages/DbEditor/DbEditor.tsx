@@ -424,7 +424,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
           />
         ) : (
           <div
-            onDoubleClick={() => setIsEditingName(true)}
+            onDoubleClick={() => !isPhone && setIsEditingName(true)}
             style={{
               fontWeight: "bold",
               fontSize: "16px",
@@ -514,6 +514,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
                   color: "#000",
                 }}
                 className="nodrag"
+                disabled={isPhone}
               />
 
               <div className="nodrag">
@@ -1403,6 +1404,7 @@ export const DatabaseDiagram: React.FC = () => {
               position: "absolute",
               bottom: 0,
               zIndex: "1000",
+              marginBottom: "env(safe-area-inset-bottom)",
               "&:hover": {
                 backgroundColor: "rgb(79, 140, 255)",
                 border: "rgb(79, 140, 255)",
