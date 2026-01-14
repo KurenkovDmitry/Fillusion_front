@@ -9,6 +9,10 @@ export const useStyles = makeStyles()((_theme) => ({
     padding: "0 16px",
     boxSizing: "border-box",
     width: "100%",
+
+    "@media (max-width: 600px)": {
+      padding: "0 10px",
+    },
   },
   headerTransparent: {
     position: "absolute",
@@ -35,6 +39,10 @@ export const useStyles = makeStyles()((_theme) => ({
     "&:hover": {
       textShadow: "0 0 8px #ffffff6b",
     },
+
+    "@media (max-width: 600px)": {
+      fontSize: "16px",
+    },
   },
   logo: {
     margin: "16px 0",
@@ -49,6 +57,9 @@ export const useStyles = makeStyles()((_theme) => ({
     fontSize: "2rem",
     letterSpacing: "2px",
     cursor: "pointer",
+    "@media (max-width: 600px)": {
+      fontSize: "1.5rem",
+    },
   },
   mainContent: {
     width: "100%",

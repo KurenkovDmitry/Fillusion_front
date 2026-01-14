@@ -411,17 +411,7 @@ export const NonModalGenerate = () => {
             </motion.article>
           </div>
         </section>
-        <section
-          style={{
-            height: "150px",
-            width: "100%",
-            backgroundColor: "#18191b",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "10px",
-          }}
-        >
+        <section className={classes.main__footer}>
           <div
             style={{
               width: "70%",
@@ -457,7 +447,7 @@ export const NonModalGenerate = () => {
           </div>
           <div
             style={{
-              width: "70%",
+              width: "",
               color: "#a1a1a1ff",
               textAlign: "center",
             }}

@@ -54,6 +54,14 @@ export const EditProfileDialog: React.FC<EditProfileDialogProps> = ({
       disableScrollLock
       maxWidth="sm"
       fullWidth
+      sx={{
+        "& .MuiPaper-root": {
+          "@media (max-width: 600px)": {
+            margin: 0,
+            width: "95%",
+          },
+        },
+      }}
     >
       <DialogTitle className={classes.changePasswordTitle}>
         <Typography fontWeight={600}>Изменить профиль</Typography>

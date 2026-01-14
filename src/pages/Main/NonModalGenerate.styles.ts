@@ -203,4 +203,18 @@ export const useStyles = makeStyles()((_theme) => ({
       marginTop: "10px",
     },
   },
+
+  main__footer: {
+    width: "100%",
+    backgroundColor: "#18191b",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "10px",
+    height: "150px",
+
+    "@media (max-width: 600px)": {
+      height: "fit-content",
+    },
+  },
 }));

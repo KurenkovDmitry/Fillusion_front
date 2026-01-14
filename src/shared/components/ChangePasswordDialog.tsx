@@ -63,7 +63,15 @@ export const ChangePasswordDialog: React.FC<ChangePasswordDialogProps> = ({
       maxWidth="sm"
       disableScrollLock
       fullWidth
-      sx={{ borderRadius: "12px" }}
+      sx={{
+        borderRadius: "12px",
+        "& .MuiPaper-root": {
+          "@media (max-width: 600px)": {
+            margin: 0,
+            width: "95%",
+          },
+        },
+      }}
     >
       <DialogTitle className={classes.changePasswordTitle}>
         <Typography fontWeight={600}>Изменить пароль</Typography>
