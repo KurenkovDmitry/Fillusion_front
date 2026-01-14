@@ -1395,26 +1395,38 @@ export const DatabaseDiagram: React.FC = () => {
           </div>
         </aside>
         {isPhone && (
-          <Button
-            variant="contained"
-            sx={{
-              width: "100%",
-              height: "42px",
-              backgroundColor: "black",
-              border: "1px solid white",
+          <div
+            style={{
               position: "absolute",
               bottom: 0,
+              width: "100%",
+              height: "120px",
+              display: "flex",
+              alignItems: "flex-start",
               zIndex: "1000",
-              marginBottom: "env(safe-area-inset-bottom)",
-              "&:hover": {
-                backgroundColor: "rgb(79, 140, 255)",
-                border: "rgb(79, 140, 255)",
-              },
+              backgroundColor: "black",
+              border: "1px solid black",
             }}
-            onClick={() => navigate(`/history/${projectId}`)}
           >
-            Перейти к истории запросов
-          </Button>
+            <Button
+              variant="contained"
+              sx={{
+                width: "100%",
+                height: "42px",
+                backgroundColor: "black",
+                borderBottom: "1px solid #ccc",
+                borderRadius: "0",
+                top: "0",
+                "&:hover": {
+                  backgroundColor: "rgb(79, 140, 255)",
+                  border: "rgb(79, 140, 255)",
+                },
+              }}
+              onClick={() => navigate(`/history/${projectId}`)}
+            >
+              Перейти к истории запросов
+            </Button>
+          </div>
         )}
 
         {/* React Flow */}
