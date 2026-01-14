@@ -14,7 +14,7 @@ export const QueryHistory = () => {
   const { classes } = useStyles();
   const { projectId } = useParams();
   const [datasets, setDatasets] = useState<Dataset[]>();
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [requsetId, setRequestId] = useState("");
   const [requsetStatus, setRequsetStatus] = useState("");
   const navigate = useNavigate();
@@ -30,10 +30,10 @@ export const QueryHistory = () => {
   const handleEditorClick = () => {
     navigate(`/projects/${projectId}`);
   };
-
   useLayoutEffect(() => {
+    setLoading(true);
+
     const fetchDatasets = async () => {
-      setLoading(true);
       try {
         const datasets = await GenerateService.getDatasets(projectId!);
         setDatasets(datasets.datasets);
@@ -43,8 +43,13 @@ export const QueryHistory = () => {
         setLoading(false);
       }
     };
+
     fetchDatasets();
-  }, []);
+
+    const intervalId = setInterval(fetchDatasets, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [projectId]);
 
   return (
     <LayoutWithHeader noJustify>

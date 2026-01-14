@@ -48,6 +48,8 @@ import SelfLoopEdge from "./components/SelfLoopEdge";
 import { ImportSchemaDialog } from "./components/ImportSchemaDialog";
 import { PhoneDialog } from "./components/PhoneDialog";
 
+const MAX_FIELDS = 10;
+
 interface TableNodeData {
   id: string;
   [key: string]: string;
@@ -314,7 +316,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
     setCurrentTable(id);
     const currentTable = getCurrentTable();
     if (!currentTable) return;
-    if (currentTable.fields.length >= 20) return;
+    if (currentTable.fields.length >= MAX_FIELDS) return;
 
     const newField = {
       name: getFieldName(table),
@@ -591,7 +593,6 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
           ))}
         </AnimatePresence>
       </div>
-
       <div
         style={{
           padding: "8px 12px",
@@ -600,7 +601,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
       >
         <button
           onClick={handleAddField}
-          disabled={table.fields.length >= 20}
+          disabled={table.fields.length >= MAX_FIELDS}
           className="nodrag"
           style={{
             width: "100%",
@@ -608,8 +609,8 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
             background: "#f5f5f5",
             border: "1px dashed #ccc",
             borderRadius: "4px",
-            color: table.fields.length >= 20 ? "#c5c5c5ff" : "#666",
-            cursor: table.fields.length >= 20 ? "initial" : "pointer",
+            color: table.fields.length >= MAX_FIELDS ? "#c5c5c5ff" : "#666",
+            cursor: table.fields.length >= MAX_FIELDS ? "initial" : "pointer",
             fontSize: "14px",
             fontWeight: "500",
             display: isPhone ? "none" : "flex",
@@ -628,9 +629,9 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
           }}
         >
           <span style={{ fontSize: "18px", lineHeight: 1 }}>
-            {table.fields.length >= 20 ? "" : "+"}
+            {table.fields.length >= MAX_FIELDS ? "" : "+"}
           </span>
-          {table.fields.length >= 20
+          {table.fields.length >= MAX_FIELDS
             ? "Достигнуто максимальное число полей"
             : "Добавить поле"}
         </button>

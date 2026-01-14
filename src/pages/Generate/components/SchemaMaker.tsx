@@ -27,6 +27,8 @@ import { SchemaService } from "@services/api";
 import { AnimatePresence, motion } from "framer-motion";
 import { typeOptions, PKTypeOptions } from "@shared/constants";
 
+const MAX_FIELDS = 10;
+
 // Утилита debounce для отложенных запросов
 function debounce<T extends (...args: any[]) => any>(
   func: T,
@@ -188,7 +190,7 @@ export const SchemaMaker: React.FC = () => {
     const currentTable = getCurrentTable();
     const id = currentTableId;
     if (!currentTable) return;
-    if (currentTable.fields.length >= 20) return;
+    if (currentTable.fields.length >= MAX_FIELDS) return;
 
     const newField = {
       name: getFieldName(currentTable),
@@ -464,7 +466,7 @@ export const SchemaMaker: React.FC = () => {
         variant="contained"
         startIcon={<AddIcon />}
         onClick={handleAddField}
-        disabled={currentTable.fields.length >= 20}
+        disabled={currentTable.fields.length >= MAX_FIELDS}
         sx={{
           marginTop: "6px",
           background: "#4f8cff",
