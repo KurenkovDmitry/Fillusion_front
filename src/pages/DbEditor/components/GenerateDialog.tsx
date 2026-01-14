@@ -44,6 +44,41 @@ const SELECT_OUTPUT_OPTIONS = [
   { value: "EXPORT_TYPE_DIRECT_DB", label: "Прямое подключение" },
 ];
 
+// Маппинг кодов ошибок
+const mapErrorMessage = (error: string): string => {
+  try {
+    const parsed = JSON.parse(error);
+    const message: string = parsed?.message || "";
+
+    const activeLimitMatch = message.match(
+      /active generations limit exceeded:\s*max\s*(\d+)/i
+    );
+    if (activeLimitMatch) {
+      const max = activeLimitMatch[1];
+      return `Превышен лимит одновременных генераций. Вы можете запускать не более ${max} запросов одновременно.`;
+    }
+
+    const selfRequiresMatch = message.match(
+      /table requires itself\s*\(possibly uroboros\):\s*Table:\s*([^\s]+)/i
+    );
+    if (selfRequiresMatch) {
+      const tableName = selfRequiresMatch[1];
+      return `Циклическая зависимость: таблица "${tableName}" иметь саму себя. Проверьте последовательности связей из этой таблицы.`;
+    }
+
+    const pkFkFakerMatch = message.match(
+      /Table: ([^:]+): column ([^ ]+) can't be both pk or fk and faker/i
+    );
+    if (pkFkFakerMatch) {
+      return `Колонка "${pkFkFakerMatch[2]}" в таблице "${pkFkFakerMatch[1]}" не может быть одновременно ключом и генерироваться через Faker`;
+    }
+
+    return message || error;
+  } catch {
+    return error;
+  }
+};
+
 export const GenerateDialog = (props: GenerateDialogProps) => {
   const { projectId } = useParams();
 
@@ -153,11 +188,11 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
       props.onSucces();
     } catch (err) {
       console.error("Generation failed:", err);
-      setError(
+      const rawError =
         err instanceof Error
           ? err.message
-          : "Не удалось запустить генерацию данных"
-      );
+          : "Не удалось запустить генерацию данных";
+      setError(rawError);
     } finally {
       setIsGenerating(false);
     }
@@ -195,11 +230,7 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
                 fontSize: "14px",
               }}
             >
-              {JSON.parse(error).code === 8 ? (
-                "Превышен лимит одновременных генераций. Вы можете запускать не более 2 запросов одновременно."
-              ) : (
-                <>{error}</>
-              )}
+              {mapErrorMessage(error)}
             </div>
           )}
         </DialogContent>

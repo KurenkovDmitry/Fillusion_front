@@ -865,6 +865,13 @@ export const DatabaseDiagram: React.FC = () => {
     fetchSchema();
   }, [projectId, loadFromApi]);
 
+  const refreshSchemaFromServer = useCallback(async () => {
+    if (!projectId) return;
+    const res = await SchemaService.getSchema(projectId);
+    loadFromApi(res);
+    loadSettingsFromApi(res);
+  }, [projectId, loadFromApi, loadSettingsFromApi]);
+
   const isUpdatingRelations = useRef(false);
 
   const onConnect = useCallback(
@@ -1030,6 +1037,8 @@ export const DatabaseDiagram: React.FC = () => {
             newRelation
           );
           addRelation(createdRelation.relation);
+
+          await refreshSchemaFromServer();
         } catch (e) {
           if (createdRelation) {
             removeRelation(createdRelation.relation.id);
@@ -1059,6 +1068,7 @@ export const DatabaseDiagram: React.FC = () => {
       tables,
       updateField,
       removeRelation,
+      refreshSchemaFromServer,
     ]
   );
 
