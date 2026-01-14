@@ -1403,7 +1403,7 @@ export const DatabaseDiagram: React.FC = () => {
               position: "absolute",
               bottom: 0,
               zIndex: "1000",
-              paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
+              marginBottom: "calc(16px + env(safe-area-inset-bottom))",
               "&:hover": {
                 backgroundColor: "rgb(79, 140, 255)",
                 border: "rgb(79, 140, 255)",
