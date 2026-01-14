@@ -5,6 +5,7 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Checkbox,
+  Tooltip,
 } from "@mui/material";
 import React, { useEffect, useState, useCallback } from "react";
 import { useStyles } from "./AdditionalSettings.styles";
@@ -326,6 +327,9 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
     return null;
   }
 
+  const isAutoincrementDisabled =
+    currentField?.type !== "int" && currentField?.type !== "bigint";
+
   return (
     <>
       <IconButton size="small" onClick={handleClick}>
@@ -546,42 +550,52 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                         </span>
                       </div>
                     </div>
-                    <div
-                      className={classes.parametrs}
-                      onClick={() => {
-                        if (
-                          currentField?.type !== "int" &&
-                          currentField?.type !== "bigint"
-                        )
-                          return;
-                        handleAutoIncrementChange();
-                      }}
+                    <Tooltip
+                      title={
+                        isAutoincrementDisabled
+                          ? "Автоинкремент применим только для типов Integer и Big Integer"
+                          : ""
+                      }
+                      placement="top-start"
+                      arrow
                     >
-                      <Checkbox
-                        checked={checkedAutoincrement}
-                        sx={{
-                          transition: "all 0.1s ease-in-out",
-                          "&:active": { transform: "scale(0.95)" },
-                        }}
-                        disabled={
-                          currentField?.type !== "int" &&
-                          currentField?.type !== "bigint"
-                        }
-                      />
                       <div
+                        className={classes.parametrs}
                         style={{
-                          display: "grid",
-                          gridTemplateRows: "1fr 1fr",
+                          cursor: isAutoincrementDisabled ? "help" : "pointer",
+                        }}
+                        onClick={() => {
+                          if (isAutoincrementDisabled) return;
+                          handleAutoIncrementChange();
                         }}
                       >
-                        <h5 style={{ margin: "4px 0 0 0", fontSize: "15px" }}>
-                          Автоинкремент
-                        </h5>
-                        <span style={{ fontSize: "13px" }}>
-                          Автоматическое увеличение значения
-                        </span>
+                        <Checkbox
+                          checked={checkedAutoincrement}
+                          sx={{
+                            transition: "all 0.1s ease-in-out",
+                            "&:active": {
+                              transform: isAutoincrementDisabled
+                                ? "none"
+                                : "scale(0.95)",
+                            },
+                          }}
+                          disabled={isAutoincrementDisabled}
+                        />
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateRows: "1fr 1fr",
+                          }}
+                        >
+                          <h5 style={{ margin: "4px 0 0 0", fontSize: "15px" }}>
+                            Автоинкремент
+                          </h5>
+                          <span style={{ fontSize: "13px" }}>
+                            Автоматическое увеличение значения
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    </Tooltip>
                   </div>
                 </article>
               )}
