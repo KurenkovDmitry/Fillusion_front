@@ -33,6 +33,19 @@ export const IMPORT_SCHEMA_ERROR_MAP = [
     match: /import schema: statement\[(\d+)\]: unterminated parentheses/i,
     uiMessage: "Синтаксическая ошибка SQL: не закрыта скобка",
   },
+
+  {
+    match:
+      /import schema: statement\[(\d+)\]: too many columns in table "([^"]+)"/i,
+    uiMessage: "Слишком много колонок в таблице",
+  },
+
+  {
+    match:
+      /import schema: foreign key "([^"]*)" \(([^)]+)\): referenced table "([^"]+)" has no primary key/i,
+    uiMessage:
+      "Ошибка внешнего ключа: таблица, на которую идёт ссылка, не содержит первичного ключа",
+  },
 ];
 
 // Функция маппинга ошибки

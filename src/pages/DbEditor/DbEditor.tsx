@@ -998,7 +998,9 @@ export const DatabaseDiagram: React.FC = () => {
             mapTableToApiPayload({
               ...toTable,
               fields: toTable.fields.map((f) =>
-                f.id === target.fieldId ? { ...f, ...toFieldUpdates } : f
+                f.id === target.fieldId
+                  ? { ...f, ...toFieldUpdates, viaFaker: false }
+                  : f
               ),
               layout: getTableLayoutPayload(toTable),
             })
@@ -1015,6 +1017,7 @@ export const DatabaseDiagram: React.FC = () => {
                   ? {
                       ...f,
                       ...sourceUpdate,
+                      viaFaker: false,
                     }
                   : f
               ),

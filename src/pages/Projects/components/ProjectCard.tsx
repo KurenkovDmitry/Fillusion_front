@@ -36,6 +36,9 @@ function beautifyUpdatedAt(dateString: string): string {
   });
 }
 
+const MAX_PROJECT_TITLE_LENGTH = 200;
+const MAX_PROJECT_DESCRIPTION_LENGTH = 2000;
+
 export const ProjectCard = (props: ProjectCardProps) => {
   const { classes } = useStyles();
   const navigate = useNavigate();
@@ -48,29 +51,58 @@ export const ProjectCard = (props: ProjectCardProps) => {
     props.setDeleteOpenFromCard(props.id, true);
   };
 
+  const safeTitle = (props.title ?? "").slice(0, MAX_PROJECT_TITLE_LENGTH);
+  const safeDescription = (props.description ?? "").slice(
+    0,
+    MAX_PROJECT_DESCRIPTION_LENGTH
+  );
+
   return (
     <article className={classes.project__card}>
       <div>
         <span className={classes.card__headerSection}>
-          <h4 className={classes.card__header}>{props.title}</h4>
+          <h4
+            className={classes.card__header}
+            title={props.title}
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {safeTitle}
+          </h4>
+
           <Tooltip title="Редактировать проект" placement="top" arrow>
             <IconButton size="small" onClick={handleSettingsClick}>
               <SettingsIcon sx={{ color: "#888" }} />
             </IconButton>
           </Tooltip>
+
           <Tooltip title="Удалить проект" placement="top" arrow>
             <IconButton size="small" onClick={handleDeleteClick}>
               <DeleteIcon sx={{ color: "#e00000ff" }} />
             </IconButton>
           </Tooltip>
         </span>
-        <p className={classes.card__description}>{props.description}</p>
+
+        <p
+          className={classes.card__description}
+          style={{
+            whiteSpace: "pre-wrap",
+            overflowWrap: "anywhere",
+            wordBreak: "break-word",
+          }}
+        >
+          {safeDescription}
+        </p>
       </div>
+
       <span className={classes.card__updatedAt}>
         <CalendarTodayOutlinedIcon sx={{ height: "16px", width: "16px" }} />
-        Изменен
-        {" " + beautifyUpdatedAt(props.updatedAt)}
+        Изменен {" " + beautifyUpdatedAt(props.updatedAt)}
       </span>
+
       <a
         className={classes.card__link}
         onClick={() => navigate(`/projects/${props.id}`)}

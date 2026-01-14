@@ -15,6 +15,9 @@ interface ProjectDialogProps {
   newProject: boolean;
 }
 
+let MAX_PROJECT_NAME_LENGTH = 200;
+let MAX_PROJECT_DESCRIPTION_LENGTH = 2000;
+
 export const ProjectDialog = (props: ProjectDialogProps) => {
   const open = props.dialogState.open;
   const { classes } = useStyles();
@@ -127,6 +130,7 @@ export const ProjectDialog = (props: ProjectDialogProps) => {
           onChange={handleNameChange}
           onBlur={handleNameBlur}
           required
+          maxLength={MAX_PROJECT_NAME_LENGTH}
           error={nameError}
           helperText={
             nameError ? "Название проекта обязательно для заполнения" : ""
@@ -141,6 +145,7 @@ export const ProjectDialog = (props: ProjectDialogProps) => {
           onBlur={handleDescriptionBlur}
           multiline
           required
+          maxLength={MAX_PROJECT_DESCRIPTION_LENGTH}
           error={descriptionError}
           helperText={
             descriptionError
