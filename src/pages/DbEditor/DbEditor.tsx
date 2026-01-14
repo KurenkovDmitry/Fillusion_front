@@ -1133,7 +1133,7 @@ export const DatabaseDiagram: React.FC = () => {
       <div
         style={{
           width: "100vw",
-          height: "calc(100vh)",
+          height: "100dvh",
           position: "relative",
         }}
       >
@@ -1403,7 +1403,6 @@ export const DatabaseDiagram: React.FC = () => {
               position: "absolute",
               bottom: 0,
               zIndex: "1000",
-              marginBottom: "calc(16px + env(safe-area-inset-bottom))",
               "&:hover": {
                 backgroundColor: "rgb(79, 140, 255)",
                 border: "rgb(79, 140, 255)",
