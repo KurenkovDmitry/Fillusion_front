@@ -15,6 +15,7 @@ export type Dataset = {
   tablesCount: string;
   tableNames: string[];
   doneTablesCount: string;
+  queuePosition?: number;
   exportType:
     | "EXPORT_TYPE_UNSPECIFIED"
     | "EXPORT_TYPE_JSON"

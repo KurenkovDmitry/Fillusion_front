@@ -1,73 +1,46 @@
-# React + TypeScript + Vite
+# Fillusion Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## License Notice
 
-Currently, two official plugins are available:
+This repository is **NOT open source**.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The code is published **for viewing and evaluation purposes only**.
+Any use, copying, modification, or derivation is strictly prohibited.
 
-## React Compiler
+See the `LICENSE.md` file for full terms.
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+---
 
-## Expanding the ESLint configuration
+## 📋 Описание
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Fillusion - это приложение для упрощения работы с базами данных, включающее редактор БД и генератор тестовых данных.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 📁 Структура проекта
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── app/           # Корневой компонент приложения
+├── pages/         # Страницы приложения
+├── assets/        # Статические ресурсы (иконки, шрифты)
+├── hooks/         # Пользовательские React хуки
+├── services/      # API сервисы и бизнес-логика
+├── shared/        # Общие компоненты и утилиты
+├── store/         # Управление состоянием
+└── ui/            # UI компоненты
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🛠️ Установка и запуск
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Требования
+- Node.js (версия 16+)
+- npm или yarn
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Установка зависимостей
+```bash
+npm install
+```
+
+### Запуск в режиме разработки
+```bash
+npm run dev
 ```

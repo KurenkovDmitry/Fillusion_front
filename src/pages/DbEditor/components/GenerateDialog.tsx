@@ -195,7 +195,11 @@ export const GenerateDialog = (props: GenerateDialogProps) => {
                 fontSize: "14px",
               }}
             >
-              {error}
+              {JSON.parse(error).code === 8 ? (
+                "Превышен лимит одновременных генераций. Вы можете запускать не более 2 запросов одновременно."
+              ) : (
+                <>{error}</>
+              )}
             </div>
           )}
         </DialogContent>
