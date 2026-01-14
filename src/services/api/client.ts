@@ -50,7 +50,8 @@ class ApiClient {
         const errorData = await response.json().catch(() => ({}));
         if (
           (errorData.message === "authentication required" ||
-            errorData.error === "Forbidden") &&
+            errorData.error === "Forbidden" ||
+            errorData.message === "unauthorized") &&
           endpoint !== "/auth/refresh" &&
           !retry
         ) {

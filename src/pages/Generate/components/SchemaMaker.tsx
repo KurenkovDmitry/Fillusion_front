@@ -27,7 +27,7 @@ import { SchemaService } from "@services/api";
 import { AnimatePresence, motion } from "framer-motion";
 import { typeOptions, PKTypeOptions } from "@shared/constants";
 
-const MAX_FIELDS = 10;
+const MAX_FIELDS = 20;
 
 // Утилита debounce для отложенных запросов
 function debounce<T extends (...args: any[]) => any>(

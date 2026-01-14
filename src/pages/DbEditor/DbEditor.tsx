@@ -48,7 +48,7 @@ import SelfLoopEdge from "./components/SelfLoopEdge";
 import { ImportSchemaDialog } from "./components/ImportSchemaDialog";
 import { PhoneDialog } from "./components/PhoneDialog";
 
-const MAX_FIELDS = 10;
+const MAX_FIELDS = 20;
 const MAX_TABLE_NAME_LENGTH = 50;
 
 interface TableNodeData {
@@ -1152,6 +1152,11 @@ export const DatabaseDiagram: React.FC = () => {
 
   const [phoneModalOpen, setPhoneModalOpen] = useState(isPhone);
 
+  const hasEmptyTables = Object.values(tables).some(
+    (table) => table.fields.length === 0
+  );
+  const isGenerateDisabled = Object.keys(tables).length === 0 || hasEmptyTables;
+
   return (
     <LayoutWithHeader noJustify transparent>
       <div
@@ -1368,6 +1373,7 @@ export const DatabaseDiagram: React.FC = () => {
           >
             <Button
               variant="contained"
+              disabled={isGenerateDisabled}
               sx={{
                 width: "100%",
                 height: "42px",
@@ -1376,6 +1382,11 @@ export const DatabaseDiagram: React.FC = () => {
                 "&:hover": {
                   backgroundColor: "rgb(79, 140, 255)",
                   border: "rgb(79, 140, 255)",
+                },
+                "&.Mui-disabled": {
+                  backgroundColor: "transparent",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  color: "rgba(255, 255, 255, 0.3)",
                 },
               }}
               onClick={() => setGenerateConformationOpen(true)}

@@ -12,10 +12,44 @@ interface ImportSchemaDialogProps {
   onSucces: () => void;
 }
 
+export const IMPORT_SCHEMA_ERROR_MAP = [
+  {
+    match: /import schema: too many tables in SQL payload/i,
+    uiMessage: "Слишком много таблиц в импортируемой схеме",
+  },
+
+  {
+    match:
+      /import schema: statement\[(\d+)\]: duplicate column "([^"]+)" in table "([^"]+)"/i,
+    uiMessage: "В таблице найдены дубликаты колонок",
+  },
+
+  {
+    match: /import schema: foreign key references unknown table "([^"]+)"/i,
+    uiMessage: "Внешний ключ ссылается на несуществующую таблицу",
+  },
+
+  {
+    match: /import schema: statement\[(\d+)\]: unterminated parentheses/i,
+    uiMessage: "Синтаксическая ошибка SQL: не закрыта скобка",
+  },
+];
+
+// Функция маппинга ошибки
+const mapImportSchemaError = (errorMessage: string): string => {
+  for (const errorPattern of IMPORT_SCHEMA_ERROR_MAP) {
+    if (errorPattern.match.test(errorMessage)) {
+      return errorPattern.uiMessage;
+    }
+  }
+  // Если не нашли совпадение - возвращаем оригинальное сообщение
+  return errorMessage;
+};
+
 export const ImportSchemaDialog = (props: ImportSchemaDialogProps) => {
   const { projectId } = useParams();
   const [schema, setSchema] = useState("");
-  const [error, setError] = useState<{ message: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const loadFromApi = useSchemaStore((state) => state.loadFromApi);
 
   const handleSchemaImport = async () => {
@@ -33,7 +67,10 @@ export const ImportSchemaDialog = (props: ImportSchemaDialogProps) => {
       props.onClose();
     } catch (e) {
       console.error(e);
-      setError(e as { message: string });
+      const rawError =
+        (e as { message: string })?.message || "Неизвестная ошибка";
+      const mappedError = mapImportSchemaError(rawError);
+      setError(mappedError);
     }
   };
 
@@ -43,7 +80,7 @@ export const ImportSchemaDialog = (props: ImportSchemaDialogProps) => {
       {error && (
         <div style={{ paddingInline: "24px" }}>
           <Alert variant="outlined" severity="error">
-            {error.message}
+            {error}
           </Alert>
         </div>
       )}
