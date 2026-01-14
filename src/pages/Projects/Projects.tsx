@@ -72,9 +72,11 @@ export const Projects = () => {
     fetchProjects();
   }, []);
 
+  const isPhone = window.innerWidth <= 600;
+
   return (
     <LayoutWithHeader noJustify>
-      <div style={{ width: "70%" }}>
+      <div style={{ width: isPhone ? "95%" : "70%" }}>
         <div
           style={{
             display: "flex",
@@ -82,7 +84,7 @@ export const Projects = () => {
             alignItems: "center",
           }}
         >
-          <h1 style={{ fontSize: "32px" }}>Проекты</h1>
+          <h1 style={{ fontSize: isPhone ? "28px" : "32px" }}>Проекты</h1>
           {projects?.length < 6 ? (
             <Button
               onClick={() => setOpen(true)}
@@ -134,7 +136,7 @@ export const Projects = () => {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
+              gridTemplateColumns: isPhone ? "1fr" : "1fr 1fr 1fr",
               gridTemplateRows: "auto auto",
               gap: "20px",
             }}

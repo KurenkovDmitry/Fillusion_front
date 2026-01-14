@@ -46,6 +46,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { typeOptions, PKTypeOptions } from "@shared/constants";
 import SelfLoopEdge from "./components/SelfLoopEdge";
 import { ImportSchemaDialog } from "./components/ImportSchemaDialog";
+import { PhoneDialog } from "./components/PhoneDialog";
 
 interface TableNodeData {
   id: string;
@@ -372,6 +373,8 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
 
   if (!table) return null;
 
+  const isPhone = window.innerWidth <= 600;
+
   return (
     <div
       style={{
@@ -434,7 +437,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
         <IconButton
           size="small"
           onClick={() => setOpen(true)}
-          sx={{ color: "#d32f2f" }}
+          sx={{ color: "#d32f2f", display: isPhone ? "none" : "unset" }}
           aria-label="Удалить таблицу"
           className="nodrag"
         >
@@ -454,7 +457,9 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
                     ? "1px solid #E0E0E0"
                     : "none",
                 display: "grid",
-                gridTemplateColumns: "30px 1fr 135px 30px 30px",
+                gridTemplateColumns: isPhone
+                  ? "30px 1fr 1fr"
+                  : "30px 1fr 135px 30px 30px",
                 alignItems: "center",
                 gap: "8px",
                 position: "relative",
@@ -526,11 +531,14 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
                         ")"
                       : undefined
                   }
-                  disabled={field.viaFaker || field.isForeignKey}
+                  disabled={field.viaFaker || field.isForeignKey || isPhone}
                 />
               </div>
 
-              <div className="nodrag">
+              <div
+                className="nodrag"
+                style={{ display: isPhone ? "none" : "unset" }}
+              >
                 <AdditionalSettings fieldId={field.id} projectId={projectId!} />
               </div>
 
@@ -546,7 +554,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
                   fontSize: "18px",
                   padding: "4px",
                   lineHeight: 1,
-                  display: "flex",
+                  display: isPhone ? "none" : "flex",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -603,7 +611,7 @@ const DatabaseTableNode = (props: NodeProps<DatabaseTableNodeType>) => {
             cursor: table.fields.length >= 20 ? "initial" : "pointer",
             fontSize: "14px",
             fontWeight: "500",
-            display: "flex",
+            display: isPhone ? "none" : "flex",
             alignItems: "center",
             justifyContent: "center",
             gap: "6px",
@@ -1115,6 +1123,11 @@ export const DatabaseDiagram: React.FC = () => {
   const [generateConformationOpen, setGenerateConformationOpen] =
     useState(false);
   const navigate = useNavigate();
+
+  const isPhone = window.innerWidth <= 600;
+
+  const [phoneModalOpen, setPhoneModalOpen] = useState(isPhone);
+
   return (
     <LayoutWithHeader noJustify transparent>
       <div
@@ -1139,6 +1152,7 @@ export const DatabaseDiagram: React.FC = () => {
             cursor: "pointer",
             boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
             transition: "all 0.3s",
+            display: isPhone ? "none" : "flex",
           }}
         >
           {isEditingRelations
@@ -1184,12 +1198,13 @@ export const DatabaseDiagram: React.FC = () => {
 
             color: "#000",
             padding: "12px",
-            display: "flex",
             flexDirection: "column",
             gap: "12px",
             overflow: "hidden",
             borderTop: "1px solid #242424ff",
             borderRight: "1px solid #242424ff",
+
+            display: isPhone ? "none" : "flex",
           }}
         >
           <div
@@ -1202,7 +1217,7 @@ export const DatabaseDiagram: React.FC = () => {
             }}
           >
             <h3 style={{ margin: 0, fontSize: 16, color: "#fff" }}>Таблицы</h3>
-            {Object.values(tables).length < 20 ? (
+            {Object.values(tables).length < 10 ? (
               <Button
                 onClick={handleAddTable}
                 aria-label="Добавить таблицу"
@@ -1225,7 +1240,7 @@ export const DatabaseDiagram: React.FC = () => {
                 +
               </Button>
             ) : (
-              <Tooltip title="Максимальное число таблиц - 20" arrow>
+              <Tooltip title="Максимальное число таблиц - 10" arrow>
                 <Button
                   variant="contained"
                   sx={{
@@ -1377,6 +1392,27 @@ export const DatabaseDiagram: React.FC = () => {
             </Button>
           </div>
         </aside>
+        {isPhone && (
+          <Button
+            variant="contained"
+            sx={{
+              width: "100%",
+              height: "42px",
+              backgroundColor: "black",
+              border: "1px solid white",
+              position: "absolute",
+              bottom: 0,
+              zIndex: "1000",
+              "&:hover": {
+                backgroundColor: "rgb(79, 140, 255)",
+                border: "rgb(79, 140, 255)",
+              },
+            }}
+            onClick={() => navigate(`/history/${projectId}`)}
+          >
+            Перейти к истории запросов
+          </Button>
+        )}
 
         {/* React Flow */}
         <ReactFlow
@@ -1458,6 +1494,13 @@ export const DatabaseDiagram: React.FC = () => {
             setSelectedRelation(null);
           }}
           projectId={projectId!}
+        />
+      )}
+
+      {isPhone && (
+        <PhoneDialog
+          open={phoneModalOpen}
+          onClose={() => setPhoneModalOpen(false)}
         />
       )}
       <Snackbar

@@ -290,6 +290,8 @@ export const PkSettings = (props: PkSettingsProps) => {
     [field]
   );
 
+  const isPhone = window.innerWidth <= 600;
+
   return (
     <>
       <IconButton
@@ -352,17 +354,17 @@ export const PkSettings = (props: PkSettingsProps) => {
           >
             <FormControlLabel
               value="regular"
-              control={<Radio />}
+              control={<Radio disabled={isPhone} />}
               label="Обычное поле"
             />
             <FormControlLabel
               value="primary"
-              control={<Radio />}
+              control={<Radio disabled={isPhone} />}
               label="Первичный ключ"
             />
             <FormControlLabel
               value="foreign"
-              control={<Radio />}
+              control={<Radio disabled={isPhone} />}
               label="Внешний ключ"
             />
           </RadioGroup>
@@ -377,21 +379,25 @@ export const PkSettings = (props: PkSettingsProps) => {
               gap: "12px",
             }}
           >
-            <SelectField
-              label="Связанная таблица"
-              value={referencedTableId}
-              options={tableOptions}
-              onChange={handleReferencedTableChange}
-            />
+            {!isPhone && (
+              <>
+                <SelectField
+                  label="Связанная таблица"
+                  value={referencedTableId}
+                  options={tableOptions}
+                  onChange={handleReferencedTableChange}
+                />
 
-            {referencedTableId && (
-              <SelectField
-                label="Связанное поле"
-                value={referencedFieldId}
-                options={fieldOptions}
-                onChange={handleReferencedFieldChange}
-                disabled={fieldOptions.length === 0}
-              />
+                {referencedTableId && (
+                  <SelectField
+                    label="Связанное поле"
+                    value={referencedFieldId}
+                    options={fieldOptions}
+                    onChange={handleReferencedFieldChange}
+                    disabled={fieldOptions.length === 0}
+                  />
+                )}
+              </>
             )}
 
             {referencedTableId && referencedFieldId && (

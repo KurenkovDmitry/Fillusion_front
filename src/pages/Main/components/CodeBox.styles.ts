@@ -10,8 +10,11 @@ export const useStyles = makeStyles()((_theme) => ({
     border: "1px solid #333",
     minWidth: "300px",
     width: "70%",
-
     marginTop: "40px",
+
+    "@media (max-width: 960px)": {
+      width: "95%",
+    },
   },
   header: {
     backgroundColor: "#d3d3d3ff",
@@ -19,6 +22,10 @@ export const useStyles = makeStyles()((_theme) => ({
     display: "flex",
     alignItems: "center",
     borderBottom: "1px solid #333",
+
+    "@media (max-width: 600px)": {
+      padding: "6px 12px",
+    },
   },
   dots: {
     display: "flex",
@@ -42,6 +49,12 @@ export const useStyles = makeStyles()((_theme) => ({
     userSelect: "none" as const, // Чтобы не выделялись при копировании
     borderRight: "1px solid #333",
     minWidth: "40px",
+
+    "@media (max-width: 600px)": {
+      paddingLeft: "4px",
+      paddingRight: "4px",
+      minWidth: "20px",
+    },
   },
   codeBlock: {
     paddingLeft: "16px",
@@ -51,6 +64,11 @@ export const useStyles = makeStyles()((_theme) => ({
     flex: 1,
     overflowX: "auto" as const, // Добавляем скролл если строка очень длинная
     scrollbarColor: "#d4d4d4 white",
+
+    "@media (max-width: 600px)": {
+      paddingLeft: "4px",
+      paddingRight: "4px",
+    },
   },
 
   codeLine: {
@@ -60,11 +78,18 @@ export const useStyles = makeStyles()((_theme) => ({
     minHeight: "1.5em", // Чтобы пустые строки не схлопывались
     lineHeight: "1.5", // Синхронизация с номерами
     whiteSpace: "pre" as const, // Сохраняет пробелы и отступы!
+    "@media (max-width: 600px)": {
+      fontSize: "14px",
+    },
   },
   numberLine: {
     display: "block",
     lineHeight: "1.5", // Такая же высота, как у кода
     fontFamily: "monospace",
+
+    "@media (max-width: 600px)": {
+      fontSize: "14px",
+    },
   },
 
   export: {
@@ -72,5 +97,9 @@ export const useStyles = makeStyles()((_theme) => ({
     marginRight: "auto",
     color: "black",
     fontSize: "16px",
+
+    "@media (max-width: 600px)": {
+      fontSize: "14px",
+    },
   },
 }));

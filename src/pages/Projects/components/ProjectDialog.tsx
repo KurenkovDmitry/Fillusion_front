@@ -103,7 +103,18 @@ export const ProjectDialog = (props: ProjectDialogProps) => {
   };
 
   return (
-    <Dialog open={open} onClose={props.onClose}>
+    <Dialog
+      open={open}
+      onClose={props.onClose}
+      sx={{
+        "& .MuiPaper-root": {
+          "@media (max-width: 600px)": {
+            width: "95%",
+            margin: 0,
+          },
+        },
+      }}
+    >
       <div className={classes.dialog}>
         <h3 className={classes.header}>
           {props.newProject ? "Создание проекта" : "Редактирование проекта"}

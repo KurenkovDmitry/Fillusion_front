@@ -15,6 +15,9 @@ export const useStyles = makeStyles()((_theme) => ({
     minHeight: "80dvh",
     alignItems: "center",
     justifyContent: "center",
+    "@media (max-width: 960px)": {
+      padding: "16px",
+    },
   },
 
   main__page: {
@@ -37,6 +40,10 @@ export const useStyles = makeStyles()((_theme) => ({
     margin: 0,
     textShadow: "0 0 8px #08080844",
     fontWeight: 600,
+
+    "@media (max-width: 600px)": {
+      fontSize: "36px",
+    },
   },
 
   main__description: {
@@ -45,6 +52,10 @@ export const useStyles = makeStyles()((_theme) => ({
     textShadow: "0 0 8px #08080844",
     fontWeight: "normal",
     fontSize: "18px",
+
+    "@media (max-width: 600px)": {
+      fontSize: "16px",
+    },
   },
 
   main__description_secondary: {
@@ -52,6 +63,10 @@ export const useStyles = makeStyles()((_theme) => ({
     textShadow: "0 0 8px #08080844",
     fontWeight: "normal",
     fontSize: "18px",
+
+    "@media (max-width: 600px)": {
+      fontSize: "16px",
+    },
   },
 
   main__actions: {
@@ -114,6 +129,10 @@ export const useStyles = makeStyles()((_theme) => ({
     textShadow: "0 0 8px #08080844",
     fontWeight: 600,
     textAlign: "center",
+
+    "@media (max-width: 600px)": {
+      fontSize: "32px",
+    },
   },
 
   main__featureSubTitle: {
@@ -129,6 +148,15 @@ export const useStyles = makeStyles()((_theme) => ({
     gridTemplateColumns: "1fr 1fr 1fr",
     gridAutoRows: "auto",
     gap: "20px",
+
+    "@media (max-width: 960px)": {
+      gridTemplateColumns: "1fr 1fr",
+      width: "95%",
+    },
+
+    "@media (max-width: 600px)": {
+      gridTemplateColumns: "1fr",
+    },
   },
 
   main__codeWrapper: {
@@ -148,6 +176,12 @@ export const useStyles = makeStyles()((_theme) => ({
     borderRadius: "24px",
     border: "1px solid black",
     boxShadow: "0 3px 10px #00000033",
+
+    "@media (max-width: 960px)": {
+      width: "95%",
+      height: "fit-content",
+      marginBottom: "20px",
+    },
   },
 
   main__startButton: {
@@ -162,6 +196,11 @@ export const useStyles = makeStyles()((_theme) => ({
     "&:hover": {
       boxShadow: "0 3px 10px #00000033",
       backgroundColor: "#333",
+    },
+
+    "@media (max-width: 960px)": {
+      marginBottom: "30px",
+      marginTop: "10px",
     },
   },
 }));

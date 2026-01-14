@@ -177,7 +177,6 @@ export const NonModalGenerate = () => {
               to={{ opacity: 1, y: 0, x: 0 }}
               threshold={0.1}
               rootMargin="-100px"
-              textAlign="left"
               tag="h1"
               className={classes.main__title}
             />
@@ -191,7 +190,6 @@ export const NonModalGenerate = () => {
               to={{ opacity: 1, y: 0, x: 0 }}
               threshold={0.1}
               rootMargin="-100px"
-              textAlign="left"
               tag="h1"
               className={classes.main__title}
             />
@@ -205,7 +203,6 @@ export const NonModalGenerate = () => {
               to={{ opacity: 1, y: 0, x: 0 }}
               threshold={0.1}
               rootMargin="-100px"
-              textAlign="left"
               tag="h4"
               className={classes.main__description}
             />
@@ -219,7 +216,6 @@ export const NonModalGenerate = () => {
               to={{ opacity: 1, y: 0, x: 0 }}
               threshold={0.1}
               rootMargin="-100px"
-              textAlign="left"
               tag="h4"
               className={classes.main__description_secondary}
             />

@@ -148,6 +148,9 @@ export const Auth = (props: { open: boolean; onClose: () => void }) => {
               : "416px",
           margin: "auto",
           padding: 4,
+          "@media (max-width: 600px)": {
+            width: "100%",
+          },
           bgcolor: "background.paper",
           boxShadow: 3,
           borderRadius: 2,
