@@ -106,6 +106,7 @@ export const InputField = (props: InputFieldProps) => {
         {props.multiline ? (
           <textarea
             {...controlledProps}
+            maxLength={props.maxLength}
             placeholder={props.placeholder || props.label}
             className={classes.input__border}
             style={{
