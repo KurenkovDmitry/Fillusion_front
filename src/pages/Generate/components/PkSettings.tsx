@@ -226,7 +226,6 @@ export const PkSettings = (props: PkSettingsProps) => {
 
       const refUpdates = {
         isForeignKey: false,
-        isPrimaryKey: true,
       };
       updateField(referencedTableId, referencedField.id, refUpdates);
       const refTable = tables[referencedTableId];
@@ -246,12 +245,17 @@ export const PkSettings = (props: PkSettingsProps) => {
       const onRight =
         tables[tableId].layout.x > tables[referencedTableId].layout.x;
 
+      const relationType =
+        field.unique && referencedField.unique
+          ? ("one-to-one" as RelationType)
+          : ("one-to-many" as RelationType);
+
       const newRelation = {
         fromTable: referencedTableId,
         toTable: tableId,
         fromField: newFieldId,
         toField: field.id,
-        type: "one-to-many" as RelationType,
+        type: relationType,
         fromHandle: (!onRight ? "left" : "right") as "left" | "right",
         toHandle: (onRight ? "left" : "right") as "left" | "right",
       };

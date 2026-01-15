@@ -893,15 +893,6 @@ export const DatabaseDiagram: React.FC = () => {
       const fromTable = tables[params.source];
       const toTable = tables[params.target];
 
-      // if (fromTable.id === toTable.id) {
-      //   setSnackbar({
-      //     open: true,
-      //     message: "Нельзя провести связь между полями одной таблицы", теперь можно
-      //     isError: true,
-      //   });
-      //   return;
-      // }
-
       const fromField = fromTable?.fields.find((f) => f.id === source.fieldId);
       const toField = toTable?.fields.find((f) => f.id === target.fieldId);
 
@@ -968,7 +959,7 @@ export const DatabaseDiagram: React.FC = () => {
           unique: true,
           type: toField.type, // выставляем правильный тип
         };
-        // toField (целевое) становится PK
+        // toField (целевое)
         updateField(params.target, target.fieldId, toFieldUpdates);
 
         // fromField (исходное) становится FK и наследует тип от toField
@@ -1005,9 +996,7 @@ export const DatabaseDiagram: React.FC = () => {
             mapTableToApiPayload({
               ...toTable,
               fields: toTable.fields.map((f) =>
-                f.id === target.fieldId
-                  ? { ...f, ...toFieldUpdates, viaFaker: false }
-                  : f
+                f.id === target.fieldId ? { ...f, ...toFieldUpdates } : f
               ),
               layout: getTableLayoutPayload(toTable),
             })
@@ -1024,7 +1013,6 @@ export const DatabaseDiagram: React.FC = () => {
                   ? {
                       ...f,
                       ...sourceUpdate,
-                      viaFaker: false,
                     }
                   : f
               ),
@@ -1038,7 +1026,7 @@ export const DatabaseDiagram: React.FC = () => {
           );
           addRelation(createdRelation.relation);
 
-          await refreshSchemaFromServer();
+          // await refreshSchemaFromServer();
         } catch (e) {
           if (createdRelation) {
             removeRelation(createdRelation.relation.id);
@@ -1062,13 +1050,13 @@ export const DatabaseDiagram: React.FC = () => {
       }
     },
     [
-      addRelation,
       isEditingRelations,
       projectId,
       tables,
+      getAllRelations,
       updateField,
+      addRelation,
       removeRelation,
-      refreshSchemaFromServer,
     ]
   );
 
