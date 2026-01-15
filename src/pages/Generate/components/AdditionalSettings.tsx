@@ -330,6 +330,10 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
   const isAutoincrementDisabled =
     currentField?.type !== "int" && currentField?.type !== "bigint";
 
+  const isFakerAvailable = !!getAllRelations().find(
+    (r) => r.fromField === currentField?.id
+  );
+
   return (
     <>
       <IconButton size="small" onClick={handleClick}>
@@ -370,41 +374,44 @@ export const AdditionalSettings = (props: AdditionalSettingsProps) => {
                 ? "Дополнительные настройки"
                 : "Способ генерации данных"}
             </p>
-            {!currentField?.isPrimaryKey && !currentField?.isForeignKey && (
-              <ToggleButtonGroup
-                value={approach}
-                exclusive
-                onChange={handleApproachChange}
-                aria-label="approach"
-                sx={{
-                  height: "32px",
-                  width: "100%",
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                }}
-              >
-                <ToggleButton
-                  value="ai"
+            {!currentField?.isPrimaryKey &&
+              !currentField?.isForeignKey &&
+              (isFakerAvailable === false ||
+                isFakerAvailable === undefined) && (
+                <ToggleButtonGroup
+                  value={approach}
+                  exclusive
+                  onChange={handleApproachChange}
+                  aria-label="approach"
                   sx={{
-                    fontFamily: "onest",
-                    textTransform: "none",
                     height: "32px",
+                    width: "100%",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
                   }}
                 >
-                  ИИ
-                </ToggleButton>
-                <ToggleButton
-                  value="faker"
-                  sx={{
-                    fontFamily: "onest",
-                    textTransform: "none",
-                    height: "32px",
-                  }}
-                >
-                  Faker
-                </ToggleButton>
-              </ToggleButtonGroup>
-            )}
+                  <ToggleButton
+                    value="ai"
+                    sx={{
+                      fontFamily: "onest",
+                      textTransform: "none",
+                      height: "32px",
+                    }}
+                  >
+                    ИИ
+                  </ToggleButton>
+                  <ToggleButton
+                    value="faker"
+                    sx={{
+                      fontFamily: "onest",
+                      textTransform: "none",
+                      height: "32px",
+                    }}
+                  >
+                    Faker
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              )}
             <section style={{ marginBottom: "20px" }}>
               {approach === "faker" ? (
                 <>
