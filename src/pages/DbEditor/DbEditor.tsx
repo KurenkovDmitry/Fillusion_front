@@ -958,6 +958,7 @@ export const DatabaseDiagram: React.FC = () => {
         const toFieldUpdates = {
           unique: true,
           type: toField.type, // выставляем правильный тип
+          viaFaker: false,
         };
         // toField (целевое)
         updateField(params.target, target.fieldId, toFieldUpdates);
@@ -967,7 +968,7 @@ export const DatabaseDiagram: React.FC = () => {
           isPrimaryKey: false,
           isForeignKey: true,
           type: toField.type,
-          viaFaker: toField.viaFaker,
+          viaFaker: false,
           fakerType: toField.fakerType,
           locale: toField.locale,
         };

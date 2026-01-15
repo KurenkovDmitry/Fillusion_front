@@ -189,26 +189,19 @@ export const PkSettings = (props: PkSettingsProps) => {
         .find((t) => t.id === referencedTableId)
         ?.fields.find((f) => f.id === newFieldId);
 
-      console.log(referencedField);
-
       if (!referencedField) return;
 
-      const sourceUpdate: Partial<SchemaField> = referencedField.viaFaker
-        ? {
-            isPrimaryKey: false,
-            isForeignKey: true,
-            viaFaker: true,
-            fakerType: referencedField.fakerType,
-            locale: referencedField.locale,
-            type: referencedField.type,
-          }
-        : {
-            isPrimaryKey: false,
-            isForeignKey: true,
-            type: referencedField.type,
-            viaFaker: false,
-          };
+      const sourceUpdate: Partial<SchemaField> = {
+        isPrimaryKey: false,
+        isForeignKey: true,
+        type: referencedField.type,
+        viaFaker: false,
+        fakerType: referencedField.fakerType,
+        locale: referencedField.locale,
+      };
+
       updateField(tableId, field.id, sourceUpdate);
+
       const currentTable = tables[tableId];
       if (!currentTable) return;
       const updatedTable = {
@@ -226,8 +219,12 @@ export const PkSettings = (props: PkSettingsProps) => {
 
       const refUpdates = {
         isForeignKey: false,
+        viaFaker: false,
+        unique: true,
       };
+
       updateField(referencedTableId, referencedField.id, refUpdates);
+
       const refTable = tables[referencedTableId];
       const updatedRefTable = {
         ...refTable,
@@ -245,10 +242,9 @@ export const PkSettings = (props: PkSettingsProps) => {
       const onRight =
         tables[tableId].layout.x > tables[referencedTableId].layout.x;
 
-      const relationType =
-        field.unique && referencedField.unique
-          ? ("one-to-one" as RelationType)
-          : ("one-to-many" as RelationType);
+      const relationType = field.unique
+        ? ("one-to-one" as RelationType)
+        : ("one-to-many" as RelationType);
 
       const newRelation = {
         fromTable: referencedTableId,
